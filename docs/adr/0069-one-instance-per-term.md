@@ -86,14 +86,21 @@ random terms would grow it without bound. With weak entries, a term no theorem h
 as it was before, and `TermInterningSpec` sees one go.
 
 **`fromProduct` refuses, and that closes a route that existed before this change.** Scala 3
-synthesises a public `fromProduct` on a case class's companion whatever the constructor's access
-is, and the compiler refuses a narrower one. 0058 found the same for `TyApp`. Measured on 2026-11-09
-at `0fa92517` from a package outside the kernel, before this change:
+makes a case class's companion its `Mirror.ProductOf`, whose `fromProduct` calls the constructor
+whatever the constructor's access is, and the compiler refuses a declared one that is narrower.
+0058 found the same for `TyApp`. Before this change no companion declared it, so `App.fromProduct`
+was not a member callable by name and did not compile from outside; the route was the derived
+mirror, which any caller can summon. Measured at `0fa92517` from a package outside the kernel,
+before this change, on 2026-11-09 and again at Scala 3.3.5 on 2026-11-10:
 
-- `App.fromProduct((p, x))`, with `p : bool`, built `p x`, which `Term.app` refuses with
-  `NotAFunction`.
-- `BVar.fromProduct(Tuple1(7))` built a loose index.
-- `Abs.fromProduct((bool, BVar(3)))` built an abstraction that is not locally closed.
+- `summon[Mirror.ProductOf[App]].fromProduct((p, x))`, with `p : bool`, built `p x`, which
+  `Term.app` refuses with `NotAFunction`.
+- `summon[Mirror.ProductOf[BVar]].fromProduct(Tuple1(3))` built a loose index, `?3`.
+- `summon[Mirror.ProductOf[Abs]].fromProduct((bool, that))` built `\x:bool. ?3`, an abstraction
+  that is not locally closed, which `Kernel.refl` refuses with `KernelInvariantViolation`.
+
+This record said until 2026-11-10 that `App.fromProduct((p, x))` was the call that built, and it
+did not compile at `0fa92517`: the independent verification of the card found it.
 
 A theorem is not shown to come out of these. Producing one would need a rule that trusts its
 argument's type, and every kernel rule is entitled to: "well-typed by construction" was false of

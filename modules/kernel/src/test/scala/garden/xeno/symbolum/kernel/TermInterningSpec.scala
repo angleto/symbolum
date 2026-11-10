@@ -79,11 +79,13 @@ class TermInterningSpec extends AnyFlatSpec with Matchers {
   }
 
   "A term built through the case class's mirror" should "be refused, since nothing checks it there" in {
-    // Measured on 2026-11-09 at `0fa92517`, before this change: from outside this package
-    // `App.fromProduct((p, x))` built `p x` with `p : bool`, which `Term.app` refuses, and
-    // `Abs.fromProduct` built an abstraction over a loose index. Scala 3 makes `fromProduct` public
-    // whatever the constructor is, and the compiler refuses a narrower one. `TrustBoundarySpec`
-    // asks the same from outside.
+    // Measured at `0fa92517`, before this change: from outside this package the derived mirror,
+    // `summon[Mirror.ProductOf[App]].fromProduct((p, x))`, built `p x` with `p : bool`, which
+    // `Term.app` refuses, and the mirrors of `BVar` and `Abs` built an abstraction over a loose
+    // index. `App.fromProduct` by name did not compile then, since no companion declared it. Scala 3
+    // gives the mirror a `fromProduct` that calls the constructor whatever its access, and refuses a
+    // declared one that is narrower, so each companion declares one that refuses.
+    // `TrustBoundarySpec` asks the same from outside.
     val p = Term.variable("p", Type.Bool)
     an[UnsupportedOperationException] should be thrownBy App.fromProduct((p, x))
     an[UnsupportedOperationException] should be thrownBy Abs.fromProduct((Type.Bool, p))

@@ -80,10 +80,13 @@ class TrustBoundarySpec extends AnyFlatSpec with Matchers {
   }
 
   "A term" should "not come out of a case class's mirror, which visibility does not reach" in {
-    // The route no `assertDoesNotCompile` can cover: Scala 3 makes `fromProduct` public whatever
-    // the constructor is, and refuses a narrower one. Until `docs/adr/0069` it called `new`, so the
-    // lines below built `p x` with `p : bool`, which `Term.app` refuses, and an abstraction over a
-    // loose index; seen on 2026-11-09 at `0fa92517`. They compile, and what they do is refuse.
+    // The route no `assertDoesNotCompile` can cover: Scala 3 gives a case class's mirror a
+    // `fromProduct` that calls the constructor whatever its access, and refuses a declared one that
+    // is narrower. Until `docs/adr/0069` the mirror's called `new`: seen at `0fa92517`, the mirror
+    // of `App` built `p x` with `p : bool`, which `Term.app` refuses, and the mirrors of `BVar` and
+    // `Abs` built an abstraction over a loose index. `App.fromProduct` by name did not compile then,
+    // because no companion declared it; each declares one now, and it refuses, by name and through
+    // the mirror alike.
     val p = Term.variable("p", bool)
     assertCompiles("""App.fromProduct((p, x))""")
     an[UnsupportedOperationException] should be thrownBy App.fromProduct((p, x))
