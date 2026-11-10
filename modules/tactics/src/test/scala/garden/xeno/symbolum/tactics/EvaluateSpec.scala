@@ -194,11 +194,21 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     at("y <= x", point) shouldBe Some(false)
   }
 
-  it should "have nothing to say where the theory has nothing to say" in {
-    // `MUL_INVERSE` holds only under `~(x = 0)`, so a model that answered here would be claiming
-    // more than the theory does. `None` is not `false`: no caller counts it as a counterexample.
+  it should "say at zero what the chain proves there" in {
+    // Until 2026-11-10 this asserted `None` at zero, on the argument that `MUL_INVERSE` holds only
+    // under `~(x = 0)` and the theory said nothing more. Since `docs/adr/0053` the chain proves
+    // `inv 0 = 0` (`theories.InverseAtZeroSpec`), so the premise of that assertion is false and the
+    // model says what the chain says (card `354256d9`). Three directions, because each alone is
+    // satisfiable by a wrong model: the value itself, a claim false only at zero coming back false,
+    // and claims true at zero coming back true, which is what an `Infinity` would break.
+    val zero = Map("x" -> Quantity(0.0))
+
     at("inv x * x = 1", Map("x" -> Quantity(2.0))) shouldBe Some(true)
-    at("inv x * x = 1", Map("x" -> Quantity(0.0))) shouldBe None
+    at("inv x = 0", zero) shouldBe Some(true)
+    at("inv x * x = 1", zero) shouldBe Some(false)
+    at("x * inv x * x = x", zero) shouldBe Some(true)
+    at("x / x = 0", zero) shouldBe Some(true)
+    at("inv (x - x) = 0", Map("x" -> Quantity(1.7))) shouldBe Some(true)
   }
 
   it should "keep the order and the equality from contradicting each other" in {

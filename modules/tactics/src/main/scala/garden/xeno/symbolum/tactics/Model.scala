@@ -170,18 +170,43 @@ object Model {
     })
 
   /**
-   * The intended model of the reals: the seven constants the theory declares and does not define.
+   * The intended model of the reals: the seven constants every other constant of the reals is
+   * defined from.
    *
    * `sub`, `div`, `le` and the two numeral bits are absent on purpose. They are definitional
    * extensions, so the theory already says what they mean, and [[Evaluate]] unfolds them. Writing
    * them here as well would be a second statement of the same thing, free to disagree with the
    * first.
    *
-   * `inv 0` is undefined rather than infinite. That matched the theory while `MUL_INVERSE`, which
-   * holds only under `~(x = 0)`, was all it said; since the reals were constructed the chain proves
-   * `inv 0 = 0`, and this model does not say so. An undefined point is skipped by every caller here,
-   * because a place where the question was not asked is not a counterexample, so what the gap costs
-   * is points not asked.
+   * == `inv 0` is zero, because the chain proves it is ==
+   *
+   * Since `docs/adr/0053` the reals are the cuts, `inv` is the inverse on cuts, and `inv 0 = 0` is a
+   * theorem of the chain resting on its three axioms and on none of the sixteen
+   * (`theories.InverseAtZeroSpec`). The model answers what the chain proves, so a point that
+   * falsifies a claim here falsifies it in the chain's own reals, and no theorem can be refuted at
+   * zero. Whether that fact is also published under a name of the reals is a separate question
+   * about the interface, and nothing here depends on how it is answered.
+   *
+   * The two alternatives, and why each is wrong rather than weaker:
+   *
+   *  - `Infinity`, which is what `1.0 / 0.0` gives if nothing intervenes. It is not a real, and
+   *    what it does to answers is worse than wrong because it is erratic, measured on 2026-11-10:
+   *    `inv 0 = 0` comes back **true**, by accident, since [[Evaluate.indistinguishable]] scales
+   *    its tolerance by the larger magnitude and an infinite scale admits any difference; while
+   *    `x * inv x * x = x` at zero is `NaN`, which every comparison answers false, so a theorem
+   *    comes back false there. `tools/verify/perturb-inverse-at-zero.sh` reproduces both.
+   *  - Undefined, which is what this was until 2026-11-10 (card `354256d9`). It matched the theory
+   *    while `MUL_INVERSE`, true only under `~(x = 0)`, was all the theory said; afterwards it said
+   *    nothing where the chain says something, so every point reaching `inv 0` was skipped and a
+   *    claim false only there was never asked.
+   *
+   * **What it does not cover is the arithmetic, and the limit is the one `Double` always had.** The
+   * test is on the computed argument, so a value that is exactly `0.0` by underflow while the exact
+   * one is not gets zero here, and a value that should be zero and is a rounding residue gets its
+   * huge reciprocal. The second was already true before this changed. The first is new: before, it
+   * was a skipped point. Neither arises from the samples [[Discovery.coordinate]] draws, which lie
+   * in `[-3, 3]` and are never exactly zero, so a point reaches `inv 0` only through a term that
+   * computes zero exactly, such as `x - x`, or a written `0`.
    */
   val Reals: Model = Model(
     carriers = Map.empty,
@@ -191,7 +216,9 @@ object Model {
       Real.Addition -> binary((left, right) => Some(Quantity(left + right))),
       Real.Multiplication -> binary((left, right) => Some(Quantity(left * right))),
       Real.Negation -> unary(argument => Some(-argument)),
-      Real.Inverse -> unary(argument => if (argument == 0.0) None else Some(1.0 / argument)),
+      // Exact comparison on purpose: within the tolerance and away from zero the reciprocal is the
+      // answer, and the tolerance belongs to equality between values, not to which branch runs.
+      Real.Inverse -> unary(argument => Some(if (argument == 0.0) 0.0 else 1.0 / argument)),
       // Strict below the tolerance the screening uses everywhere else, so that `<` and `=` cannot
       // both be true of one pair: within the tolerance the two are equal and neither is less.
       Real.Order -> binary((left, right) => Some(Truth(Evaluate.strictlyLess(left, right))))
