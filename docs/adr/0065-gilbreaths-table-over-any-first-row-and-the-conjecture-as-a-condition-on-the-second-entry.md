@@ -5,7 +5,7 @@
 
 ## Context
 
-Mycelium card `ddd1ba96` follows note 917b3939, whose section 12 measures why Gilbreath's
+Mycelium card `ddd1ba96` follows note 917b3939, whose section 5.2 measures why Gilbreath's
 conjecture holds as far as anyone has computed: the table of absolute differences of the primes
 starts every row after the first with 1, and the note locates the reason in a head of 0s and 2s
 behind that 1, which a large value arriving from the right is absorbed into when the head keeps
@@ -45,7 +45,7 @@ with no hypotheses and resting on no axiom beyond the three of the chain:
 
 **The conjecture is not among them, and the line between the two is stated.** What is proved is
 that the 1 survives exactly as long as a head survives; whether a head survives forever over the
-primes is the conjecture, and the measurements of note 917b3939 section 12 are about that question
+primes is the conjecture, and the measurements of note 917b3939 section 5.2 are about that question
 and remain measurements. They are not copied here: the note holds them with the scripts that
 reproduce them.
 

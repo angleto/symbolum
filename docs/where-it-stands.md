@@ -1265,7 +1265,7 @@ conjecture is that condition at every row (`GILBREATH_EQUIVALENT`); even entries
 head of `n + 1` entries in `{0, 2}` behind the 1 passes on a head of `n`, which guarantees the 1 for
 `n` rows (`GILBREATH_HEAD`, `GILBREATH_WINDOW`). `GILBREATH_EXISTS` exhibits a table for every first
 row. **What is not here**: the primes, which the library does not enumerate, and the conjecture
-itself, which is whether the head lasts; note 917b3939 section 12 measures that and nothing proves it.
+itself, which is whether the head lasts; note 917b3939 section 5.2 measures that and nothing proves it.
 
 **Finite distributions and Blackwell's easy direction are `Decision`, a link since 2026-10-22.**
 `docs/adr/0063` is the decision. A distribution on `n` outcomes is a function on `[0, n)` that

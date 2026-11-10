@@ -15,7 +15,7 @@ import garden.xeno.symbolum.logic.*
  *
  * Not a development: it declares nothing, and `Complex` publishes what it proves beside
  * `RuleThirty`, because the steps it is written in are the ones that link already has.
- * `docs/adr/0065` is the decision; Mycelium note 917b3939, section 12, is the account with the
+ * `docs/adr/0065` is the decision; Mycelium note 917b3939, section 5.2, is the account with the
  * measurements.
  *
  * == What the statements say ==
