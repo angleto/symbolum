@@ -136,3 +136,16 @@ One thing the arithmetic taught and the record keeps: the closing step reads rat
 numbers only when `Linarith` is called on them directly. Through `ComplexKit.linAfter` every
 quotient is abstracted into an atom, which is right for `x / y` and turns `8 * (1 / 8) = 1` into
 `8 * q = 1`, so the essay's case closes with its own step that rewrites and then calls `Linarith`.
+
+Added on 2026-11-10, for the two items of `1535fdb7` the first delivery left open. The fourth value
+of the card, `7/20` at `phi = 1/10`, is `EssayCase.Ignored`, and `EssayCase.IgnoredRule` says what
+"the reader ignores `g`" means: the rule answers `s` at every signal, strictly, the closest
+comparison being `221/11200 < 441/11200` between the products `P(s | a) P(g | a)` at `a = g` and
+`a = s`. Recounted outside the kernel first, with exact fractions: `7/20`, and no tie at any of the
+sixty-four signals. And the card asked that `7/20 <= 9/16` be an instance of Blackwell's theorem
+rather than a comparison of two numbers, which is what it had been: `EssayCase.Garbled` is
+`BLACKWELL_GARBLING` at the garbling that sends the signal `8 s + g` to `s`, with `CHANNEL`
+discharged, and with the garbled experiment shown to be the signal alone. The two agree on the
+states and signals `VALUE` reads and not as functions, since at a signal of eight or more no pair
+maps there and the garbled sum is zero, so the bridge is `SUM_CONGRUENCE_BELOW` and
+`MAXIMUM_CONGRUENCE_BELOW` rather than an equation between experiments.

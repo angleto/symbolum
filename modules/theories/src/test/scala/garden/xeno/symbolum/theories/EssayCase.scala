@@ -14,13 +14,20 @@ import garden.xeno.symbolum.logic.*
  * task it is on, and is paid one for the right answer and nothing otherwise.
  *
  * The pair `(s, g)` is one signal `t = 8 s + g` of the sixty-four, read back by `NUM_DIV` and
- * `NUM_MOD`. Three values, each a theorem with no hypothesis:
+ * `NUM_MOD`. Four values, each a theorem with no hypothesis:
  *
  *  - [[EssayCase.Empty]]: with `s` alone the value is `7/20`;
- *  - [[EssayCase.Average]]: with `s` and `g` it is `9/16`, at least `7/20` as Blackwell says, since
- *    dropping `g` is a garbling;
+ *  - [[EssayCase.Average]]: with `s` and `g` it is `9/16`;
  *  - [[EssayCase.NewTask]]: the same reader's rule, which follows `g`, is right `1/8` of the time
- *    on new tasks, less than the `7/20` it had without `g`.
+ *    on new tasks, less than the `7/20` it had without `g`;
+ *  - [[EssayCase.Ignored]]: when the task is familiar only one time in ten, `g = y` has probability
+ *    `17/80`, the value with `s` and `g` is `7/20` again, and [[EssayCase.IgnoredRule]] says why:
+ *    the rule answers `s` at every signal, so `g` is never read.
+ *
+ * And the comparison Blackwell's theorem makes: [[EssayCase.Garbled]] is `BLACKWELL_GARBLING` at
+ * [[EssayCase.Forget]], the garbling that drops `g`, with `CHANNEL` discharged and the garbled
+ * experiment shown to be `s` alone on the states and signals `VALUE` reads. With the first two
+ * values it says `7/20 <= 9/16`.
  *
  * So the monotonicity holds on average over the tasks and not conditioned on the task, which is the
  * point the essay prints. `docs/adr/0063` is why this is in the test scope and not in the library.
@@ -53,7 +60,38 @@ private[theories] object EssayCase {
     s"Sum (\\t:num. Sum (\\y:num. $Prior y * $Novel y t * $Utility (Argmax (\\a:num. " +
       s"Sum (\\z:num. $Prior z * $Full z t * $Utility a z) 8) 7) y) 8) (8 * 8) = (1:real) / 8"
 
-  final case class Values(empty: Kernel.Thm, average: Kernel.Thm, newTask: Kernel.Thm)
+  /** The frame at `phi = 1/10`: `g = y` with probability `1/10 + 9/10 * 1/8 = 17/80`, each other value `9/80`. */
+  val Rare: String =
+    "(\\y:num. \\t:num. COND (NUM_DIV t 8 = y) ((7:real) / 20) (13 / 140) * COND (NUM_MOD t 8 = y) ((17:real) / 80) (9 / 80))"
+
+  /** `V(1)` at `phi = 1/10`: the frame is there and worth nothing, the value is the signal's. */
+  val Ignored: String = s"VALUE 8 (8 * 8) 7 $Prior $Rare $Utility = (7:real) / 20"
+
+  /**
+   * At `phi = 1/10` the optimal rule answers `s` at every one of the sixty-four signals `8 s + g`,
+   * whatever `g` says: what "the reader ignores `g`" means, read off `Argmax`.
+   */
+  val IgnoredRule: String =
+    s"!s:num. !g:num. s < 8 ==> g < 8 ==> " +
+      s"Argmax (\\a:num. Sum (\\z:num. $Prior z * $Rare z (8 * s + g) * $Utility a z) 8) 7 = s"
+
+  /** Dropping `g` from the pair: the row of signal `t` puts all its weight on `NUM_DIV t 8`. */
+  val Forget: String = "(\\t:num. \\i:num. COND (i = NUM_DIV t 8) (1:real) 0)"
+
+  /**
+   * `BLACKWELL_GARBLING` at [[EssayCase.Forget]], with its hypothesis discharged and the garbled
+   * experiment read back as [[EssayCase.Signal]]: the signal alone is worth no more than the pair.
+   */
+  val Garbled: String = s"VALUE 8 8 7 $Prior $Signal $Utility <= VALUE 8 (8 * 8) 7 $Prior $Full $Utility"
+
+  final case class Values(
+    empty: Kernel.Thm,
+    average: Kernel.Thm,
+    newTask: Kernel.Thm,
+    ignored: Kernel.Thm,
+    ignoredRule: Kernel.Thm,
+    garbled: Kernel.Thm
+  )
 
   def derive(decision: Decision, successor: Successor): R[Values] = {
     val shared = new EssaySteps(decision, successor)
@@ -126,22 +164,22 @@ private[theories] object EssayCase {
 
     /* ------------------------------------------------- the pair (s, g) of one signal */
     /** The reader's score for answer `a` at the pair `(s, g)`, once the inner sum is collapsed. */
-    def score(S: String, G: String, A: String): String =
-      s"(1:real) / 8 * (COND ($S = $A) $Q $Qr * COND ($G = $A) $H $Hr)"
+    def score(S: String, G: String, A: String, h: String = H, hr: String = Hr): String =
+      s"(1:real) / 8 * (COND ($S = $A) $Q $Qr * COND ($G = $A) $h $hr)"
 
     /** The inner sum of the full experiment at the pair, before collapsing. */
-    def inner(S: String, G: String, A: String): String =
-      s"Sum (\\y:num. (1:real) / 8 * (COND ($S = y) $Q $Qr * COND ($G = y) $H $Hr) * COND (y = $A) (1:real) 0) 8"
+    def inner(S: String, G: String, A: String, h: String = H, hr: String = Hr): String =
+      s"Sum (\\y:num. (1:real) / 8 * (COND ($S = y) $Q $Qr * COND ($G = y) $h $hr) * COND (y = $A) (1:real) 0) 8"
 
     /** `inner a = score a` for every `a <= 7`. */
-    def collapsed(S: String, G: String): R[Kernel.Thm] =
+    def collapsed(S: String, G: String, h: String = H, hr: String = Hr): R[Kernel.Thm] =
       for {
-        each <- prop(s"!a:num. a <= 7 ==> ${inner(S, G, "a")} = ${score(S, G, "a")}")
+        each <- prop(s"!a:num. a <= 7 ==> ${inner(S, G, "a", h, hr)} = ${score(S, G, "a", h, hr)}")
         out <- every(each) { (as, ahs, _) =>
           val A = num(as(0))
           for {
             lt <- belowEight(A, ahs(0))
-            out <- at(k(Decision.SumIndicator), s"$A < 8 ==> ${inner(S, G, A)} = ${score(S, G, A)}").flatMap(mp(_, lt))
+            out <- at(k(Decision.SumIndicator), s"$A < 8 ==> ${inner(S, G, A, h, hr)} = ${score(S, G, A, h, hr)}").flatMap(mp(_, lt))
           } yield out
         }
       } yield out
@@ -215,16 +253,18 @@ private[theories] object EssayCase {
       cell: (FVar, FVar, Kernel.Thm, Kernel.Thm) => R[Kernel.Thm],
       coefficient: String,
       whole: Seq[Kernel.Thm],
-      total: String
+      total: String,
+      x: String = Q,
+      z: String = Qr
     ): R[Kernel.Thm] = {
-      val row = s"($coefficient) * ($Q + (real_of_num 8 - 1) * $Qr)"
+      val row = s"($coefficient) * ($x + (real_of_num 8 - 1) * $z)"
       for {
         groups <- at(k(Decision.SumGroups),
           s"Sum (\\t:num. ${at64("t")}) (8 * 8) = Sum (\\s:num. Sum (\\g:num. ${at64("(8 * s + g)")}) 8) 8")
         perS <- prop(s"!s:num. s < 8 ==> Sum (\\g:num. ${at64("(8 * s + g)")}) 8 = $row")
         rows <- every(perS) { (ss, shs, rowGoal) =>
           val S = num(ss(0))
-          val Cell = s"(\\g:num. ($coefficient) * COND (g = $S) $Q $Qr)"
+          val Cell = s"(\\g:num. ($coefficient) * COND (g = $S) $x $z)"
           for {
             perG <- prop(s"!g:num. g < 8 ==> ${at64(s"(8 * $S + g)")} = $Cell g")
             cells <- every(perG) { (gs, ghs, _) => cell(ss(0), gs(0), shs(0), ghs(0)) }
@@ -233,9 +273,9 @@ private[theories] object EssayCase {
                 s"Sum (\\g:num. ${at64(s"(8 * $S + g)")}) 8 = Sum $Cell 8")
               .flatMap(mp(_, cells))
             scaled <- at(fact("SUM_SCALE"),
-              s"Sum (\\g:num. ($coefficient) * COND (g = $S) $Q $Qr) 8 = ($coefficient) * Sum (\\g:num. COND (g = $S) $Q $Qr) 8")
+              s"Sum (\\g:num. ($coefficient) * COND (g = $S) $x $z) 8 = ($coefficient) * Sum (\\g:num. COND (g = $S) $x $z) 8")
             counted <- at(k(Decision.SumCondCount),
-              s"$S < 8 ==> Sum (\\g:num. COND (g = $S) $Q $Qr) 8 = $Q + (real_of_num 8 - 1) * $Qr").flatMap(mp(_, shs(0)))
+              s"$S < 8 ==> Sum (\\g:num. COND (g = $S) $x $z) 8 = $x + (real_of_num 8 - 1) * $z").flatMap(mp(_, shs(0)))
             out <- exact(Seq(spread, scaled, counted), Seq.empty, rowGoal)
           } yield out
         }
@@ -327,11 +367,319 @@ private[theories] object EssayCase {
         )
       } yield out
 
+    /* -------------------------------------- V(1) at phi = 1/10, where the reader ignores g */
+
+    val (h10, hr10) = ("((17:real) / 80)", "((9:real) / 80)")
+
+    /**
+     * Away from `s` the score at `phi = 1/10` is strictly below the score at `s`: the closest is
+     * `221/11200 < 441/11200`, `a = g` against `a = s`, between the products `P(s | a) P(g | a)`.
+     */
+    def belowSignal(S: String, G: String, A: String, other: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        goal <- prop(s"${score(S, G, A, h10, hr10)} < ${score(S, G, S, h10, hr10)}")
+        sT <- prop0(S)
+        turned <- flip(A, S)
+        sOther <- rw(turned, other)
+        signalOff <- condOff(s"$S = $A", Q, Qr, sOther)
+        signalOn <- condOn(s"$S = $S", Q, Qr, Kernel.refl(sT))
+        out <- cases(s"$G = $A")(
+          hit =>
+            for {
+              frameOn <- condOn(s"$G = $A", h10, hr10, hit)
+              // g = a and a <> s, so g <> s
+              gs <- prop(s"$G = $S")
+              assumed <- LogicError.lift(Kernel.assume(gs))
+              back <- Conv.sym(hit)
+              as <- trans(back, assumed)
+              absurd <- rules.notElim(other, as)
+              gOther <- rules.notIntro(gs, absurd)
+              frameAtS <- condOff(s"$G = $S", h10, hr10, gOther)
+              out <- exact(Seq(signalOff, signalOn, frameOn, frameAtS), Seq.empty, goal)
+            } yield out,
+          miss =>
+            for {
+              frameOff <- condOff(s"$G = $A", h10, hr10, miss)
+              out <- cases(s"$G = $S")(
+                same => condOn(s"$G = $S", h10, hr10, same).flatMap(e => exact(Seq(signalOff, signalOn, frameOff, e), Seq.empty, goal)),
+                apart => condOff(s"$G = $S", h10, hr10, apart).flatMap(e => exact(Seq(signalOff, signalOn, frameOff, e), Seq.empty, goal))
+              )
+            } yield out
+        )
+      } yield out
+
+    /** `Maximum (\a. inner a) 7 = score s` at `phi = 1/10`, at a pair with `s <= 7`. */
+    def maximumAtSignal(S: String, G: String, sLe: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        pointwise <- collapsed(S, G, h10, hr10)
+        same <- at(k(Decision.MaximumCongruenceBelow),
+          s"(!a:num. a <= 7 ==> (\\a:num. ${inner(S, G, "a", h10, hr10)}) a = (\\a:num. ${score(S, G, "a", h10, hr10)}) a) ==> " +
+            s"Maximum (\\a:num. ${inner(S, G, "a", h10, hr10)}) 7 = Maximum (\\a:num. ${score(S, G, "a", h10, hr10)}) 7")
+          .flatMap(mp(_, pointwise))
+        fT <- prop0(s"\\a:num. ${score(S, G, "a", h10, hr10)}")
+        sevenT <- nm("7")
+        sV <- numVar(S)
+        upper <- spec(k(Decision.MaximumUpper), fT, sevenT, sV).flatMap(mp(_, sLe))
+        bound <- prop(s"!a:num. a <= 7 ==> (\\a:num. ${score(S, G, "a", h10, hr10)}) a <= ${score(S, G, S, h10, hr10)}")
+        bounded <- every(bound) { (as, _, g) =>
+          val A = num(as(0))
+          cases(s"$A = $S")(
+            equal => exact(Seq(equal), Seq.empty, g),
+            other => belowSignal(S, G, A, other).flatMap(lt => exact(Seq.empty, Seq(lt), g))
+          )
+        }
+        cT <- prop0(score(S, G, S, h10, hr10))
+        least <- spec(k(Decision.MaximumLeast), fT, sevenT, cT).flatMap(mp(_, bounded))
+        goal <- prop(s"Maximum (\\a:num. ${inner(S, G, "a", h10, hr10)}) 7 = ${score(S, G, S, h10, hr10)}")
+        out <- exact(Seq(same), Seq(upper, least), goal)
+      } yield out
+
+    def rareAt(t: String): String =
+      s"Maximum (\\a:num. Sum (\\y:num. (1:real) / 8 * (COND (NUM_DIV $t 8 = y) $Q $Qr * " +
+        s"COND (NUM_MOD $t 8 = y) $h10 $hr10) * COND (y = a) (1:real) 0) 8) 7"
+
+    val ignored: R[Kernel.Thm] =
+      for {
+        whole <- unfold(Decision.ValueName, "8:num", "(8:num) * 8", "7:num", Prior, Rare, Utility)
+        out <- overPairs(
+          rareAt,
+          (s, g, sBelow, gBelow) => {
+            val (sT, gT) = (num(s), num(g))
+            for {
+              coords <- coordinates(sT, gT, gBelow)
+              moved <- rewritten(coords, rareAt(s"(8 * $sT + $gT)"))
+              sLe <- atMostSeven(sT, sBelow)
+              top <- maximumAtSignal(sT, gT, sLe)
+              onS <- condOn(s"$sT = $sT", Q, Qr, Kernel.refl(s))
+              goal <- prop(s"${rareAt(s"(8 * $sT + $gT)")} = (\\g:num. ((1:real) / 8 * $Q) * COND (g = $sT) $h10 $hr10) $gT")
+              out <- exact(Seq(moved, top, onS), Seq.empty, goal)
+            } yield out
+          },
+          s"(1:real) / 8 * $Q",
+          Seq(whole),
+          Ignored,
+          h10,
+          hr10
+        )
+      } yield out
+
+    val ignoredRule: R[Kernel.Thm] =
+      for {
+        statement <- prop(IgnoredRule)
+        out <- every(statement) { (vs, hs, goal) =>
+          val (sT, gT) = (num(vs(0)), num(vs(1)))
+          for {
+            coords <- coordinates(sT, gT, hs(1))
+            sLe <- atMostSeven(sT, hs(0))
+            pointwise <- collapsed(sT, gT, h10, hr10)
+            strict <- prop(s"!i:num. i <= 7 ==> ~(i = $sT) ==> " +
+              s"(\\a:num. ${inner(sT, gT, "a", h10, hr10)}) i < (\\a:num. ${inner(sT, gT, "a", h10, hr10)}) $sT")
+            below <- every(strict) { (is, ihs, g) =>
+              val I = num(is(0))
+              for {
+                atI <- at(pointwise, s"$I <= 7 ==> ${inner(sT, gT, I, h10, hr10)} = ${score(sT, gT, I, h10, hr10)}").flatMap(mp(_, ihs(0)))
+                atS <- at(pointwise, s"$sT <= 7 ==> ${inner(sT, gT, sT, h10, hr10)} = ${score(sT, gT, sT, h10, hr10)}").flatMap(mp(_, sLe))
+                lt <- belowSignal(sT, gT, I, ihs(1))
+                out <- exact(Seq(atI, atS), Seq(lt), g)
+              } yield out
+            }
+            fT <- prop0(s"\\a:num. ${inner(sT, gT, "a", h10, hr10)}")
+            sevenT <- nm("7")
+            rule <- spec(k(Decision.ArgmaxUnique), fT, sevenT, vs(0)).flatMap(mp(_, sLe, below))
+            out <- exact(coords :+ rule, Seq.empty, goal)
+          } yield out
+        }
+      } yield out
+
+    /* ------------------------------------- 7/20 <= 9/16 as an instance of BLACKWELL_GARBLING */
+
+    /** The term of the garbled experiment at state `Y` and signal `S`, at the pair's signal `t`. */
+    def cellOf(t: String, Y: String, S: String): String =
+      s"(COND (NUM_DIV $t 8 = $Y) $Q $Qr * COND (NUM_MOD $t 8 = $Y) $H $Hr) * COND ($S = NUM_DIV $t 8) (1:real) 0"
+
+    /** The garbled experiment at state `Y` and signal `S`, as `BLACKWELL_GARBLING` writes it. */
+    def garbledAt(Y: String, S: String): String = s"Sum (\\t:num. ${cellOf("t", Y, S)}) (8 * 8)"
+
+    /** `NUM_DIV t 8 < 8` for `t < 8 * 8`: otherwise `8 * 8 <= 8 * NUM_DIV t 8 <= t`. */
+    def quotientBelowEight(T: String, lt: Kernel.Thm): R[Kernel.Thm] = {
+      val D = s"NUM_DIV $T 8"
+      for {
+        wanted <- prop(s"$D < 8")
+        out <- cases(s"$D < 8")(
+          yes => Right(yes),
+          no =>
+            for {
+              le <- at(fact("NUM_LE_OF_NOT_LT"), s"~($D < 8) ==> 8 <= $D").flatMap(mp(_, no))
+              scaled <- at(fact("NUM_MUL_MONOTONE"), s"8 <= $D ==> 8 * 8 <= 8 * $D").flatMap(mp(_, le))
+              added <- at(fact("NUM_LE_ADD"), s"8 * $D <= 8 * $D + NUM_MOD $T 8")
+              whole <- at(fact("NUM_DIV_MOD"), s"8 * $D + NUM_MOD $T 8 = $T")
+              reached <- rw(whole, added)
+              both <- conj(scaled, reached)
+              far <- at(fact("NUM_LE_TRANS"), s"8 * 8 <= 8 * $D /\\ 8 * $D <= $T ==> 8 * 8 <= $T").flatMap(mp(_, both))
+              refused <- at(fact("NUM_LT_NOT_LE"), s"$T < 8 * 8 ==> ~(8 * 8 <= $T)").flatMap(mp(_, lt))
+              absurd <- rules.notElim(refused, far)
+              out <- classical.contradiction(wanted, absurd)
+            } yield out
+        )
+      } yield out
+    }
+
+    /** `CHANNEL (8 * 8) 8 Forget`: each row is the indicator of `NUM_DIV t 8`, which is below eight. */
+    val channel: R[Kernel.Thm] =
+      for {
+        opened <- unfold(Decision.ChannelName, "(8:num) * 8", "8:num", Forget)
+        rows <- prop("!t:num. t < 8 * 8 ==> DISTRIBUTION 8 (\\i:num. COND (i = NUM_DIV t 8) (1:real) 0)")
+        each <- every(rows) { (ts, ths, _) =>
+          val T = num(ts(0))
+          val D = s"NUM_DIV $T 8"
+          for {
+            below <- quotientBelowEight(T, ths(0))
+            dist <- unfold(Decision.DistributionName, "8:num", s"\\i:num. COND (i = $D) (1:real) 0")
+            nonneg <- prop(s"!i:num. i < 8 ==> (0:real) <= COND (i = $D) 1 0")
+            signs <- every(nonneg) { (is, _, g) =>
+              val I = num(is(0))
+              cases(s"$I = $D")(
+                on => condOn(s"$I = $D", "(1:real)", "0", on).flatMap(e => exact(Seq(e), Seq.empty, g)),
+                off => condOff(s"$I = $D", "(1:real)", "0", off).flatMap(e => exact(Seq(e), Seq.empty, g))
+              )
+            }
+            counted <- at(k(Decision.SumCondCount),
+              s"$D < 8 ==> Sum (\\i:num. COND (i = $D) (1:real) 0) 8 = 1 + (real_of_num 8 - 1) * 0").flatMap(mp(_, below))
+            total <- lin(Seq(counted), s"Sum (\\i:num. COND (i = $D) (1:real) 0) 8 = 1")
+            both <- conj(signs, total)
+            back <- Conv.sym(dist)
+            out <- LogicError.lift(Kernel.eqMp(back, both))
+          } yield out
+        }
+        back <- Conv.sym(opened)
+        out <- LogicError.lift(Kernel.eqMp(back, each))
+      } yield out
+
+    /**
+     * The garbled experiment is the signal's on the states and signals `VALUE` reads, `y < 8` and
+     * `s < 8`, and not as a function: at `s >= 8` no pair has `NUM_DIV t 8 = s` and the sum is `0`.
+     */
+    val sameAsSignal: R[Kernel.Thm] =
+      for {
+        statement <- prop(s"!y:num. !s:num. y < 8 ==> s < 8 ==> ${garbledAt("y", "s")} = COND (s = y) $Q $Qr")
+        out <- every(statement) { (vs, hs, goal) =>
+          val (y, s) = (num(vs(0)), num(vs(1)))
+          val whole = s"($H + (real_of_num 8 - 1) * $Hr)"
+          def rowAt(K: String) = s"(COND ($K = $y) $Q $Qr * $whole) * COND ($K = $s) (1:real) 0"
+          for {
+            groups <- at(k(Decision.SumGroups),
+              s"${garbledAt(y, s)} = Sum (\\k:num. Sum (\\i:num. ${cellOf("(8 * k + i)", y, s)}) 8) 8")
+            perK <- prop(s"!k:num. k < 8 ==> Sum (\\i:num. ${cellOf("(8 * k + i)", y, s)}) 8 = ${rowAt("k")}")
+            rows <- every(perK) { (ks, _, rowGoal) =>
+              val K = num(ks(0))
+              val weight = s"(COND ($K = $y) $Q $Qr * COND ($K = $s) (1:real) 0)"
+              for {
+                perI <- prop(s"!i:num. i < 8 ==> ${cellOf(s"(8 * $K + i)", y, s)} = $weight * COND (i = $y) $H $Hr")
+                cells <- every(perI) { (is, ihs, cellGoal) =>
+                  for {
+                    coords <- coordinates(K, num(is(0)), ihs(0))
+                    turned <- flip(s, K)
+                    out <- exact(coords :+ turned, Seq.empty, cellGoal)
+                  } yield out
+                }
+                spread <- at(fact("SUM_CONGRUENCE_BELOW"),
+                  s"(!i:num. i < 8 ==> ${cellOf(s"(8 * $K + i)", y, s)} = $weight * COND (i = $y) $H $Hr) ==> " +
+                    s"Sum (\\i:num. ${cellOf(s"(8 * $K + i)", y, s)}) 8 = Sum (\\i:num. $weight * COND (i = $y) $H $Hr) 8")
+                  .flatMap(mp(_, cells))
+                scaled <- at(fact("SUM_SCALE"),
+                  s"Sum (\\i:num. $weight * COND (i = $y) $H $Hr) 8 = $weight * Sum (\\i:num. COND (i = $y) $H $Hr) 8")
+                counted <- at(k(Decision.SumCondCount),
+                  s"$y < 8 ==> Sum (\\i:num. COND (i = $y) $H $Hr) 8 = $H + (real_of_num 8 - 1) * $Hr").flatMap(mp(_, hs(0)))
+                out <- exact(Seq(spread, scaled, counted), Seq.empty, rowGoal)
+              } yield out
+            }
+            outer <- at(fact("SUM_CONGRUENCE_BELOW"),
+              s"(!k:num. k < 8 ==> Sum (\\i:num. ${cellOf("(8 * k + i)", y, s)}) 8 = ${rowAt("k")}) ==> " +
+                s"Sum (\\k:num. Sum (\\i:num. ${cellOf("(8 * k + i)", y, s)}) 8) 8 = Sum (\\k:num. ${rowAt("k")}) 8")
+              .flatMap(mp(_, rows))
+            picked <- at(k(Decision.SumIndicator),
+              s"$s < 8 ==> Sum (\\k:num. ${rowAt("k")}) 8 = COND ($s = $y) $Q $Qr * $whole").flatMap(mp(_, hs(1)))
+            numerals <- realNumerals
+            out <- rewriting(Seq(groups, outer, picked), goal)(g => exact(numerals, Seq.empty, g))
+          } yield out
+        }
+      } yield out
+
+    /** The inner sum of `VALUE` over the states, at answer `A`, for an experiment's term `body`. */
+    def overStates(body: String, A: String): String =
+      s"Sum (\\y:num. (1:real) / 8 * $body * COND (y = $A) (1:real) 0) 8"
+
+    val garbledKernel: String = s"(\\y:num. \\s:num. ${garbledAt("y", "s")})"
+
+    /** `VALUE` of the garbled experiment is `VALUE` of the signal alone. */
+    val garbledIsSignal: R[Kernel.Thm] =
+      for {
+        pointwise <- sameAsSignal
+        kgOpen <- unfold(Decision.ValueName, "8:num", "8:num", "7:num", Prior, garbledKernel, Utility)
+        sigOpen <- unfold(Decision.ValueName, "8:num", "8:num", "7:num", Prior, Signal, Utility)
+        perS <- prop(s"!s:num. s < 8 ==> Maximum (\\a:num. ${overStates(garbledAt("y", "s"), "a")}) 7 = " +
+          s"Maximum (\\a:num. ${overStates(s"COND (s = y) $Q $Qr", "a")}) 7")
+        maxima <- every(perS) { (ss, shs, sGoal) =>
+          val S = num(ss(0))
+          for {
+            perA <- prop(s"!a:num. a <= 7 ==> ${overStates(garbledAt("y", S), "a")} = ${overStates(s"COND ($S = y) $Q $Qr", "a")}")
+            sums <- every(perA) { (as, _, _) =>
+              val A = num(as(0))
+              val term = s"(1:real) / 8 * ${garbledAt("y", S)} * COND (y = $A) (1:real) 0 = " +
+                s"(1:real) / 8 * COND ($S = y) $Q $Qr * COND (y = $A) (1:real) 0"
+              for {
+                perY <- prop(s"!y:num. y < 8 ==> $term")
+                terms <- every(perY) { (ys, yhs, yGoal) =>
+                  val Y = num(ys(0))
+                  for {
+                    one <- at(pointwise, s"$Y < 8 ==> $S < 8 ==> ${garbledAt(Y, S)} = COND ($S = $Y) $Q $Qr")
+                      .flatMap(mp(_, yhs(0), shs(0)))
+                    out <- exact(Seq(one), Seq.empty, yGoal)
+                  } yield out
+                }
+                out <- at(fact("SUM_CONGRUENCE_BELOW"),
+                  s"(!y:num. y < 8 ==> $term) ==> ${overStates(garbledAt("y", S), A)} = ${overStates(s"COND ($S = y) $Q $Qr", A)}")
+                  .flatMap(mp(_, terms))
+              } yield out
+            }
+            out <- at(k(Decision.MaximumCongruenceBelow),
+              s"(!a:num. a <= 7 ==> ${overStates(garbledAt("y", S), "a")} = ${overStates(s"COND ($S = y) $Q $Qr", "a")}) ==> " +
+                s"Maximum (\\a:num. ${overStates(garbledAt("y", S), "a")}) 7 = Maximum (\\a:num. ${overStates(s"COND ($S = y) $Q $Qr", "a")}) 7")
+              .flatMap(mp(_, sums))
+          } yield out
+        }
+        summed <- at(fact("SUM_CONGRUENCE_BELOW"),
+          s"(!s:num. s < 8 ==> Maximum (\\a:num. ${overStates(garbledAt("y", "s"), "a")}) 7 = " +
+            s"Maximum (\\a:num. ${overStates(s"COND (s = y) $Q $Qr", "a")}) 7) ==> " +
+            s"Sum (\\s:num. Maximum (\\a:num. ${overStates(garbledAt("y", "s"), "a")}) 7) 8 = " +
+            s"Sum (\\s:num. Maximum (\\a:num. ${overStates(s"COND (s = y) $Q $Qr", "a")}) 7) 8")
+          .flatMap(mp(_, maxima))
+        goal <- prop(s"VALUE 8 8 7 $Prior $garbledKernel $Utility = VALUE 8 8 7 $Prior $Signal $Utility")
+        out <- exact(Seq(kgOpen, sigOpen, summed), Seq.empty, goal)
+      } yield out
+
+    val garbled: R[Kernel.Thm] =
+      for {
+        arguments <- Seq("8", "8 * 8", "8", "7").foldLeft[R[Vector[Term]]](Right(Vector.empty))((acc, t) =>
+          acc.flatMap(done => nm(t).map(done :+ _)))
+        functions <- Seq(Prior, Full, Forget, Utility).foldLeft[R[Vector[Term]]](Right(Vector.empty))((acc, t) =>
+          acc.flatMap(done => prop0(t).map(done :+ _)))
+        instance <- spec(k(Decision.Blackwell), (arguments ++ functions)*)
+        discharged <- channel.flatMap(mp(instance, _))
+        bridge <- garbledIsSignal
+        moved <- rw(bridge, discharged)
+        wanted <- prop(Garbled)
+        out <- if (moved.conclusion == wanted) Right(moved) else Left(NotOfForm(Garbled, moved.conclusion))
+      } yield out
+
     for {
       e <- empty
       a <- average
       n <- newTask
-    } yield Values(e, a, n)
+      i <- ignored
+      r <- ignoredRule
+      g <- garbled
+    } yield Values(e, a, n, i, r, g)
   }
 }
 

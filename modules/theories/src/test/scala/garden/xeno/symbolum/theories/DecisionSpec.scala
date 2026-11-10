@@ -17,8 +17,8 @@ import garden.xeno.symbolum.logic.*
  * about distributions, marginals, channels, products and posteriors have every hypothesis met at
  * the uniform weight on two points, the posterior's positivity included.
  *
- * The essay's case E5 is the last test: three values, each a theorem with no hypothesis, and the
- * two comparisons the essay reads off them.
+ * The essay's case E5 is the last test but one: its values, each a theorem with no hypothesis,
+ * the first comparison as an instance of `BLACKWELL_GARBLING` and the second off the numbers.
  */
 class DecisionSpec extends AnyFlatSpec with Matchers {
 
@@ -240,26 +240,40 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The essay's case E5, `docs/adr/0063`: `7/20` with the signal alone, `9/16` with the frame on
-   * average, `1/8` for the same reader on new tasks. Recomputed outside the kernel on 2026-10-22 with
-   * exact fractions, by the essay's `sim.py` and by a second script written from its description,
-   * and the three agree; no tie for the optimal action at any of the sixty-four signals.
+   * The essay's case E5, `EssayCase`: `7/20` with the signal alone, `9/16` with the frame on
+   * average, `1/8` for the same reader on new tasks, and `7/20` again at `phi = 1/10`, where the rule
+   * answers `s` at every signal. Recomputed outside the kernel on 2026-10-22 at `phi = 1/2` and on
+   * 2026-11-10 at `phi = 1/10`, with exact fractions; no tie for the optimal action at any of the
+   * sixty-four signals at either.
+   *
+   * The comparison Blackwell's theorem makes is read off `BLACKWELL_GARBLING` rather than off the
+   * numbers: `EssayCase.Garbled` is that theorem at the garbling that drops `g`, and `7/20 <= 9/16`
+   * is what it says once the two values are put in. The comparison it does not make, on new tasks,
+   * is arithmetic on two theorems.
    */
-  "The essay's case E5" should "have the three values it prints, each a theorem with nothing assumed" in {
+  "The essay's case E5" should "have the values it prints, each a theorem with nothing assumed" in {
     val values = force(EssayCase.derive(decision, chain.successor))
-    Seq(values.empty -> EssayCase.Empty, values.average -> EssayCase.Average, values.newTask -> EssayCase.NewTask)
-      .foreach { case (theorem, text) =>
-        withClue(s"$text: ") {
-          // read with its redexes contracted: the new-task value applies the model's lambdas to the
-          // signal, and the theorem is stated as the kernel holds it, beta-normal
-          theorem.conclusion shouldBe force(steps.kit.prop(text))
-          theorem.hypotheses shouldBe empty
-          Derivation.axiomsOf(theorem) shouldBe threeAxioms
-        }
+    Seq(
+      values.empty -> EssayCase.Empty,
+      values.average -> EssayCase.Average,
+      values.newTask -> EssayCase.NewTask,
+      values.ignored -> EssayCase.Ignored,
+      values.ignoredRule -> EssayCase.IgnoredRule,
+      values.garbled -> EssayCase.Garbled
+    ).foreach { case (theorem, text) =>
+      withClue(s"$text: ") {
+        // read with its redexes contracted: the new-task value applies the model's lambdas to the
+        // signal, and the theorem is stated as the kernel holds it, beta-normal
+        theorem.conclusion shouldBe force(steps.kit.prop(text))
+        theorem.hypotheses shouldBe empty
+        Derivation.axiomsOf(theorem) shouldBe threeAxioms
       }
+    }
     // what the essay reads off them: the frame helps on average, as Blackwell says, and hurts on new tasks
+    val onAverage = force(steps.kit.rw(values.empty, values.garbled).flatMap(steps.kit.rw(values.average, _)))
+    onAverage.conclusion shouldBe proposition("(7:real) / 20 <= 9 / 16")
+    onAverage.hypotheses shouldBe empty
     val linarith = force(Linarith.construct(chain.magnitude.order))
-    force(linarith.prove(proposition("(7:real) / 20 <= 9 / 16")))
     force(linarith.prove(proposition("(1:real) / 8 < 7 / 20")))
   }
 
