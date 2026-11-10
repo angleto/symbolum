@@ -270,6 +270,13 @@ session named would be a different tool with the same name.
   take, and prints what `Cost` reports: the outcome, the price, the axioms, what it rests on, and
   where it fails if it fails. `|` separates two claims; the claim is **not** quoted, because `sbt`
   hands the arguments over already split and the shell's quotes are gone by then.
+- **Checking a proof written without Scala:**
+  `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Check path/to/file.sym"`, with `--json` for
+  a program reading the report. A document holds `define` and `theorem` declarations with
+  structured proofs, and the theorem each one ends with is the kernel's. `docs/language.md` is the
+  reference and `docs/adr/0070` the decision. One failed step marks its own declaration and every
+  other one is still checked, so a report lists every problem in the file with its line, the
+  refusal, what to try and the goal at that point.
 - **Looking for a lemma, by name or by shape:**
   `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SUM"`, or
   `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Find x:real + y:real = y + x"`. It puts the query to all

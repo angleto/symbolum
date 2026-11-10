@@ -452,6 +452,7 @@ docs/notation.md       every symbol, the prerequisites, and where to look things
 docs/architecture.md   the correctness argument, and where a change is dangerous
 docs/examples.md       what has been proved, and how far the asked-for areas are
 docs/proving.md        how to state and prove things
+docs/language.md       the proof language: writing a proof without Scala, and checking it
 docs/where-it-stands.md  what the proof side reaches today, and what is not written
 docs/evaluation.md     benchmarks, measurements, and where a language model fits
 docs/numerics.md       the two capabilities that rest on a numeric library, and what that costs
@@ -720,6 +721,7 @@ Test coverage includes:
 |---|---|
 | [docs/examples.md](docs/examples.md) | A dozen results the system has proved, each as a page carrying its statement, what it rests on and what it cost; and a table of the areas that have been asked for, with the distance to each measured rather than estimated |
 | [docs/proving.md](docs/proving.md) | The guide to the proof assistant: stating something, proving it, and what the tactics decide |
+| [docs/language.md](docs/language.md) | The proof language: a document of definitions and theorems with structured proofs, checked by the kernel, written without Scala. Every step and method, what a report says, and what it does not do yet. Every example in it is checked by `LanguageSpec` |
 | [docs/architecture.md](docs/architecture.md) | The trust boundary, the module graph, the kernel's ten rules, and where a change is dangerous |
 | [docs/evaluation.md](docs/evaluation.md) | Where the system stands against the benchmarks, what can be measured today, where a language model fits and where it must not, and the order to build in |
 | [docs/numerics.md](docs/numerics.md) | The Fourier transform and the Perron eigenvalue: which library they rest on, what it costs a consumer of the published artifact, what stays exact, and why a number from them is never a theorem |

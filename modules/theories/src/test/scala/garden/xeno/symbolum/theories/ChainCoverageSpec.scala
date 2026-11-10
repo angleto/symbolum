@@ -217,6 +217,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // halving, are proved again in each instance and published by none.
     "NumberSteps" -> NotADevelopment,
 
+    // Not a development, for `NumberSteps`' reason: it is `NumberSteps.numLin` made reachable from
+    // `tactics`, over the widest link's kit, so the proof language can say "this is arithmetic"
+    // about a goal over `num`. It declares nothing and publishes nothing.
+    "NaturalLinear" -> NotADevelopment,
+
     // Not a development, for `ExtremeValue`'s reason: continuity relative to `[a, b]` and the
     // interval theorems in that form, published in `Continuity.facts`, and the same for the
     // derivative's, published in `Derivative.facts`. Each declares nothing of its own.

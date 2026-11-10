@@ -847,7 +847,20 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     // This entry is only true while that holds, and it did not hold when the file was first
     // written: every refusal was turned into its message where it arrived, so a page could not
     // offer what `Ask` already offers for the same mistake. This assertion is what found that.
-    "Session.Outcome"
+    "Session.Outcome",
+
+    // The syntax of a proof document, which is an input for the reason `Session.Command` is one: a
+    // writer supplies it and the checker reads it, and nothing a caller receives is one of these.
+    "Document.Declaration",
+    "Document.Justification",
+    "Document.Step",
+    "Document.Method",
+
+    // What a checked declaration is and how it stood, which is a report and not a refusal: every
+    // problem the report carries has its next step already, asked of `Remedy` where the refusal was
+    // still a value, which is the reason `Session.Outcome` is named here.
+    "Elaborate.Kind",
+    "Elaborate.Status"
   )
 
   "Every verdict this module declares" should "be mapped by Remedy or named as an exception" in {

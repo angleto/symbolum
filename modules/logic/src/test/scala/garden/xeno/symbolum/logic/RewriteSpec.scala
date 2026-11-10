@@ -940,6 +940,12 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "this entry was written for is unchanged"),
     "Family.scala" ->
       "asks `finished` when the sample is not a number, and says which of the two it was",
+    "Elaborate.scala" ->
+      ("the proof language's `rewrite`, as a step and as a method, asks `Rewrite.rewriteReporting` " +
+        "and moves the goal only on `Stop.Settled`: `Steps` and `Size` are refusals naming which " +
+        "bound stopped the walk, and a proof never continues from the term it stopped at, which " +
+        "would be a true equation about a half-rewritten goal. Found on its first probe: `ADD_SYM` " +
+        "loops, and before this the step would have carried on from a waypoint"),
     "Recursion.scala" ->
       ("one rule carrying `select ... = name` into the step the recursion theorem produced; it " +
         "replaces one chosen term by one constant and cannot loop, and what comes back is handed " +

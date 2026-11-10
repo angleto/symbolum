@@ -93,6 +93,7 @@ final class Refutation private (val evaluate: Evaluate) {
 
     denied(opened)
       .flatMap(negation => solved(premises :+ negation, refuting = true))
+      .orElse(impossible(premises))
       .getOrElse(
         pinned(premises) match {
           case Some(reason) => Refutation.Undecided(reason)
@@ -106,6 +107,27 @@ final class Refutation private (val evaluate: Evaluate) {
         }
       )
   }
+
+  /**
+   * The premises decided unable to hold together, where that can be decided, before any sampling.
+   *
+   * A conclusion that cannot be denied as one linear relation, an equation above all, used to go
+   * straight to the sampler, and the sampler counts a point at which a premise is false as a point
+   * that answered: `{x < 0, 0 < x}` with the conclusion `x = 7` came back `Survived(100)`, a hundred
+   * points of which none was a point where the premises held. Found by the proof language, whose
+   * report printed that a goal under contradictory hypotheses had survived a hundred points. The
+   * order conclusions never had the defect, because their denial goes to the solver with the
+   * premises and the solver sees the contradiction.
+   *
+   * Only `Contradictory` is taken from here. Every other answer `satisfying` gives is about the
+   * premises alone, and the question asked of this method is about the conclusion too.
+   */
+  private def impossible(premises: Vector[Term]): Option[Refutation.Outcome] =
+    if (premises.isEmpty) None
+    else satisfying(premises) match {
+      case contradictory: Refutation.Contradictory => Some(contradictory)
+      case _ => None
+    }
 
   /**
    * The conclusion denied, as a premise, when denying it is one linear relation.

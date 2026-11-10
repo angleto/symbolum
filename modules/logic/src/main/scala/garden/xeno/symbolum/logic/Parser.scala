@@ -87,6 +87,28 @@ object Parser {
   def proposition(theory: Theory, notation: Notation, text: String): Either[LogicError, Term] =
     parse(theory, notation, text, Some(Type.Bool))
 
+  /**
+   * A term read where some free names already have a type, which is what a proof in progress is.
+   *
+   * A proof that has fixed `n : num` and then writes `n + 0 = n` means that `n`, and nothing in the
+   * text says so: without this, `n` is a fresh free variable whose type the numerals cannot settle,
+   * and the claim is refused as ambiguous or, worse, read at a type the proof never fixed. The
+   * types are seeded into the rule that one free name has one type throughout a term, so `fixed`
+   * decides the first occurrence exactly as an earlier occurrence would have, and an annotation
+   * disagreeing with it is the same type error it would be between two occurrences.
+   *
+   * A name in `fixed` the theory declares as a constant is still the constant: the map is consulted
+   * only where the text names something the theory does not.
+   */
+  def term(
+    theory: Theory,
+    notation: Notation,
+    text: String,
+    expected: Option[Type],
+    fixed: Map[String, Type]
+  ): Either[LogicError, Term] =
+    parse(theory, notation, text, expected, fixed)
+
   /** A type. */
   def parseType(theory: Theory, text: String): Either[LogicError, Type] = {
     val notation = Notation.standard
@@ -105,14 +127,15 @@ object Parser {
     theory: Theory,
     notation: Notation,
     text: String,
-    expected: Option[Type]
+    expected: Option[Type],
+    fixed: Map[String, Type] = Map.empty
   ): Either[LogicError, Term] = {
     val reader = new Reader(notation)
     Lexer.tokenise(notation.symbols, text).flatMap { tokens =>
       reader.readTerm(Cursor(tokens, 0)).flatMap { case (pre, rest) =>
         for {
           _ <- reader.expectEnd(rest)
-          result <- new Elaborator(theory, notation).run(pre, expected)
+          result <- new Elaborator(theory, notation).run(pre, expected, fixed)
         } yield result
       }
     }
@@ -509,8 +532,8 @@ object Parser {
    */
   private final class Elaborator(theory: Theory, notation: Notation) {
 
-    def run(pre: Pre, expected: Option[Type]): Either[LogicError, Term] =
-      infer(pre, Map.empty, Context.empty).flatMap { inferred =>
+    def run(pre: Pre, expected: Option[Type], fixed: Map[String, Type] = Map.empty): Either[LogicError, Term] =
+      infer(pre, Map.empty, Context.empty.copy(freeTypes = fixed)).flatMap { inferred =>
         for {
           constrained <- constrain(inferred.ty, expected, inferred.context)
           settled <- settleNumerals(inferred.typed, constrained)

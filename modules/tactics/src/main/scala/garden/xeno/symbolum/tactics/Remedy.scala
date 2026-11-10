@@ -548,8 +548,10 @@ object Remedy {
    * the three that are not answers get three different next steps.
    */
   def of(outcome: Refutation.Outcome): Remedy = outcome match {
+    // Each value through `Model.show`, as the finite half below already was: a bare `toString`
+    // printed `x=Quantity(-0.51)`, the constructor of the model rather than the number.
     case Refutation.Found(witness, _) =>
-      Settled(s"a point where the claim fails: ${point(witness)}")
+      Settled(s"a point where the claim fails: ${point(witness.map { case (name, value) => name -> Model.show(value) })}")
 
     // The finite half is shown beside the rational one rather than dropped: a point over a sized
     // type is part of where the premises hold, and a message naming only the reals would say a set
