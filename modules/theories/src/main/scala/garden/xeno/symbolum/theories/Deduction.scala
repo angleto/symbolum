@@ -475,6 +475,36 @@ object Deduction {
    */
   val DeniedImplication: String = "NUM_PROV_NOT_IMP"
 
+  /**
+   * `|- !i t p. NUM_FORM p ==> NUM_TERM t ==> NUM_CLOSED t ==> NUM_PROV (p[t/i]) ==>
+   *     NUM_PROV (?i. p)`
+   *
+   * Existential introduction, which the object language has no axiom for because its existential
+   * is an abbreviation, `~!i. ~p` ([[Language.ExistsName]]). It is specialisation read backwards:
+   * the axiom gives `(!i. ~p) ==> ~(p[t/i])`, contraposed it is `~~(p[t/i]) ==> ~!i. ~p`, and the
+   * instance doubled by [[DoubleNegationIntroduction]] detaches it. The witness is closed because
+   * specialisation asks that of what it substitutes, so this introduces at a closed term and at
+   * nothing else.
+   */
+  val ExistentialIntroduction: String = "NUM_PROV_EXISTS_INTRO"
+
+  /**
+   * `|- !i m n. m < n ==> NUM_PROV (NUM_LESS i (numeral m) (numeral n))`
+   *
+   * PA proves a true strict order between two numerals. `NUM_LESS i s t` is the existential
+   * `?i. s + S v_i = t` ([[Language.LessName]]), so this is [[ExistentialIntroduction]] at the
+   * witness `numeral d`, where `SUC m + d = n` is what `m < n` unfolds to, and the instance is
+   * [[NumeralAddition]] at `m` and `SUC d` with the successor's numeral read as `S (numeral d)`.
+   *
+   * **The other half, `~(numeral m < numeral n)` for `m >= n`, is not here, and the reason is the
+   * object logic rather than the effort.** Its body is `!z. ~(numeral m + S z = numeral n)`, a
+   * claim about a variable, and every route to it instantiates an axiom of PA at an open term:
+   * `numeral m + S z = S (numeral m + z)` is `NUM_PA_ADD_SUC` at `numeral m` and `v_z`.
+   * Specialisation and replacement are both stated for closed terms only (the docstring of
+   * `Language.ClosedName` says what that costs), so no derivation found here reaches it.
+   */
+  val NumeralsOrdered: String = "NUM_PROV_LESS_NUMERAL"
+
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
     Weaken ->
@@ -580,7 +610,12 @@ object Deduction {
         "NUM_PROV (NUM_CODE 7 (NUM_PAIR p q))"),
     DeniedImplication ->
       ("!p:num q:num. NUM_FORM p ==> NUM_FORM q ==> NUM_PROV p ==> NUM_PROV (NUM_CODE 6 q) ==> " +
-        "NUM_PROV (NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR p q)))")
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR p q)))"),
+    ExistentialIntroduction ->
+      ("!i:num t:num p:num. NUM_FORM p ==> NUM_TERM t ==> NUM_CLOSED t ==> " +
+        "NUM_PROV (NUM_SUBST_FORM i t p) ==> NUM_PROV (NUM_EXISTS i p)"),
+    NumeralsOrdered ->
+      "!i:num m:num n:num. m < n ==> NUM_PROV (NUM_LESS i (NUM_NUMERAL m) (NUM_NUMERAL n))"
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -633,7 +668,10 @@ object Deduction {
             DeniedCongruence -> builder.checked(DeniedCongruence, builder.deniedCongruence),
             NumeralsDistinct -> builder.checked(NumeralsDistinct, builder.numeralsDistinct),
             ImplicationOfDenial -> builder.checked(ImplicationOfDenial, builder.implicationOfDenial),
-            DeniedImplication -> builder.checked(DeniedImplication, builder.deniedImplication)
+            DeniedImplication -> builder.checked(DeniedImplication, builder.deniedImplication),
+            ExistentialIntroduction ->
+              builder.checked(ExistentialIntroduction, builder.existentialIntroduction),
+            NumeralsOrdered -> builder.checked(NumeralsOrdered, builder.numeralsOrdered)
           )
         )
       )
@@ -2985,6 +3023,150 @@ object Deduction {
       val everything = force(
         rules.conjIntro(base, stepClosed).flatMap(rules.mp(instance, _)))
       force(rules.spec(m, everything).flatMap(rules.gen(m, _)))
+    }
+
+    /** [[ExistentialIntroduction]]. Specialisation of `~p`, contraposed, and the instance doubled. */
+    lazy val existentialIntroduction: Kernel.Thm = {
+      val i = Term.variable("i", numbers)
+      val t = Term.variable("t", numbers)
+      val p = Term.variable("p", numbers)
+      val formulaP = assumed(isFormula(p))
+      val termT = assumed(isTerm(t))
+      val closedT = assumed(isClosed(t))
+      val instance = substituted(i, t, p)
+      val holds = isProvable(instance)
+
+      val np = neg(p)
+      val formulaNp = formNot(p, formulaP)
+      val quantified = forAll(i, np)
+      val formulaQuantified = force(
+        rules.specAll(formulaOfUniversal, List(i, np)).flatMap(rules.mp(_, formulaNp)))
+      val formulaInstance = force(
+        rules
+          .specAll(force(language.fact(Language.FormulaSubstituteKeepsFormulas)), List(i, t, p))
+          .flatMap(rules.mp(_, formulaP))
+          .flatMap(rules.mp(_, termT)))
+      val denied = neg(instance)
+
+      // `(!i. ~p) ==> (~p)[t/i]`, with the substitution moved inside the negation.
+      val logical = force(
+        rules
+          .specTo(
+            specialising,
+            imply(isFormula(np),
+              imply(isTerm(t), imply(isClosed(t), isLogical(imp(quantified, substituted(i, t, np)))))))
+          .flatMap(rules.mp(_, formulaNp))
+          .flatMap(rules.mp(_, termT))
+          .flatMap(rules.mp(_, closedT)))
+      val inside = force(rules.specAll(substituteNegation, List(i, t, p)))
+      val specialised = force(
+        Conv
+          .apTerm(provableConstant, pairCongruence(seven, Kernel.refl(quantified), inside))
+          .flatMap(equation =>
+            LogicError.lift(Kernel.eqMp(equation, axiom(imp(quantified, substituted(i, t, np)), logical)))))
+
+      val doubled = detach(instance, neg(denied),
+        doubleNegationIntroducedAt(instance, formulaInstance), assumed(holds))
+      val reached = tollens(quantified, denied, formulaQuantified, formNot(instance, formulaInstance),
+        specialised, doubled)
+
+      val existential = force(
+        rules
+          .specAll(force(language.fact(Language.ExistsCases)), List(i, p))
+          .flatMap(Conv.sym)
+          .flatMap(Conv.apTerm(provableConstant, _))
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, reached))))
+      force(
+        rules
+          .disch(holds, existential)
+          .flatMap(rules.disch(isClosed(t), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.disch(isFormula(p), _))
+          .flatMap(rules.genAll(_, List(i, t, p))))
+    }
+
+    /** [[NumeralsOrdered]]. The order's gap is the witness, and the instance is a numeral sum. */
+    lazy val numeralsOrdered: Kernel.Thm = {
+      val peanoTheory = language.numbering.peano
+      val binary = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+      val numeralConstant = constant(Language.NumeralName, Type.fun(numbers, numbers))
+      val successorConstant = constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      val lessConstant = constant(Peano.StrictOrder, binary)
+      def numeral(x: Term): Term = applied(numeralConstant, List(x))
+      def suc(x: Term): Term = applied(successorConstant, List(x))
+      def numeralTerm(x: Term): Kernel.Thm =
+        force(rules.spec(x, force(language.fact(Language.NumeralIsTerm))))
+      def numeralClosed(x: Term): Kernel.Thm =
+        force(rules.spec(x, force(language.fact(Language.NumeralIsClosed))))
+
+      val i = Term.variable("i", numbers)
+      val m = Term.variable("m", numbers)
+      val n = Term.variable("n", numbers)
+      val below = applied(lessConstant, List(m, n))
+      val (nm, nn) = (numeral(m), numeral(n))
+      val variable = objVar(i)
+      val variableIsATerm = force(rules.spec(i, variableIsTerm))
+      val successorOfVariable = objSucc(variable)
+      val successorIsATerm =
+        force(rules.spec(variable, successorIsTerm).flatMap(rules.mp(_, variableIsATerm)))
+      val sum = objSum(nm, successorOfVariable)
+      val sumIsATerm = force(
+        rules.specAll(sumIsTerm, List(nm, successorOfVariable))
+          .flatMap(rules.mp(_, numeralTerm(m)))
+          .flatMap(rules.mp(_, successorIsATerm)))
+      val body = objEq(sum, nn)
+      val formulaBody = formEq(sum, nn, sumIsATerm, numeralTerm(n))
+      val introducing = existentialIntroduction
+
+      // `m < n` is `NUM_LE (SUC m) n`, which is `?d. SUC m + d = n`.
+      val gap = force(
+        for {
+          strict <- peanoTheory.definition(Peano.StrictOrder)
+          atMost <- peanoTheory.definition(Peano.NonStrictOrder)
+          first <- Conv.unfold(strict, List(m, n))
+          widened <- LogicError.lift(Kernel.eqMp(first, assumed(below)))
+          second <- Conv.unfold(atMost, List(suc(m), n))
+          opened <- LogicError.lift(Kernel.eqMp(second, widened))
+        } yield opened)
+
+      val reached = openAt(gap, "d", Term.freeVariables(isProvable(body)) + i + m + n) { (d, equal) =>
+        val witness = numeral(d)
+        // `m + SUC d = n`, from `SUC m + d = n` by the shift.
+        val shifted = force(
+          rules.specAll(pf("NUM_ADD_SHIFT"), List(m, d)).flatMap(Conv.trans(_, equal)))
+        // PA's sum of the two numerals, read at the shapes the body has.
+        val added = force(rules.specAll(numeralAddition, List(m, suc(d))))
+        val successorNumeral = force(rules.spec(d, force(language.fact(Language.NumeralAtSuccessor))))
+        val read = pairCongruence(five,
+          pairCongruence(three, Kernel.refl(nm), successorNumeral),
+          force(Conv.apTerm(numeralConstant, shifted)))
+        val instanceProved = force(
+          Conv.apTerm(provableConstant, read).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, added))))
+        // The body at the witness, computed: the numerals are closed and the variable is filled.
+        val computed = acrossEquality(i, witness, sum, nn,
+          acrossSum(i, witness, nm, successorOfVariable,
+            idle(i, witness, nm, numeralTerm(m), numeralClosed(m)),
+            acrossSuccessor(i, witness, variable, filled(i, witness))),
+          idle(i, witness, nn, numeralTerm(n), numeralClosed(n)))
+        val atWitness = force(
+          Conv.sym(computed)
+            .flatMap(Conv.apTerm(provableConstant, _))
+            .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, instanceProved))))
+        val existential = force(
+          rules
+            .specAll(introducing, List(i, witness, body))
+            .flatMap(rules.mp(_, formulaBody))
+            .flatMap(rules.mp(_, numeralTerm(d)))
+            .flatMap(rules.mp(_, numeralClosed(d)))
+            .flatMap(rules.mp(_, atWitness)))
+        force(
+          rules
+            .specAll(force(language.fact(Language.LessCases)), List(i, nm, nn))
+            .flatMap(Conv.sym)
+            .flatMap(Conv.apTerm(provableConstant, _))
+            .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, existential))))
+      }
+      force(rules.disch(below, reached).flatMap(rules.genAll(_, List(i, m, n))))
     }
 
     def checked(name: String, theorem: Kernel.Thm): Kernel.Thm = {

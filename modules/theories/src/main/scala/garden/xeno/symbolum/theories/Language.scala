@@ -906,8 +906,10 @@ object Language {
    * scheme asks that `t` be *substitutable* for the index in the formula, which permits a `t` with
    * free variables as long as none is captured; that is a recursion over the formula this
    * development has not got. What is lost is instantiating a universal at a variable, so the object
-   * system is weaker than first-order logic here. What is not lost is Goedel's argument, which
-   * substitutes numerals, and a numeral is closed.
+   * system is weaker than first-order logic here. Goedel's argument substitutes numerals, and a
+   * numeral is closed, but completeness for bounded formulas is a claim about a variable below a
+   * numeral, and on 2026-11-10 every derivation tried for it needed an axiom at an open term:
+   * `docs/adr/0040` has the measurement and what it leaves undecided.
    */
   val ClosedName: String = "NUM_CLOSED"
 

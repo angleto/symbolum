@@ -113,3 +113,27 @@ Not measured: that completeness for bounded formulas is within reach of `Deducti
 they stand. It needs, at least, PA proving `x < S n -> x < n \/ x = n` at a numeral and the
 bounded quantifiers unfolded into finite conjunctions and disjunctions; neither exists. That is
 the claim in this record a reader should doubt first, and it is the next piece of work.
+
+## What the first attempt at it measured, 2026-11-10
+
+The existential side holds. `NUM_PROV_EXISTS_INTRO` introduces `?i. p` from `p[t/i]` at a closed
+`t`, as specialisation of `~p` contraposed, and `NUM_PROV_LESS_NUMERAL` proves `numeral m <
+numeral n` for every `m < n` with it. Both cost the naturals' two axioms and nothing else.
+
+The universal side is where the doubt was placed, and the doubt survived. Refuting
+`numeral m < numeral n` for `m >= n` is proving `!z. ~(numeral m + S v_z = numeral n)`, and the
+case split `x < S n ==> x < n \/ x = n` is a statement about a variable `x`. Every derivation of
+either that was tried needs an axiom of PA at an **open** term: `numeral m + S v_z = S (numeral m
++ v_z)` is `NUM_PA_ADD_SUC` at `numeral m` and `v_z`, and `~(S (a + b) = 0)` is `S x != 0` at
+`a + b`. `NUM_LOGIC_SPECIALISE` and `NUM_LOGIC_REPLACE` take closed terms only, and the induction
+scheme substitutes `0` and `S i` for `i` and nothing else, so none of them reaches those instances.
+The docstring of `Language.ClosedName` named this cost and judged that Goedel's argument does not
+pay it, because it substitutes numerals; completeness for bounded formulas is the place where it
+does pay it, since a bounded universal is a claim about a variable.
+
+What this does not establish: that no derivation exists. No proof of underivability was attempted,
+and the induction scheme's open instance `p[S i/i]` is the one place an open term enters. The
+textbook repair is the scheme's own condition, a term **substitutable** for the index rather than
+a closed one, which needs a recursion over the formula `Language` does not have, and changes what
+`NUM_PROV` means for every fact above it. That is a decision about the object logic, and it is
+taken before completeness for bounded formulas is attempted again, not inside it.

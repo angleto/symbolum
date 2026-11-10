@@ -467,7 +467,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the run beside the same figure. Plus eight.
     // 984 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`: the eight
     // `RediscoverySpec` counts beside the same figure. Plus eight.
-    proposals.size shouldBe 984
+    // 989 with the strict order between numerals, 2026-11-10, card `4102f131`: the five
+    // `RediscoverySpec` counts beside the same figure. Plus five.
+    proposals.size shouldBe 989
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1508,7 +1510,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 846 with triangular maps, 2026-10-24, card `09bca345`, read off the run and not decomposed:
     // claims about an arbitrary `f` or `iterate` under the triangular hypothesis, which no procedure
     // reads. Plus three.
-    open shouldBe 846
+    // 850 with the strict order between numerals, 2026-11-10, card `4102f131`, read off the run:
+    // four of its five weakenings, claims about `NUM_PROV` that no procedure reads. Plus four.
+    open shouldBe 850
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1923,7 +1927,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 227 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`, read off the run:
     // the eight new weakenings, every one over an arbitrary `h` or `g` that no procedure reads, so
     // `open` above does not move. Plus eight.
-    unreadable shouldBe 227
+    // 228 with the strict order between numerals, 2026-11-10, card `4102f131`: the fifth of its
+    // weakenings, derived as five less the four `open` above read off the run, which this one did
+    // not reach because `open` was red. Plus one.
+    unreadable shouldBe 228
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

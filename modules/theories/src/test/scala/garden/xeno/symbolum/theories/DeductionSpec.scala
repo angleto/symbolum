@@ -241,6 +241,49 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * PA proves `1 < 3` between numerals, and the code is the existential the order abbreviates.
+   *
+   * The strict order is a pair of numbers apart by two rather than by one, so the witness is
+   * `numeral 1` and not zero, which is the case a witness wired to `0` would get right by accident.
+   * The antecedent is derived from the naturals' own order rather than assumed, so the instance is
+   * about something. The conclusion is compared twice: as `NUM_LESS`, which is what the fact
+   * states, and opened by `NUM_LESS_CASES` into `~!5. ~(numeral 1 + S v5 = numeral 3)`, which is
+   * what [[Deduction.ExistentialIntroduction]] put there.
+   */
+  it should "prove a true strict order between numerals by introducing its witness" in {
+    val theorem = force(deduction.fact(Deduction.NumeralsOrdered))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+    Derivation.axiomsOf(force(deduction.fact(Deduction.ExistentialIntroduction))) should have size 2
+
+    val peano = chain.peano
+    val one = "SUC ZERO"
+    val two = "SUC (SUC ZERO)"
+    val three = "SUC (SUC (SUC ZERO))"
+    val oneTwo = force(rules.spec(term(one), force(peano.fact(Peano.BelowSuccessor))))
+    val twoThree = force(rules.spec(term(two), force(peano.fact(Peano.BelowSuccessor))))
+    val oneThree = force(
+      rules
+        .specAll(force(peano.fact(Peano.StrictTransitive)), List(term(one), term(two), term(three)))
+        .flatMap(implication => rules.conjIntro(oneTwo, twoThree).flatMap(rules.mp(implication, _))))
+    val instance = force(rules.specAll(theorem, List(term("5"), term(one), term(three)))
+      .flatMap(rules.mp(_, oneThree)))
+    instance.hypotheses shouldBe empty
+    instance.conclusion shouldBe proposition(
+      s"NUM_PROV (NUM_LESS 5 (NUM_NUMERAL ($one)) (NUM_NUMERAL ($three)))")
+
+    val opened = force(
+      rules
+        .specAll(force(chain.language.fact(Language.LessCases)),
+          List(term("5"), term(s"NUM_NUMERAL ($one)"), term(s"NUM_NUMERAL ($three)")))
+        .flatMap(Conv.apTerm(constant(Provability.ProvableName, Type.fun(numbers, Type.Bool)), _))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance))))
+    opened.conclusion shouldBe proposition(
+      s"NUM_PROV (NUM_EXISTS 5 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR " +
+        s"(NUM_NUMERAL ($one)) (NUM_CODE 2 (NUM_CODE 0 5)))) (NUM_NUMERAL ($three)))))")
+  }
+
+  /**
    * The object theory's multiplication on numerals, which stands on the addition above it.
    *
    * The same two assertions for the same two reasons, and one more that is about the ORDER rather

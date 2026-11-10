@@ -433,7 +433,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 984 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`: the eight facts of
     // `RuleFamily.Statements` that are implications, all but `PASCAL_MAP_EXISTS`, counted before the
     // run and equal to it. Plus eight.
-    propose.weakenings.size shouldBe 984
+    // 989 with the strict order between numerals, 2026-11-10, card `4102f131`: one antecedent per
+    // hypothesis, four on `NUM_PROV_EXISTS_INTRO` and one on `NUM_PROV_LESS_NUMERAL`, derived before
+    // the run and equal to it. Plus five.
+    propose.weakenings.size shouldBe 989
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -738,8 +738,15 @@ negation the hypothesis at its body with `Deduction`'s double negation for the f
 implication `NUM_PROV_WEAKEN`, `NUM_PROV_IMP_DENIED` or `NUM_PROV_NOT_IMP` by the truth of its two
 sides. `TruthSpec` discharges both conditions at `~(0 = 0)` and gets `NUM_PROV ~~(0 = 0)` back.
 
-Not written above that: the bounded quantifiers, where `NUM_LESS` is itself an existential and PA
-has to prove `x < S n` splits; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so
+**PA proves a true strict order between numerals, since 2026-11-10**, by
+`NUM_PROV_LESS_NUMERAL`: `NUM_LESS` is an existential, and `NUM_PROV_EXISTS_INTRO` introduces one
+at a closed witness, which is specialisation contraposed. The other half, refuting a false order,
+is not written, and neither is anything about a variable bounded by a numeral, for one reason that
+is the object logic's: every route found to them instantiates an axiom of PA at an open term, and
+specialisation and replacement take closed terms only. `docs/adr/0040` has the measurement.
+
+Not written above that: the bounded quantifiers, where PA has to prove `x < S n` splits, which is
+that open-term question; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale
