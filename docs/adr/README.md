@@ -101,3 +101,4 @@ the rejected option attractive, and they will.
 | [0068](0068-the-licence-is-agplv3.md) | The licence is the AGPLv3, so a network service built on this code owes its source too | accepted, supersedes 0050 |
 | [0069](0069-one-instance-per-term.md) | One instance per term, because a chain held 13.2 million applications spelling 1.68 million | accepted |
 | [0070](0070-a-proof-language-checked-by-the-kernel-and-written-without-scala.md) | A proof language, checked by the kernel and written without Scala | accepted |
+| [0071](0071-a-system-of-equations-is-decided-by-its-ideal-and-the-kernel-checks-the-cofactors.md) | A system of equations is decided by its ideal, and the kernel checks the cofactors | accepted |

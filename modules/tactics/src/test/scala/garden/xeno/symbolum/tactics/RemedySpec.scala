@@ -626,6 +626,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       ValueUnidentified(x, Term.variable("y", realType), NotEqualTo(x, Term.variable("y", realType))),
       // Two forms that differ over an atom that is not free: a person looks, and it is not decided.
       NotEqualAsRead(x, Term.variable("y", realType), Vector(x)),
+      // A conclusion outside the ideal of its equations: a person looks, and it is not decided,
+      // because `x * x = 0 ==> x = 0` is true and outside it.
+      OutsideTheIdeal(x, "x"),
       // Both arms of the one refusal that carries another: a caller's procedure that refused, and a
       // caller's procedure that returned something else. The remedy is read off the inner reason, so
       // the branch is only worth running when the two inner reasons take different arms there.

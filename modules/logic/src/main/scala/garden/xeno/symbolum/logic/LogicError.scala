@@ -365,6 +365,25 @@ final case class NotEqualAsRead(wanted: Term, found: Term, bound: Vector[Term]) 
 }
 
 /**
+ * The conclusion is not a consequence of the hypotheses' equations by ring arithmetic alone: it does
+ * not lie in the ideal they generate, and `remainder` is what is left of it modulo that ideal.
+ *
+ * **Never decided, and the reason is a counterexample rather than caution.** Membership in the
+ * ideal is decided exactly, but it is a question about every commutative ring at once, and the
+ * claim is about the reals. `x * x = 0 ==> x = 0` is true of the reals and `x` is not in the ideal
+ * of `x * x`; `0 < a ==> a * a = 4 ==> a = 2` is true and needs the order, which an ideal does not
+ * see. So the reading is coarser than the claim, which is `Unread`'s last cause. Calling it decided
+ * would be the defect [[NotEqualAsRead]] was written to repair, one procedure further on.
+ */
+final case class OutsideTheIdeal(goal: Term, remainder: String) extends LogicError {
+  def render(show: Term => String): String =
+    s"${show(goal)} does not follow from its equations by ring arithmetic: modulo the ideal they " +
+      s"generate it leaves $remainder, which says nothing about whether it holds of the reals"
+
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+/**
  * A procedure established a value and could not say whether it is the one it was asked about.
  *
  * Its own case rather than [[NotEqualTo]], which is what it arrived as and what made it wrong.

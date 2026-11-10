@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Chain, Convergence, Field, Library, Linarith, LinearForm, Order, Real, RealTheory, Ring, Signature, Value}
+import garden.xeno.symbolum.theories.{Chain, Convergence, Field, Ideal, Library, Linarith, LinearForm, Order, Real, RealTheory, Ring, Signature, Value}
 
 /**
  * One entry point for "prove this goal", and one rule for which refusal survives.
@@ -409,15 +409,26 @@ final class Prove private (
             linarith.prove(goal) match {
               case Right(theorem) => Right(Prove.Outcome.Settled(theorem))
 
-              // Both refused, and there are three things the refusal can be, in decreasing order
-              // of what it tells a caller. `Field` proves it at a price, and the price is named.
-              // Or a side carries something neither procedure reads, and that is named. Or RING's
-              // "the two normal forms differ" is the whole of what is known, which is the honest
-              // answer when the identity is simply false. The example this comment used to carry,
-              // `2 * ((3 * n + 1) / 2) = 3 * n + 1`, is proved since 2026-09-09; the witness for
-              // the first case is `(2 * y) / y = 2`, which holds wherever `y` is not zero.
+              // Neither reads the hypotheses as anything but linear facts, and a conclusion that is a
+              // member of the ideal their equations generate is out of reach of both: `aime_1990_p15`
+              // is the witness. IDEAL is asked third, and asked for a theorem only: its refusal is
+              // never the one reported, because "not in the ideal" is unread rather than decided and
+              // the refusals kept below say more about a goal that fails here.
               case Left(_) =>
-                Left(priceOf(goal).getOrElse(FromLogic(named(goal).getOrElse(fromRing))))
+                ideal.prove(goal) match {
+                  case Right(theorem) => Right(Prove.Outcome.Settled(theorem))
+
+                  // All three refused, and there are three things the refusal can be, in
+                  // decreasing order of what it tells a caller. `Field` proves it at a price, and
+                  // the price is named. Or a side carries something neither procedure reads, and
+                  // that is named. Or RING's "the two normal forms differ" is the whole of what is
+                  // known, which is the honest answer when the identity is simply false. The
+                  // example this comment used to carry, `2 * ((3 * n + 1) / 2) = 3 * n + 1`, is
+                  // proved since 2026-09-09; the witness for the first case is `(2 * y) / y = 2`,
+                  // which holds wherever `y` is not zero.
+                  case Left(_) =>
+                    Left(priceOf(goal).getOrElse(FromLogic(named(goal).getOrElse(fromRing))))
+                }
             }
         }
 
@@ -589,6 +600,15 @@ final class Prove private (
    * 58.
    */
   private val intuitionistic: Intuitionistic = Intuitionistic(reals.logic)
+
+  /**
+   * The equations among a goal's hypotheses, with the conclusion as a member of their ideal.
+   *
+   * Built from [[ring]] and not passed in, because it holds nothing of its own: a certificate is
+   * searched for and `Ring` checks it, so the procedure is the ring plus a search, and a second
+   * parameter would be a second place for the two to disagree about which ring that is.
+   */
+  private val ideal: Ideal = Ideal.construct(ring)
 
   /**
    * The whole classical propositional fragment, decided by a solver and certified, where there is

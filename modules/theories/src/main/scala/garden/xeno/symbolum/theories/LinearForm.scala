@@ -96,7 +96,7 @@ object LinearForm {
    * denominator is not one either, and it never becomes one by looking harder: whether `inv y` is
    * anything at all needs `~(y = 0)`, which is `Field`'s to charge for and not this procedure's.
    */
-  private def coefficient(reals: Signature, term: Term): Option[Rational] = {
+  private[theories] def coefficient(reals: Signature, term: Term): Option[Rational] = {
     def denominator(current: Term): Option[Rational] = coefficient(reals, current).filter(!_.isZero)
 
     Numeral.valueOf(reals, term).map(Rational.of) match {

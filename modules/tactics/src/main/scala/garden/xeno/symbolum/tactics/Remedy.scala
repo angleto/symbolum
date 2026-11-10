@@ -374,6 +374,15 @@ object Remedy {
           "identity may hold for a reason this prover does not read"
       )
 
+    // A person, for `NotEqualAsRead`'s reason: the ideal is decided and the claim is not, so the
+    // sentence says what an ideal cannot see and where the claim may still be closed from.
+    case OutsideTheIdeal(goal, remainder) =>
+      APersonLooks(
+        s"${write(goal, reals)} leaves $remainder modulo the ideal of its equations; what would " +
+          "close it is something an ideal does not see: an order fact, a denominator that is not " +
+          "zero, or a power of the conclusion that does lie in the ideal"
+      )
+
     // A person rather than a restatement, for `NotEqualTo`'s reason, and without its verdict: the
     // two values were neither identified nor told apart, so the sentence says both are possible.
     case ValueUnidentified(wanted, found, _) =>
