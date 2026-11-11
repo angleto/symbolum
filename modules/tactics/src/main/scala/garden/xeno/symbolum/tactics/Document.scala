@@ -321,7 +321,7 @@ object Document {
             _ <- check(split >= 0, line.number, "`obtain` is written `obtain x h from FACT`")
             bound <- names(line, line.rest.take(split), "a variable and a hypothesis name")
             _ <- check(bound.size == 2, line.number, "`obtain` names exactly one variable and one hypothesis: `obtain x h from FACT`")
-            from <- single(line, line.rest.drop(split + 6), "the fact it opens")
+            from <- single(line, line.keyword, line.rest.drop(split + 6), "the fact it opens")
           } yield (Step.Obtain(line.number, bound(0), bound(1), from), next)
         case "cases" =>
           for {
@@ -351,10 +351,10 @@ object Document {
           for {
             _ <- check(line.rest.nonEmpty, line.number, "`witness` wants the term")
           } yield (Step.Witness(line.number, line.rest), next)
-        case "rewrite" => alone(list(line, line.rest, "the equations it rewrites with").map(Step.Rewrite(line.number, _)))
+        case "rewrite" => alone(list(line, line.keyword, line.rest, "the equations it rewrites with").map(Step.Rewrite(line.number, _)))
         case "apply" =>
           for {
-            lemma <- single(line, line.rest, "the lemma it applies")
+            lemma <- single(line, line.keyword, line.rest, "the lemma it applies")
             grouped <- if (at(next).exists(_.keyword == "case")) branches(line, next) else Right((Vector.empty, next))
           } yield (Step.Apply(line.number, lemma, grouped._1), grouped._2)
         case "calc" => links(line, next).map { case (read, after) => (Step.Calc(line.number, read), after) }
@@ -477,16 +477,16 @@ object Document {
         val rest = trimmed.drop(keyword.length).trim
         def from: Either[Malformed, Vector[String]] =
           if (rest.isEmpty) Right(Vector.empty)
-          else if (rest.startsWith("from ")) list(line, rest.drop(5), "the facts it uses")
+          else if (rest.startsWith("from ")) list(line, keyword, rest.drop(5), "the facts it uses")
           else fail(line.number, s"`$keyword` is written `$keyword` or `$keyword from F, G`")
         keyword match {
           case "auto" => from.map(Method.Auto(_))
           case "ring" => check(rest.isEmpty, line.number, "`ring` takes nothing after it").map(_ => Method.Ring)
           case "linarith" => from.map(Method.Linarith(_))
           case "arith" => from.map(Method.Arith(_))
-          case "rewrite" => list(line, rest, "the equations it rewrites with").map(Method.Rewrite(_))
-          case "exact" => single(line, rest, "the fact").map(Method.Exact(_))
-          case "apply" => single(line, rest, "the lemma").map(Method.Apply(_))
+          case "rewrite" => list(line, keyword, rest, "the equations it rewrites with").map(Method.Rewrite(_))
+          case "exact" => single(line, keyword, rest, "the fact").map(Method.Exact(_))
+          case "apply" => single(line, keyword, rest, "the lemma").map(Method.Apply(_))
           case "first" => fail(line.number, "`first` is written `first A | B`, with at least two methods")
           case other => fail(line.number, s"no method `$other`; a method is one of ${MethodKeywords.mkString(", ")}")
         }
@@ -496,18 +496,20 @@ object Document {
     private def sequence[A](reads: Vector[Either[Malformed, A]]): Either[Malformed, Vector[A]] =
       reads.foldLeft(Right(Vector.empty): Either[Malformed, Vector[A]])((acc, read) => acc.flatMap(done => read.map(done :+ _)))
 
-    private def list(line: Line, text: String, what: String): Either[Malformed, Vector[String]] = {
+    /** Names separated by commas, for `keyword`, which is the step or the method that wants them. */
+    private def list(line: Line, keyword: String, text: String, what: String): Either[Malformed, Vector[String]] = {
       val found = text.split(",").map(_.trim).filter(_.nonEmpty).toVector
       for {
-        _ <- check(found.nonEmpty, line.number, s"`${line.keyword}` wants $what")
+        _ <- check(found.nonEmpty, line.number, s"`$keyword` wants $what")
         _ <- found.find(name => !isName(name)).fold(Right(()): Either[Malformed, Unit])(bad => fail(line.number, s"`$bad` is not a name"))
       } yield found
     }
 
-    private def single(line: Line, text: String, what: String): Either[Malformed, String] = {
+    /** One name, for `keyword`, which is the step or the method that wants it. */
+    private def single(line: Line, keyword: String, text: String, what: String): Either[Malformed, String] = {
       val trimmed = text.trim
       for {
-        _ <- check(trimmed.nonEmpty, line.number, s"`${line.keyword}` wants $what")
+        _ <- check(trimmed.nonEmpty, line.number, s"`$keyword` wants $what")
         named <- name(line, trimmed)
       } yield named
     }
