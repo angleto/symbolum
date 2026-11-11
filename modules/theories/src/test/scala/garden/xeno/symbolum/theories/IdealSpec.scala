@@ -68,10 +68,49 @@ class IdealSpec extends AnyFlatSpec with Matchers {
     proved("!a b c:real. b = a + 1 ==> c = b + 1 ==> c = a + 2")
   }
 
-  "x * x = 0 ==> x = 0" should "be refused as outside the ideal, and never as decided, because it is true" in {
-    val error = refused("!x:real. x * x = 0 ==> x = 0")
+  "amc12_2000_p20" should "follow once its denominators are cleared and its difference squared" in {
+    // The three positivity hypotheses are what clears `1 / x`, `1 / y` and `1 / z`, and then
+    // `(x * y * z - 1)^2` is in the ideal while `x * y * z - 1` is not.
+    proved(
+      "!x y z:real. 0 < x /\\ 0 < y /\\ 0 < z ==> x + 1 / y = 4 ==> y + 1 / z = 1 ==> z + 1 / x = 7 / 3 ==> " +
+        "x * y * z = 1"
+    )
+  }
+
+  "x * x = 0 ==> x = 0" should "be proved through the radical, being outside the ideal itself" in {
+    proved("!x:real. x * x = 0 ==> x = 0")
+  }
+
+  "A cube that vanishes" should "need two squarings, its square not being in the ideal either" in {
+    proved("!x:real. x * x * x = 0 ==> x = 0")
+  }
+
+  "A fifth power that vanishes" should "be refused, since x^8 is past the squarings asked and x^4 is not a member" in {
+    // The bound Ideal.Squarings drawn where it is, as a refusal and not a decision: the claim is true.
+    val error = refused("!x:real. x * x * x * x * x = 0 ==> x = 0")
     error shouldBe a[OutsideTheIdeal]
     error.standing shouldBe LogicError.Standing.Unread
+  }
+
+  "x * x + y * y = 0 ==> x = 0" should "be refused as outside the ideal, and never as decided, because it is true" in {
+    // True of the reals and of no power of x: the real radical is larger than any power reaches.
+    val error = refused("!x y:real. x * x + y * y = 0 ==> x = 0")
+    error shouldBe a[OutsideTheIdeal]
+    error.standing shouldBe LogicError.Standing.Unread
+  }
+
+  "A denominator the hypotheses say is positive" should "be cleared" in {
+    proved("!x y:real. 0 < y ==> x = 1 / y ==> x * y = 1")
+  }
+
+  "A denominator stated not to be zero" should "be cleared" in {
+    proved("!x y:real. ~(y = 0) ==> x = 1 / y ==> x * y = 1")
+  }
+
+  "A denominator nobody said anything about" should "stay an unknown, the claim being false at zero" in {
+    // At y = 0 the reals give inv 0 = 0, so x = 0 and x * y = 0: assuming y * inv y = 1 here would
+    // prove something false.
+    refused("!x y:real. x = 1 / y ==> x * y = 1") shouldBe a[OutsideTheIdeal]
   }
 
   "A claim needing the order" should "be refused as outside the ideal" in {
@@ -81,7 +120,7 @@ class IdealSpec extends AnyFlatSpec with Matchers {
 
   "A search that runs out of budget" should "say so, and not that the goal is outside the ideal" in {
     // The same goal `mathd_algebra_338` proves above, at a budget its search spends eighty times over.
-    val starved = Ideal.at(Ring.standard, 1)
+    val starved = Ideal.at(Order.standard, 1)
     starved.prove("!a b c:real. 3 * a + b + c = neg 3 /\\ a + 3 * b + c = 9 /\\ a + b + 3 * c = 19 ==> a * b * c = neg 56") match {
       case Left(error: BoundReached) => error.standing shouldBe LogicError.Standing.Exhausted
       case other => fail(s"came back $other")

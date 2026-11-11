@@ -961,6 +961,7 @@ they have least appetite for working out how it is produced.
   MUL_NONNEG_BOTH          !x:real. !y:real. 0 <= x ==> 0 <= y ==> 0 <= x * y
   POSITIVE_NOT_ZERO        !x:real. 0 < x ==> ~(x = 0)
   SQUARE_NONNEG            !x:real. 0 <= x * x
+  SQUARE_ZERO              !x:real. x * x = 0 ==> x = 0
   ZERO_LT_ONE              (0:real) < (1:real)
 
 ## Peano

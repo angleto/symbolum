@@ -40,7 +40,8 @@ run "1-wrong-cofactors" "$GROEBNER" \
   'Membership.Member(reduced.cofactors, charged.spent)' \
   -- ./tools/sbt -batch "$THEORIES"
 
-# 2. "Not in the ideal" called decided, which files a true claim (x * x = 0 ==> x = 0) as settled.
+# 2. "Not in the ideal" called decided, which files a true claim (x * x + y * y = 0 ==> x = 0, since
+# the radical landed; x * x = 0 ==> x = 0 until then) as settled.
 # Expect red in IdealSpec: "never as decided, because it is true".
 run "2-outside-decided" "$ERRORS" \
   'which says nothing about whether it holds of the reals"

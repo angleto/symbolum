@@ -689,6 +689,7 @@ more than one place. Each is proved, and `OrderSpec` prints every one of them:
 | `LE_FROM_ZERO` | `!x y. 0 <= y - x ==> x <= y` |
 | `LE_ANTISYMMETRIC` | `!x y. x <= y ==> y <= x ==> x = y` |
 | `SQUARE_NONNEG` | `!x. 0 <= x * x` |
+| `SQUARE_ZERO` | `!x. x * x = 0 ==> x = 0` |
 | `ADD_LE` | `!x y z u. x <= y ==> z <= u ==> x + z <= y + u` |
 | `LE_OF_NOT_LT` | `!x y. ~(x < y) ==> y <= x` |
 | `LT_OF_NOT_LE` | `!x y. ~(x <= y) ==> y < x` |

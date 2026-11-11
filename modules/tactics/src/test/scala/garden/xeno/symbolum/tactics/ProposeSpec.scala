@@ -471,7 +471,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `RediscoverySpec` counts beside the same figure. Plus five.
     // 995 with the bound and the ladder over Gilbreath's table, 2026-11-11, card `538f5094`: the
     // six `RediscoverySpec` counts beside the same figure. Plus six.
-    proposals.size shouldBe 995
+    // 996 with the radical of an ideal, 2026-11-11, ADR 0072: the one antecedent
+    // `RediscoverySpec` counts beside the same figure. Plus one.
+    proposals.size shouldBe 996
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -704,7 +706,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // registers dropped, `!x y. 0 < x ==> 0 < y ==> x = y`, refuted at `x = 4, y = 8`.
     // 85 with `Circle`'s `COS_INJECTIVE`, 2026-09-28, derived from its statement and matched by the
     // run: its one antecedent dropped leaves `!x y. x = y`, which is `EXP_INJECTIVE`'s row above.
-    decidedFalse shouldBe 85
+    // 86 with the radical of an ideal, 2026-11-11, ADR 0072, read off the run and matching
+    // its statement: `SQUARE_ZERO` with its one antecedent dropped is `!x. x = 0`, false at `x = 1`
+    // and written in equality and a numeral.
+    decidedFalse shouldBe 86
 
     // Most of those come with the point they fail at, and some do not: the claim is decided false
     // by quantifier elimination and the abduction that would name a point comes back with none.
@@ -852,7 +857,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 80 with `COS_INJECTIVE`'s false residue, `!x y. x = y`, refuted at two distinct reals like the
     // logarithm's. **Not moved in the same pass as `decidedFalse`**, 2026-09-28: the paragraph above
     // said how it would be found, and it was found that way, by the next run.
-    withAPoint shouldBe 80
+    // 81 with `SQUARE_ZERO`'s false residue, `!x. x = 0`, refuted at `x = 1`, 2026-11-11, ADR 0072.
+    // **Not moved in the same pass as `decidedFalse`**, read off the next run as the paragraph
+    // above says it is found.
+    withAPoint shouldBe 81
   }
 
   it should "leave the rest in the two buckets that mean different things" in {

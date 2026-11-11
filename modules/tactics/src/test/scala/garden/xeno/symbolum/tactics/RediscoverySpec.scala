@@ -439,7 +439,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 995 with the bound and the ladder over Gilbreath's table, 2026-11-11, card `538f5094`: the
     // table's equation on each of six facts of `Gilbreath.Statements`, counted before the run and
     // equal to it. Plus six.
-    propose.weakenings.size shouldBe 995
+    // 996 with the radical of an ideal, 2026-11-11, ADR 0072: `SQUARE_ZERO` has one hypothesis, read
+    // off the run and matching its statement. Plus one.
+    propose.weakenings.size shouldBe 996
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -596,7 +598,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 160 with Rule 30, 2026-10-23, read off the run: `RULE_THIRTY_SIGNED` writes `*`, `+` and `-`
     // with no lambda in the body, and the other fourteen carry a quantifier's or a sum's lambda.
     // Plus one over the base above.
-    propose.mutable.size shouldBe 160
+    // 161 with the radical of an ideal, 2026-11-11, ADR 0072: `SQUARE_ZERO` writes `*` with no
+    // lambda in the body, read off the run and matching its statement. Plus one.
+    propose.mutable.size shouldBe 161
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

@@ -36,13 +36,38 @@ import garden.xeno.symbolum.logic.*
  * == What it reads, and what it does not ==
  *
  * Sums, differences, negations, products and quotients by a non-zero rational constant, as
- * [[LinearForm]] reads them, with products multiplied out rather than kept as atoms. Everything
- * else is an atom, which costs a proof rather than yielding a wrong one: `inv y` is an unknown here,
- * and `y * inv y = 1` is not something this file knows. Hypotheses that are not equations between
- * reals stay assumed and unused, so a goal whose conclusion needs an order fact is refused by
- * `OutsideTheIdeal` and never decided.
+ * [[LinearForm]] reads them, with products multiplied out rather than kept as atoms. A quotient by
+ * anything else is read as a product with `inv r`, which is what `/` abbreviates. Everything else
+ * is an atom, which costs a proof rather than yielding a wrong one. Hypotheses that are not
+ * equations between reals stay assumed, and only two kinds are spent, both below.
+ *
+ * == A denominator the hypotheses say is not zero ==
+ *
+ * `inv y` is an unknown like any other atom, and `y * inv y = 1` is true only where `y` is not
+ * zero, which is `MUL_INVERSE`'s antecedent. So that equation joins the generators exactly when a
+ * hypothesis says so: `~(y = 0)`, or `0 < y`, which `NON_ZERO` turns into it. The fact is a theorem
+ * resting on that hypothesis, so it enters the certificate the way an assumed equation does and
+ * the kernel sees the side condition being paid. A denominator whose sign nobody stated stays an
+ * unknown, and a goal that needed it is refused rather than proved by assuming it away.
+ *
+ * == The radical ==
+ *
+ * `x * x = 0 ==> x = 0` is true of the reals and `x` is not in the ideal of `x * x`, so ideal
+ * membership alone refuses it, and `amc12_2000_p20` is that case after its denominators are
+ * cleared: `(x * y * z - 1)^2` is in the ideal and `x * y * z - 1` is not. When the difference `D`
+ * is not a member, the search asks for `D^2`, then `D^4`, up to [[Ideal.Squarings]] times; a member
+ * `D^(2^m) = 0` is rebuilt as above, and `SQUARE_ZERO`, `m` times, brings it down to `D = 0`. Only
+ * the powers of two are asked, because they are the ones a square root takes back in one step, and
+ * every power is below one of them: `D^k = 0` puts every larger power in the ideal too.
+ *
+ * What this is **not** is a decision about the radical. The reals are not algebraically closed, so
+ * the real radical is larger than the one any power of `D` reaches: `x * x + y * y = 0 ==> x = 0`
+ * is true and `x` has no power in that ideal. A refusal after every squaring is still
+ * `OutsideTheIdeal`, read as unread and never as decided.
  */
-final class Ideal private (val ring: Ring, val budget: Long) {
+final class Ideal private (val order: Order, val budget: Long) {
+
+  val ring: Ring = order.ring
 
   val reals: RealTheory = ring.reals
 
@@ -65,7 +90,7 @@ final class Ideal private (val ring: Ring, val budget: Long) {
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
     for {
       problem <- read(goal)
-      proved <- certify(goal, problem, Groebner.membership(problem.generators, problem.target, problem.atoms.length, budget))
+      proved <- settle(goal, problem)
       discharged <- problem.antecedents.foldRight(Right(proved): Either[LogicError, Kernel.Thm]) {
         (antecedent, acc) => acc.flatMap(inner => rules.disch(antecedent, inner))
       }
@@ -115,9 +140,15 @@ final class Ideal private (val ring: Ring, val budget: Long) {
         case (left, right) if Term.typeOf(left) == real => (fact, left, right)
       })
       _ <- if (equations.isEmpty) Left(NotOfForm("a goal with an equation among its hypotheses", goal)) else Right(())
+      (left, right) = sides
+      stated = (equations.flatMap((_, l, r) => Vector(l, r)) ++ Vector(left, right)).flatMap(atomsOf).distinct
+      nonZero <- traverse(facts)(nonZeroOf).map(_.flatten.toMap)
+      inverses <- traverse(stated.collect { case App(Const(Real.Inverse, _), r) if nonZero.contains(r) => r })(
+        r => inverseEquation(r, nonZero(r))
+      )
     } yield {
-      val (left, right) = sides
-      val atoms = (equations.flatMap((_, l, r) => Vector(l, r)) ++ Vector(left, right)).flatMap(atomsOf).distinct
+      val all = equations ++ inverses
+      val atoms = (all.flatMap((_, l, r) => Vector(l, r)) ++ Vector(left, right)).flatMap(atomsOf).distinct
       val index = atoms.zipWithIndex.toMap
       def poly(term: Term): Groebner.Poly = polynomialOf(term, index, atoms.length)
       Problem(
@@ -125,12 +156,54 @@ final class Ideal private (val ring: Ring, val budget: Long) {
         antecedents,
         left,
         right,
-        equations,
+        all,
         atoms,
-        equations.map((_, l, r) => Groebner.subtract(poly(l), poly(r))),
+        all.map((_, l, r) => Groebner.subtract(poly(l), poly(r))),
         Groebner.subtract(poly(left), poly(right))
       )
     }
+
+  /** `G |- ~(r = 0)` from a fact `~(r = 0)` or `0 < r`, keyed by `r`; nothing from any other fact. */
+  private def nonZeroOf(fact: Kernel.Thm): Either[LogicError, Option[(Term, Kernel.Thm)]] =
+    reals.logic.destNot(fact.conclusion).flatMap(Term.destEq) match {
+      case Some((r, zero)) if Term.typeOf(r) == real && LinearForm.coefficient(reals, zero).exists(_.isZero) =>
+        Right(Some((r, fact)))
+      case _ =>
+        Order.destLess(reals, fact.conclusion).toOption match {
+          case Some((zero, r)) if LinearForm.coefficient(reals, zero).exists(_.isZero) =>
+            order.nonZero.flatMap(rules.spec(r, _)).flatMap(rules.mp(_, fact)).map(proved => Some((r, proved)))
+          case _ => Right(None)
+        }
+    }
+
+  /** `G |- r * inv r = 1`, from `MUL_INVERSE` and the fact that `r` is not zero. */
+  private def inverseEquation(r: Term, nonZero: Kernel.Thm): Either[LogicError, (Kernel.Thm, Term, Term)] =
+    for {
+      law <- reals.law("MUL_INVERSE")
+      fact <- rules.spec(r, law).flatMap(rules.mp(_, nonZero))
+      sides <- Term.destEq(fact.conclusion).toRight(NotOfForm("an equation", fact.conclusion))
+    } yield (fact, sides._1, sides._2)
+
+  /**
+   * The conclusion from the search: a member, or failing that a member at a power of two of its
+   * difference, up to [[Ideal.Squarings]]. A budget run out at any stage is reported as such
+   * rather than as a refusal, because a search that stopped has not said the goal is outside.
+   */
+  private def settle(goal: Term, problem: Problem): Either[LogicError, Kernel.Thm] = {
+    def ask(target: Groebner.Poly) = Groebner.membership(problem.generators, target, problem.atoms.length, budget)
+    ask(problem.target) match {
+      case Groebner.Membership.NotMember(remainder, _) =>
+        val powers = Iterator.iterate(problem.target)(t => Groebner.multiply(t, t)).drop(1).take(Ideal.Squarings)
+        val answers = powers.map(ask).zipWithIndex.map((answer, i) => (answer, i + 1))
+        answers.find(!_._1.isInstanceOf[Groebner.Membership.NotMember]) match {
+          case Some((Groebner.Membership.Member(cofactors, _), squarings)) =>
+            radical(problem, cofactors, squarings).left.map(reason => NotRebuilt(goal, "IDEAL", reason))
+          case Some((other, _)) => certify(goal, problem, other)
+          case None => certify(goal, problem, Groebner.Membership.NotMember(remainder, 0L))
+        }
+      case answer => certify(goal, problem, answer)
+    }
+  }
 
   private def certify(goal: Term, problem: Problem, membership: Groebner.Membership): Either[LogicError, Kernel.Thm] =
     membership match {
@@ -144,6 +217,34 @@ final class Ideal private (val ring: Ring, val budget: Long) {
     }
 
   /* ---------------------------------------------------------------- the kernel half */
+
+  /**
+   * `L = R` from `D^(2^m)` in the ideal, `D` being `L - R`: the member rebuilt as `H = 0`, where
+   * `H` is `D` squared `m` times as a term, then `SQUARE_ZERO` once per squaring, then one ring
+   * step from `L - R = 0` to `L = R`.
+   */
+  private def radical(problem: Problem, cofactors: Vector[Groebner.Poly], squarings: Int): Either[LogicError, Kernel.Thm] =
+    for {
+      difference <- Linarith.difference(reals, problem.left, problem.right)
+      tower <- (1 to squarings).foldLeft(Right(Vector(difference)): Either[LogicError, Vector[Term]]) { (acc, _) =>
+        acc.flatMap(terms => Linarith.product(reals, terms.last, terms.last).map(terms :+ _))
+      }
+      zero <- Numeral.of(reals, 0)
+      top <- rebuild(tower.last, zero, problem.equations, cofactors, problem.atoms)
+      squareZero <- order.squareZero
+      vanishes <- tower.init.foldRight(Right(top): Either[LogicError, Kernel.Thm]) { (base, acc) =>
+        acc.flatMap(above => rules.spec(base, squareZero).flatMap(rules.mp(_, above)))
+      }
+      plus <- constant(Real.Addition, binary)
+      withDifference <- Linarith.sum(reals, problem.right, difference)
+      identity <- LogicError.lift(Term.eq(problem.left, withDifference)).flatMap(ring.prove)
+      plusRight <- LogicError.lift(Term.app(plus, problem.right))
+      shifted <- LogicError.lift(Kernel.mkComb(Kernel.refl(plusRight), vanishes))
+      residue <- Linarith.sum(reals, problem.right, zero)
+      closing <- LogicError.lift(Term.eq(residue, problem.right)).flatMap(ring.prove)
+      step <- LogicError.lift(Kernel.trans(identity, shifted))
+      whole <- LogicError.lift(Kernel.trans(step, closing))
+    } yield whole
 
   private def rebuild(
     left: Term,
@@ -267,8 +368,14 @@ final class Ideal private (val ring: Ring, val budget: Long) {
       case App(App(Const(Real.Multiplication, _), l), r) => atomsOf(l) ++ atomsOf(r)
       case App(Const(Real.Negation, _), a) => atomsOf(a)
       case App(App(Const(Real.Division, _), l), r) if divisor(r).isDefined => atomsOf(l)
+      case App(App(Const(Real.Division, _), l), r) =>
+        reciprocal(r).fold(Vector(term))(inverse => atomsOf(l) :+ inverse)
       case other => Vector(other)
     }
+
+  /** `inv r`, which a quotient by a non-constant `r` abbreviates a product with. */
+  private def reciprocal(r: Term): Option[Term] =
+    reals.theory.constant(Real.Inverse, Type.fun(real, real)).toOption.flatMap(inverse => Term.app(inverse, r).toOption)
 
   private def divisor(term: Term): Option[Rational] = LinearForm.coefficient(reals, term).filter(!_.isZero)
 
@@ -283,6 +390,8 @@ final class Ideal private (val ring: Ring, val budget: Long) {
           case App(Const(Real.Negation, _), a) => Groebner.negate(polynomialOf(a, index, arity))
           case App(App(Const(Real.Division, _), l), r) if divisor(r).isDefined =>
             Groebner.multiply(polynomialOf(l, index, arity), Groebner.constant(Rational.one / divisor(r).get, arity))
+          case App(App(Const(Real.Division, _), l), r) if reciprocal(r).isDefined =>
+            Groebner.multiply(polynomialOf(l, index, arity), Groebner.variable(index(reciprocal(r).get), arity))
           case other => Groebner.variable(index(other), arity)
         }
     }
@@ -326,15 +435,25 @@ final class Ideal private (val ring: Ring, val budget: Long) {
 
 object Ideal {
 
-  /** Over the ring the order was built on, which is the one every other arithmetic procedure uses. */
-  def construct(ring: Ring): Ideal = new Ideal(ring, Groebner.Budget)
+  /**
+   * How many times the difference is squared before the search gives up on the radical: `D^2`
+   * and `D^4`. Chosen and not measured: the one goal that asks for the radical, `amc12_2000_p20`,
+   * needs one squaring, and a higher power doubles the degree the search works at each time.
+   */
+  val Squarings: Int = 2
+
+  /**
+   * Over an order, for `NON_ZERO` and `SQUARE_ZERO`, and the ring it was built on, which is the one
+   * every other arithmetic procedure uses.
+   */
+  def construct(order: Order): Ideal = new Ideal(order, Groebner.Budget)
 
   /**
    * The same procedure with the search's budget somewhere else, which is how the bound is measured
    * and how its refusal is seen. `Linarith.at` is the precedent and its comment the argument: a
    * bound that cannot be moved cannot be measured.
    */
-  def at(ring: Ring, budget: Long): Ideal = new Ideal(ring, budget)
+  def at(order: Order, budget: Long): Ideal = new Ideal(order, budget)
 
-  lazy val standard: Ideal = construct(Ring.standard)
+  lazy val standard: Ideal = construct(Order.standard)
 }

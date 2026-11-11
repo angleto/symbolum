@@ -125,6 +125,9 @@ final class Order private (val ring: Ring, published: Map[String, Kernel.Thm]) {
   /** `|- !x. 0 <= x * x` */
   def squareNonNegative: Either[LogicError, Kernel.Thm] = fact(Order.SquareNonNegative)
 
+  /** `|- !x. x * x = 0 ==> x = 0` */
+  def squareZero: Either[LogicError, Kernel.Thm] = fact(Order.SquareZero)
+
   /** `|- !x y z w. x <= y ==> z <= w ==> x + z <= y + w` */
   def addLe: Either[LogicError, Kernel.Thm] = fact(Order.AddLe)
 
@@ -283,6 +286,22 @@ object Order {
   val SquareNonNegative: String = "SQUARE_NONNEG"
 
   /**
+   * `|- !x. x * x = 0 ==> x = 0`.
+   *
+   * A real whose square vanishes is zero, which is what turns a power of a difference into the
+   * difference: `Ideal` finds `(L - R) * (L - R)` in the ideal of a goal's equations where `L - R`
+   * itself is not, and this is the step from the one to the other. It is the case of the
+   * zero-product law a field needs least to state, and the only one asked for so far; the general
+   * `x * y = 0 ==> x = 0 \/ y = 0` wants `MUL_INVERSE` and a case split on a proposition, which
+   * the order does not supply.
+   *
+   * By the same three cases as [[SquareNonNegative]]: at `0 = x` it is the hypothesis turned round,
+   * and on either side of zero the square is strictly positive, so the hypothesis makes `0 < 0`,
+   * which `LT_IRREFLEXIVE` refuses.
+   */
+  val SquareZero: String = "SQUARE_ZERO"
+
+  /**
    * `|- !x y z w. x <= y ==> z <= w ==> x + z <= y + w`.
    *
    * Addition is monotone in both arguments at once, which `LT_ADD` does not say: the axiom adds the
@@ -374,6 +393,7 @@ object Order {
       weakFromZero <- leFromZero(ring, cases, ofLt, ofEq, fromZero)
       antisymmetry <- antisymmetric(reals, cases)
       square <- squareNonNegative(ring, ofLt, ofEq)
+      squareVanishes <- squareZero(ring)
       sumOfBounds <- addLe(ring, weakToZero, weakFromZero, addBoth)
       timesLe <- multiplyLe(ring, weakToZero, weakFromZero, timesNonNegatives)
       inverseReverses <- inverseAntitone(ring, notZero, inverse, cases, ofLt, timesLe)
@@ -402,6 +422,7 @@ object Order {
         LeFromZero -> weakFromZero,
         Antisymmetric -> antisymmetry,
         SquareNonNegative -> square,
+        SquareZero -> squareVanishes,
         AddLe -> sumOfBounds,
         MultiplyLe -> timesLe,
         InverseAntitone -> inverseReverses
@@ -1580,6 +1601,83 @@ object Order {
       result <- rules.disjElim(cases, first, fromTail)
 
       general <- rules.gen(x, result)
+    } yield general
+  }
+
+  /**
+   * `|- !x. x * x = 0 ==> x = 0`, by the three cases of [[squareNonNegative]].
+   *
+   * The strictly positive square is built the same way in both outer cases, `LT_MUL` at `x` or at
+   * `-x`, and each is then contradicted by the hypothesis in the same way, so the contradiction is
+   * written once.
+   */
+  def squareZero(ring: Ring): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+
+    for {
+      ltAdd <- reals.law("LT_ADD")
+      ltMul <- reals.law("LT_MUL")
+      trichotomy <- reals.law("LT_TOTAL")
+      irreflexive <- reals.law("LT_IRREFLEXIVE")
+
+      zero <- reals.term("0")
+      vanishes <- reals.proposition("x:real * x = 0")
+      vanishesAssumed <- LogicError.lift(Kernel.assume(vanishes))
+      goal <- reals.proposition("x:real = 0")
+      zeroNotBelowZero <- rules.spec(zero, irreflexive)
+
+      // `0 < x * x` and the hypothesis say `0 < 0`.
+      absurd = (positive: Kernel.Thm) =>
+        for {
+          collapsed <- Conv.rewriteRight(positive, vanishesAssumed)
+          falsity <- rules.notElim(zeroNotBelowZero, collapsed)
+          out <- rules.falsityElim(goal, falsity)
+        } yield out
+
+      cases <- rules.specAll(trichotomy, List(zero, x))
+
+      // `0 < x`: the axiom at the same factor twice.
+      strict <- reals.proposition("0 < x:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      positive <- rules
+        .specAll(ltMul, List(x, x))
+        .flatMap(instance =>
+          rules.conjIntro(strictAssumed, strictAssumed).flatMap(rules.mp(instance, _))
+        )
+      first <- absurd(positive)
+
+      // `0 = x`: the goal turned round.
+      equated <- reals.proposition("0 = x:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      second <- Conv.sym(equatedAssumed)
+
+      // `x < 0`: `-x` is positive and its square is the same term.
+      belowZero <- reals.proposition("x:real < 0")
+      belowAssumed <- LogicError.lift(Kernel.assume(belowZero))
+      negated <- reals.term("-x:real")
+      moved <- rules.specAll(ltAdd, List(x, zero, negated)).flatMap(rules.mp(_, belowAssumed))
+      cancels <- ring.prove("x:real + -x = 0")
+      absorbs <- ring.prove("0 + -x:real = -x")
+      positiveNegation <- Conv.rewriteSides(cancels, absorbs, moved)
+      negatedSquare <- rules
+        .specAll(ltMul, List(negated, negated))
+        .flatMap(instance =>
+          rules.conjIntro(positiveNegation, positiveNegation).flatMap(rules.mp(instance, _))
+        )
+      sameSquare <- ring.prove("-x:real * -x = x * x")
+      onGoal <- Conv.rewriteRight(negatedSquare, sameSquare)
+      third <- absurd(onGoal)
+
+      tail <- reals
+        .proposition("0 = x:real \\/ x:real < 0")
+        .flatMap(term => LogicError.lift(Kernel.assume(term)))
+      fromTail <- rules.disjElim(tail, second, third)
+      result <- rules.disjElim(cases, first, fromTail)
+
+      discharged <- rules.disch(vanishes, result)
+      general <- rules.gen(x, discharged)
     } yield general
   }
 

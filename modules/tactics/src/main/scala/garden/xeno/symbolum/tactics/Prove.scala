@@ -602,13 +602,15 @@ final class Prove private (
   private val intuitionistic: Intuitionistic = Intuitionistic(reals.logic)
 
   /**
-   * The equations among a goal's hypotheses, with the conclusion as a member of their ideal.
+   * The equations among a goal's hypotheses, with the conclusion as a member of their ideal or of
+   * its radical, and the denominators the hypotheses say are not zero cleared.
    *
-   * Built from [[ring]] and not passed in, because it holds nothing of its own: a certificate is
-   * searched for and `Ring` checks it, so the procedure is the ring plus a search, and a second
-   * parameter would be a second place for the two to disagree about which ring that is.
+   * Built from [[order]] and not passed in, because it holds nothing of its own: a certificate is
+   * searched for and `Ring` checks it, with `NON_ZERO` and `SQUARE_ZERO` from the order, so the
+   * procedure is the order plus a search, and a second parameter would be a second place for the
+   * two to disagree about which order that is.
    */
-  private val ideal: Ideal = Ideal.construct(ring)
+  private val ideal: Ideal = Ideal.construct(order)
 
   /**
    * The whole classical propositional fragment, decided by a solver and certified, where there is

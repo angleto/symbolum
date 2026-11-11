@@ -848,8 +848,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 1135 and 1132 with the bound and the ladder over Gilbreath's table, 2026-11-11, card
     // `538f5094`: six facts under six new names from `Gilbreath.Statements`, derived before the run.
     // Each has one leading quantifier, so `AGENTS.md`'s two other figures do not move.
-    library.entries.size shouldBe 1135
-    library.names.distinct.size shouldBe 1132
+    // 1136 and 1133 with the radical of an ideal, 2026-11-11, ADR 0072: one fact under one new
+    // name, `SQUARE_ZERO`, published by `Order`, read off the run and matching its statement.
+    // `AGENTS.md`'s first figure moves by one and the other two do not, the fact having one binder.
+    library.entries.size shouldBe 1136
+    library.names.distinct.size shouldBe 1133
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
