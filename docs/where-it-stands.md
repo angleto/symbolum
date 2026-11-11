@@ -1278,9 +1278,18 @@ step, every run of `m + 1` entries in `{0, D}` being all zeros giving the same f
 row down (`GILBREATH_SHRINK`); Chase's Lemma 3.2, `L` rows down from a window whose blocks in
 `{0, D}` holding a `D` are at most `L` long the bound is `D - 1` (`GILBREATH_DROP`,
 `GILBREATH_RUNG`); and the counted ladder of rungs, each lowering the bound by one, down to an entry
-at most 1 (`GILBREATH_LADDER`). **What is not here**: the primes, which the library does not
-enumerate, and the conjecture itself, which is whether the head lasts, or whether the primes' blocks
-shrink as the ladder asks; note 917b3939 section 5.2 measures that and nothing proves it.
+at most 1 (`GILBREATH_LADDER`). And since later that day the primes: a list of them is a hypothesis
+on a function `p`, `p 0 = 2` and each entry the least prime above the one before, which exists and
+misses no prime (`GILBREATH_PRIMES_EXIST`, `GILBREATH_PRIMES_ALL`), begins 2, 3, 5 and has every gap
+after the first even and at least 2 (`GILBREATH_PRIMES_START`, `GILBREATH_PRIMES_GAPS`). The table
+halved and shifted one position, row 0 the halved second row less one, keeps the table's equation
+(`GILBREATH_NORMALISED`) and exists over every table (`GILBREATH_NORMALISED_EXISTS`), and over the primes a ladder on it from row 0 with window `n` makes
+position 1 of row `n + 1` hold 0 or 2 (`GILBREATH_PRIMES_CONE`); ladders for every window up to `R`
+give the 1 at the front of every row up to `R + 2`, and for every window the conjecture
+(`GILBREATH_PRIMES_FRONT`, `GILBREATH_PRIMES_CONJECTURE`). **What is not here**: that the ladder
+certifies every window over the primes, which is what the conjecture has become, and whether the
+primes' blocks shrink as the ladder asks; note 917b3939 section 5.2 measures that and nothing
+proves it.
 
 **Finite distributions and Blackwell's easy direction are `Decision`, a link since 2026-10-22.**
 `docs/adr/0063` is the decision. A distribution on `n` outcomes is a function on `[0, n)` that

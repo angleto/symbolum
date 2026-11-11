@@ -764,15 +764,16 @@ object Chain {
       // Over the circle, extending the chain's end: `cis` pairs `cos` with `sin`, the polar form
       // spends `acos` and `pi`, the roots spend `exp` and `ln`, the roots of unity the sums and the
       // division of `num`, the fundamental theorem `abs`, `min` and the extreme value theorem, and
-      // the Fourier inversion `Peano`'s semiring, where its exponents and residues are decided.
-      // What it reads is named, by the links that hold it.
+      // the Fourier inversion `Peano`'s semiring, where its exponents and residues are decided,
+      // and the list of the primes `Gilbreath` builds needs `Primes` for Euclid's theorem. What it
+      // reads is named, by the links that hold it.
       below = Library.of(Vector(
         "Reals" -> reals.laws, "Real, defined" -> reals.definitions, "Order" -> order.facts,
         "Natural" -> naturals.facts, "Peano" -> peano.facts, "Series" -> series.facts,
         "Modular" -> modular.facts, "Product" -> product.facts, "Root" -> root.facts,
         "Transcendental" -> transcendental.facts, "Logarithm" -> logarithm.facts, "Circle" -> circle.facts,
         "Classical, derived" -> classical.facts, "Magnitude" -> magnitude.facts, "Limit" -> limit.facts,
-        "Continuity" -> continuity.facts
+        "Continuity" -> continuity.facts, "Primes" -> primes.facts
       ))
       within <- continuity.definition(Continuity.ContinuousWithin)
       complex <- Complex.construct(

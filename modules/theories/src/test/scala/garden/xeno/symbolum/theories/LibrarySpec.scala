@@ -851,8 +851,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 1136 and 1133 with the radical of an ideal, 2026-11-11, ADR 0072: one fact under one new
     // name, `SQUARE_ZERO`, published by `Order`, read off the run and matching its statement.
     // `AGENTS.md`'s first figure moves by one and the other two do not, the fact having one binder.
-    library.entries.size shouldBe 1136
-    library.names.distinct.size shouldBe 1133
+    // 1145 and 1142 with the table over the primes, 2026-11-11, card `c30eae79`: nine facts under
+    // nine new names from `Gilbreath.Statements`, derived before the run. `GILBREATH_PRIMES_ALL`
+    // binds `p` and `q`, of two types, and the other eight bind one or none, so `AGENTS.md`'s figures
+    // move by nine, one and none. Measured as 1144 and 1141 over 1135 and 1132 before the rebase onto
+    // the radical of an ideal, which added one.
+    library.entries.size shouldBe 1145
+    library.names.distinct.size shouldBe 1142
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

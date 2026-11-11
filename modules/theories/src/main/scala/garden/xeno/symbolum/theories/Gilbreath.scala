@@ -4,14 +4,17 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * The table of Gilbreath's conjecture over any first row, and the form the conjecture takes on it.
+ * The table of Gilbreath's conjecture over any first row, the list of the primes, and the form the
+ * conjecture takes on the table over them.
  *
  * Row `k + 1` holds the absolute differences of neighbours in row `k`. The absolute value of a
  * difference of naturals is written with the truncated subtraction as `NUM_SUB a b + NUM_SUB b a`,
  * one of the two terms being 0, so no absolute value on the naturals is needed. The conjecture is
- * that over the primes every row after the first starts with 1. Nothing here is about the primes:
- * the library has no enumeration of them, so every statement is over any table satisfying the
- * equation, and `GILBREATH_EXISTS` shows there is one for every first row.
+ * that over the primes every row after the first starts with 1. Most statements here are over any
+ * table satisfying the equation, and `GILBREATH_EXISTS` shows there is one for every first row. The
+ * primes enter as a hypothesis on a function `p` rather than as a constant: `p` lists them when
+ * `p 0 = 2` and each entry is the least prime above the one before, and `GILBREATH_PRIMES_EXIST` and
+ * `GILBREATH_PRIMES_ALL` show that such a `p` exists and that it misses no prime.
  *
  * Not a development: it declares nothing, and `Complex` publishes what it proves beside
  * `RuleThirty`, because the steps it is written in are the ones that link already has.
@@ -42,10 +45,25 @@ import garden.xeno.symbolum.logic.*
  * bound is `D - 1`. `GILBREATH_LADDER` chains rungs, the bound lowered by one per rung, down to the
  * single entry the last window leaves, which is at most 1. `docs/adr/0065` has the dated record.
  *
+ * == Over the primes ==
+ *
+ * `GILBREATH_PRIMES_START`: the list begins 2, 3, 5. `GILBREATH_PRIMES_GAPS`: every gap after the
+ * first is even and at least 2, a prime above 2 being odd. `GILBREATH_NORMALISED` is over any table
+ * whose second row is even and at least 2 from position 1 on: halving every row after the first,
+ * taking 1 from the halved second row, and reading each row from position 1, gives a table with the
+ * same equation, and `GILBREATH_NORMALISED_EXISTS` that every table has one. The shift is what
+ * makes it hold, since the first gap, 3 - 2, is odd. Over the primes the normalised table's row
+ * `n`, from 1 on, starts with half the entry at position 1 of row `n + 1` of the table, so
+ * `GILBREATH_PRIMES_CONE` turns a ladder over it, from row 0 with window `n`, into that entry being
+ * 0 or 2. `GILBREATH_PRIMES_FRONT` collects the ladders for every window up to `R` into the 1 at
+ * the front of every row up to `R + 2`, and `GILBREATH_PRIMES_CONJECTURE` all of them into the
+ * conjecture.
+ *
  * == What they do not say ==
  *
- * That the head never runs out, which is the conjecture, and that the primes' table has blocks
- * short enough for the ladder at every depth, which is the same question asked of the bound. The
+ * That the ladder certifies every window over the primes, which is what the conjecture has become
+ * here: `GILBREATH_PRIMES_CONJECTURE` assumes it rather than proving it. It is the same question
+ * asked of the bound, whether the primes' table has blocks short enough at every depth. The
  * measurements in the note place it in the gaps modulo 4: a large value meeting the head is
  * absorbed when the head keeps producing 2s, and the kernel has nothing on how the gaps between
  * primes are distributed.
@@ -59,52 +77,91 @@ private[theories] object Gilbreath {
   private val Tables: Type = Type.fun(Numbers, Rows)
 
   private val D = "(d:num->num->num)"
+  private val F = "(f:num->num->num)"
+  private val P = "(p:num->num)"
 
-  /** Row `k + 1` from row `k`: the equation that characterises the table. */
-  private val Step: String =
-    s"(!k:num. !i:num. $D (SUC k) i = NUM_SUB ($D k (i + 1)) ($D k i) + NUM_SUB ($D k i) ($D k (i + 1)))"
+  /** Row `k + 1` of `table` from row `k`: the equation that characterises a table. */
+  private def stepOf(table: String): String =
+    s"(!k:num. !i:num. $table (SUC k) i = NUM_SUB ($table k (i + 1)) ($table k i) + NUM_SUB ($table k i) ($table k (i + 1)))"
+
+  /** The equation of the table `d`. */
+  private val Step: String = stepOf(D)
 
   private def over(claim: String): String = s"!d:num->num->num. $Step ==> $claim"
 
   /** The entry is 0 or 2. */
   private def good(e: String): String = s"($e = 0 \\/ $e = 2)"
 
-  /** Every entry of row `row` from position 0 to position `width` is at most `bound`. */
-  private def bounded(row: String, width: String, bound: String): String =
-    s"(!i:num. i <= $width ==> $D ($row) i <= $bound)"
+  /** Every entry of row `row` of `table` from position 0 to position `width` is at most `bound`. */
+  private def bounded(row: String, width: String, bound: String, table: String = D): String =
+    s"(!i:num. i <= $width ==> $table ($row) i <= $bound)"
 
   /** The entry is 0 or `bound`. */
   private def member(e: String, bound: String): String = s"($e = 0 \\/ $e = $bound)"
 
   /**
-   * The run of `length` entries of row `row` starting at `start`, when it lies in positions 0 to
-   * `width`: if every entry of it is 0 or `bound`, every entry of it is 0. `start` and the other
-   * arguments must not mention `t`, which is bound here.
+   * The run of `length` entries of row `row` of `table` starting at `start`, when it lies in
+   * positions 0 to `width`: if every entry of it is 0 or `bound`, every entry of it is 0. `start`
+   * and the other arguments must not mention `t`, which is bound here.
    */
-  private def runsFrom(row: String, width: String, bound: String, length: String, start: String): String =
-    s"$start + $length <= SUC ($width) ==> (!t:num. t < $length ==> ${member(s"$D ($row) ($start + t)", bound)}) ==> " +
-      s"(!t:num. t < $length ==> $D ($row) ($start + t) = 0)"
+  private def runsFrom(row: String, width: String, bound: String, length: String, start: String, table: String = D): String =
+    s"$start + $length <= SUC ($width) ==> (!t:num. t < $length ==> ${member(s"$table ($row) ($start + t)", bound)}) ==> " +
+      s"(!t:num. t < $length ==> $table ($row) ($start + t) = 0)"
 
   /**
    * Every run of `length` consecutive entries in `{0, bound}` inside positions 0 to `width` of row
-   * `row` is all zeros. Chase's "the longest block containing `bound` has length `L`" is this at
-   * `length = L + 1`. The arguments must not mention `j` or `t`, which are bound here.
+   * `row` of `table` is all zeros. Chase's "the longest block containing `bound` has length `L`" is
+   * this at `length = L + 1`. The arguments must not mention `j` or `t`, which are bound here.
    */
-  private def runs(row: String, width: String, bound: String, length: String): String =
-    s"(!j:num. ${runsFrom(row, width, bound, length, "j")})"
+  private def runs(row: String, width: String, bound: String, length: String, table: String = D): String =
+    s"(!j:num. ${runsFrom(row, width, bound, length, "j", table)})"
 
   /**
-   * The hypothesis of the ladder: row `r 0` bounded by `D` on positions 0 to `w 0`, and at each
-   * stage `s < c` a rung of `l s` rows taking row `r s` with window `w s` to row `r (SUC s)` with a
-   * window `l s` shorter, the runs of stage `s` bounded by `l s` at the bound `D - s`; and the bound
-   * after `c` stages is at most 1.
+   * The hypothesis of the ladder over `table`: row `r 0` bounded by `D` on positions 0 to `w 0`,
+   * and at each stage `s < c` a rung of `l s` rows taking row `r s` with window `w s` to row
+   * `r (SUC s)` with a window `l s` shorter, the runs of stage `s` bounded by `l s` at the bound
+   * `D - s`; and the bound after `c` stages is at most 1.
    */
-  private def staged(c: String, r: String, l: String, w: String, bound: String): String =
-    s"${bounded(s"$r 0", s"$w 0", bound)} /\\ (!s:num. s < $c ==> ${stage(r, l, w, bound, "s")}) /\\ NUM_SUB $bound $c <= 1"
+  private def staged(c: String, r: String, l: String, w: String, bound: String, table: String = D): String =
+    s"${bounded(s"$r 0", s"$w 0", bound, table)} /\\ (!s:num. s < $c ==> ${stage(r, l, w, bound, "s", table)}) /\\ NUM_SUB $bound $c <= 1"
 
-  /** Stage `s` of the ladder. */
-  private def stage(r: String, l: String, w: String, bound: String, s: String): String =
-    s"$r (SUC $s) = $r $s + $l $s /\\ $w $s = $w (SUC $s) + $l $s /\\ ${runs(s"$r $s", s"$w $s", s"NUM_SUB $bound $s", s"SUC ($l $s)")}"
+  /** Stage `s` of the ladder over `table`. */
+  private def stage(r: String, l: String, w: String, bound: String, s: String, table: String = D): String =
+    s"$r (SUC $s) = $r $s + $l $s /\\ $w $s = $w (SUC $s) + $l $s /\\ ${runs(s"$r $s", s"$w $s", s"NUM_SUB $bound $s", s"SUC ($l $s)", table)}"
+
+  /**
+   * `y` is the least prime above `x`. The arguments must not mention `m`, which is bound here.
+   */
+  private def nextPrime(x: String, y: String): String =
+    s"(NUM_PRIME ($y) /\\ $x < $y /\\ (!m:num. $x < m /\\ m < $y ==> ~(NUM_PRIME m)))"
+
+  /**
+   * `p` lists the primes in increasing order from `p 0 = 2`: each entry after the first is the
+   * least prime above the one before it. `GILBREATH_PRIMES_EXIST` shows such a `p` exists and
+   * `GILBREATH_PRIMES_ALL` that it misses no prime.
+   */
+  private def enumerates(p: String): String =
+    s"($p 0 = 2 /\\ (!n:num. ${nextPrime(s"$p n", s"$p (SUC n)")}))"
+
+  /** The gap after the `n + 1`-st prime, counting `p 0 = 2` as the 0-th. */
+  private def gap(n: String): String = s"NUM_SUB ($P (SUC (SUC $n))) ($P (SUC $n))"
+
+  /** Every entry of row 1 of `d` from position 1 on is even and at least 2. */
+  private val EvenGaps: String = s"(!j:num. NUM_MOD ($D 1 (SUC j)) 2 = 0 /\\ 2 <= $D 1 (SUC j))"
+
+  /**
+   * `f` is the normalised table of `d`, shifted one position to the right: row 0 is the halved
+   * second row of `d` less one, row `k + 1` the halved row `k + 2`, both read from position 1.
+   */
+  private def normalised(f: String): String =
+    s"((!i:num. $f 0 i = NUM_SUB (NUM_DIV ($D 1 (SUC i)) 2) 1) /\\ (!k:num. !i:num. $f (SUC k) i = NUM_DIV ($D (SUC (SUC k)) (SUC i)) 2))"
+
+  /** `d` is Gilbreath's table over the primes listed by `p`, and `f` its normalised table. */
+  private val Setting: String = s"${enumerates(P)} /\\ (!i:num. $D 0 i = $P i) /\\ ${normalised(F)}"
+
+  /** Ladder data for `f`, starting at row 0 with window `n`, exist. `n` must not mention the names bound here. */
+  private def certified(n: String): String =
+    s"(?c:num. ?r:num->num. ?l:num->num. ?w:num->num. ?D:num. r 0 = 0 /\\ w 0 = $n /\\ ${staged("c", "r", "l", "w", "D", F)})"
 
   /** What `Complex` publishes from here, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
@@ -127,7 +184,31 @@ private[theories] object Gilbreath {
     "GILBREATH_RUNG" -> over(
       s"!L:num. !k:num. !n:num. !D:num. ${bounded("k", "n + L", "D")} /\\ ${runs("k", "n + L", "D", "SUC L")} ==> ${bounded("k + L", "n", "NUM_SUB D 1")}"),
     "GILBREATH_LADDER" -> over(
-      s"!c:num. !r:num->num. !l:num->num. !w:num->num. !D:num. ${staged("c", "r", "l", "w", "D")} ==> $D (r c + w c) 0 <= 1")
+      s"!c:num. !r:num->num. !l:num->num. !w:num->num. !D:num. ${staged("c", "r", "l", "w", "D")} ==> $D (r c + w c) 0 <= 1"),
+    "GILBREATH_PRIMES_EXIST" -> s"?p:num->num. ${enumerates(P)}",
+    "GILBREATH_PRIMES_ALL" -> s"!p:num->num. !q:num. ${enumerates(P)} ==> NUM_PRIME q ==> (?n:num. $P n = q)",
+    "GILBREATH_PRIMES_START" -> s"!p:num->num. ${enumerates(P)} ==> $P 1 = 3 /\\ $P 2 = 5",
+    "GILBREATH_PRIMES_GAPS" -> s"!p:num->num. ${enumerates(P)} ==> (!n:num. NUM_MOD (${gap("n")}) 2 = 0 /\\ 2 <= ${gap("n")})",
+    "GILBREATH_NORMALISED" -> over(s"$EvenGaps ==> (!f:num->num->num. ${normalised(F)} ==> ${stepOf(F)})"),
+    "GILBREATH_NORMALISED_EXISTS" -> s"!d:num->num->num. ?f:num->num->num. ${normalised(F)}",
+    "GILBREATH_PRIMES_CONE" -> over(
+      s"!p:num->num. !f:num->num->num. !c:num. !r:num->num. !l:num->num. !w:num->num. !D:num. !n:num. " +
+        s"$Setting /\\ ${staged("c", "r", "l", "w", "D", F)} /\\ r 0 = 0 /\\ w 0 = n /\\ 1 <= n ==> ${good(s"$D (SUC n) 1")}"),
+    "GILBREATH_PRIMES_FRONT" -> over(
+      s"!p:num->num. !f:num->num->num. !R:num. $Setting /\\ (!n:num. 1 <= n /\\ n <= R ==> ${certified("n")}) ==> " +
+        s"(!k:num. 1 <= k /\\ k <= R + 2 ==> $D k 0 = 1)"),
+    "GILBREATH_PRIMES_CONJECTURE" -> over(
+      s"!p:num->num. !f:num->num->num. $Setting /\\ (!n:num. 1 <= n ==> ${certified("n")}) ==> (!k:num. 0 < k ==> $D k 0 = 1)")
+  )
+
+  /**
+   * Proved on the way and not published, each named here so that a later step reads it rather
+   * than proving it again: every prime in the list is at least its index plus 2, and every row
+   * after the first of a table whose second row is even from position 1 on is even from there too.
+   */
+  private val Lemmas: Vector[(String, String)] = Vector(
+    "GILBREATH_PRIMES_CLIMB" -> s"!p:num->num. ${enumerates(P)} ==> (!n:num. n + 2 <= $P n)",
+    "GILBREATH_EVEN_ROWS" -> over(s"$EvenGaps ==> (!k:num. !i:num. NUM_MOD ($D (SUC k) (SUC i)) 2 = 0)")
   )
 
   private val Order: Vector[(String, Proofs => R[Kernel.Thm])] = Vector(
@@ -142,7 +223,18 @@ private[theories] object Gilbreath {
     "GILBREATH_SHRINK" -> (_.shrink),
     "GILBREATH_DROP" -> (_.drop),
     "GILBREATH_RUNG" -> (_.rung),
-    "GILBREATH_LADDER" -> (_.ladder)
+    "GILBREATH_LADDER" -> (_.ladder),
+    "GILBREATH_PRIMES_EXIST" -> (_.primesExist),
+    "GILBREATH_PRIMES_CLIMB" -> (_.primesClimb),
+    "GILBREATH_PRIMES_ALL" -> (_.primesAll),
+    "GILBREATH_PRIMES_START" -> (_.primesStart),
+    "GILBREATH_PRIMES_GAPS" -> (_.primesGaps),
+    "GILBREATH_EVEN_ROWS" -> (_.evenRows),
+    "GILBREATH_NORMALISED" -> (_.normalisedStep),
+    "GILBREATH_NORMALISED_EXISTS" -> (_.normalisedExists),
+    "GILBREATH_PRIMES_CONE" -> (_.primesCone),
+    "GILBREATH_PRIMES_FRONT" -> (_.primesFront),
+    "GILBREATH_PRIMES_CONJECTURE" -> (_.primesConjecture)
   )
 
   /** The facts [[Statements]] names, derived with `kit`. */
@@ -277,36 +369,45 @@ private[theories] object Gilbreath {
       }
 
     /**
-     * Even entries from position 1 on stay even. Writing each as twice its half, the absolute
-     * difference of two of them is twice the absolute difference of the halves.
+     * Half the absolute difference of two even numbers `a` and `b`, from `NUM_MOD a 2 = 0` and
+     * `NUM_MOD b 2 = 0`: `T = NUM_DIV V 2 /\\ 0 = NUM_MOD V 2`, with `V` the absolute difference of
+     * `a` and `b` and `T` that of their halves, both written with the truncated subtraction. Writing
+     * each as twice its half, `V` is twice `T`.
      */
+    private def halved(A: String, B: String, evenA: Kernel.Thm, evenB: Kernel.Thm): R[Kernel.Thm] = {
+      val Ha = s"NUM_DIV ($A) 2"; val Hb = s"NUM_DIV ($B) 2"
+      val V = s"NUM_SUB ($A) ($B) + NUM_SUB ($B) ($A)"
+      val T = s"NUM_SUB ($Ha) ($Hb) + NUM_SUB ($Hb) ($Ha)"
+      for {
+        halfA <- at(fact("NUM_DIV_MOD"), s"2 * $Ha + NUM_MOD ($A) 2 = $A").flatMap(rw(evenA, _))
+        halfB <- at(fact("NUM_DIV_MOD"), s"2 * $Hb + NUM_MOD ($B) 2 = $B").flatMap(rw(evenB, _))
+        twice <- eitherOrder(s"($Ha)", s"($Hb)") { (lo, hi, le) =>
+          val (low, high) = if (lo == s"($Ha)") (s"($A)", s"($B)") else (s"($B)", s"($A)")
+          for {
+            halves <- ordered(le, lo, hi)
+            whole <- numLinText(Seq(halfA, halfB, le), s"$low <= $high")
+            wholes <- ordered(whole, low, high)
+            out <- numLinText(Seq(halfA, halfB) ++ halves ++ wholes, s"$V = 2 * ($T) + 0")
+          } yield out
+        }
+        below <- two
+        unique <- at(fact("NUM_DIV_MOD_UNIQUE"), s"$V = 2 * ($T) + 0 /\\ (0:num) < 2 ==> $T = NUM_DIV ($V) 2 /\\ 0 = NUM_MOD ($V) 2")
+        out <- conj(twice, below).flatMap(mp(unique, _))
+      } yield out
+    }
+
+    /** Even entries from position 1 on stay even: the difference of two of them is twice that of their halves, by `halved`. */
     def even: R[Kernel.Thm] =
       table { step =>
         val K = v("k"); val I = v("i")
         val A = s"$D $K ($I + 1)"; val B = s"$D $K $I"
-        val Ha = s"NUM_DIV ($A) 2"; val Hb = s"NUM_DIV ($B) 2"
-        val V = s"NUM_SUB ($A) ($B) + NUM_SUB ($B) ($A)"
-        val T = s"NUM_SUB ($Ha) ($Hb) + NUM_SUB ($Hb) ($Ha)"
         for {
           held <- assumed(s"!i:num. 0 < i ==> NUM_MOD ($D $K i) 2 = 0")
           (hT, h) = held
           pos <- assumed(s"0 < $I")
           evenA <- numLinText(Seq.empty, s"0 < $I + 1").flatMap(p => at(h, s"0 < $I + 1 ==> NUM_MOD ($A) 2 = 0").flatMap(mp(_, p)))
           evenB <- at(h, s"0 < $I ==> NUM_MOD ($B) 2 = 0").flatMap(mp(_, pos._2))
-          halfA <- at(fact("NUM_DIV_MOD"), s"2 * $Ha + NUM_MOD ($A) 2 = $A").flatMap(rw(evenA, _))
-          halfB <- at(fact("NUM_DIV_MOD"), s"2 * $Hb + NUM_MOD ($B) 2 = $B").flatMap(rw(evenB, _))
-          twice <- eitherOrder(s"($Ha)", s"($Hb)") { (lo, hi, le) =>
-            val (low, high) = if (lo == s"($Ha)") (s"($A)", s"($B)") else (s"($B)", s"($A)")
-            for {
-              halves <- ordered(le, lo, hi)
-              whole <- numLinText(Seq(halfA, halfB, le), s"$low <= $high")
-              wholes <- ordered(whole, low, high)
-              out <- numLinText(Seq(halfA, halfB) ++ halves ++ wholes, s"$V = 2 * ($T) + 0")
-            } yield out
-          }
-          below <- two
-          unique <- at(fact("NUM_DIV_MOD_UNIQUE"), s"$V = 2 * ($T) + 0 /\\ (0:num) < 2 ==> $T = NUM_DIV ($V) 2 /\\ 0 = NUM_MOD ($V) 2")
-          modulus <- conj(twice, below).flatMap(mp(unique, _)).flatMap(rules.conjElim2).flatMap(Conv.sym)
+          modulus <- halved(A, B, evenA, evenB).flatMap(rules.conjElim2).flatMap(Conv.sym)
           opened <- stepAt(step, K, I)
           goal <- prop(s"NUM_MOD ($D (SUC $K) $I) 2 = 0")
           proved <- rewriting(Seq(opened), goal)(landsOn(modulus))
@@ -854,6 +955,764 @@ private[theories] object Gilbreath {
           end <- numLinText(Seq.empty, "(0:num) <= 0")
             .flatMap(c => at(down, s"(0:num) <= 0 ==> $D ($R0 $C + $W $C) 0 <= 1").flatMap(mp(_, c)))
           out <- rules.disch(hT, end).flatMap(gen(_, cv, rv, lv, wv, boundv))
+        } yield out
+      }
+
+    /* ------------------------------------------------------------ the primes in order */
+
+    private val primesv = Term.variable("p", Rows)
+    private val fv = Term.variable("f", Tables)
+    private val qv = Term.variable("q", Numbers)
+    private val xv = Term.variable("x", Numbers)
+    private val ceilingv = Term.variable("R", Numbers)
+
+    /** A lemma of `Lemmas` proved earlier, checked against its text before it is spent. */
+    private def lemma(name: String): R[Kernel.Thm] =
+      for {
+        thm <- known.get(name).toRight(MissingDefinition(name))
+        text <- Lemmas.toMap.get(name).toRight(MissingDefinition(name))
+        expected <- prop(text)
+        out <- if (thm.conclusion == expected && thm.hypotheses.isEmpty) Right(thm)
+          else Left(NotOfForm("the statement Gilbreath.Lemmas writes for it, with no hypothesis", thm.conclusion))
+      } yield out
+
+    /** A lemma of `Lemmas` over the table, at the equation assumed. */
+    private def underLemma(name: String): R[Kernel.Thm] =
+      for {
+        h <- assume(Step)
+        out <- lemma(name).flatMap(spec(_, dv)).flatMap(mp(_, h))
+      } yield out
+
+    /** Falsity from comparisons of naturals that cannot all hold, which `numLin` sees as `SUC 0 = 0`. */
+    private def absurd(facts: Seq[Kernel.Thm]): R[Kernel.Thm] =
+      for {
+        zero <- numLinText(facts, "SUC 0 = 0")
+        never <- at(fact("NUM_SUC_NOT_ZERO"), "~(SUC 0 = 0)")
+        out <- rules.notElim(never, zero)
+      } yield out
+
+    /** `goal` from falsity. */
+    private def anyway(falsity: Kernel.Thm, goal: String): R[Kernel.Thm] = prop(goal).flatMap(rules.falsityElim(_, falsity))
+
+    /** `SUC 0 = 1`, which carries a row or a position written by a recurrence to the numeral. */
+    private def oneOfSuc: R[Kernel.Thm] = fact("NUM_ONE_SUC").flatMap(Conv.sym)
+
+    /** `SUC (NUM_SUB x 1) = x` from `1 <= x`, and `NUM_SUB x 1 + 1 = x` beside it. */
+    private def predecessor(one: Kernel.Thm, x: String): R[(Kernel.Thm, Kernel.Thm)] =
+      for {
+        back <- at(fact("NUM_SUB_ADD"), s"1 <= $x ==> NUM_SUB $x 1 + 1 = $x").flatMap(mp(_, one))
+        suc <- numLinText(Seq(back), s"SUC (NUM_SUB $x 1) = $x")
+      } yield (suc, back)
+
+    /** `!i. 0 < i ==> P i` from `!i. P (SUC i)`, with `entry` writing `P` at a position. */
+    private def fromSuccessor(thm: Kernel.Thm, entry: String => String): R[Kernel.Thm] = {
+      val I = v("i")
+      for {
+        pos <- assumed(s"0 < $I")
+        one <- numLinText(Seq(pos._2), s"1 <= $I")
+        suc <- predecessor(one, I).map(_._1)
+        there <- at(thm, entry(s"(SUC (NUM_SUB $I 1))")).flatMap(rw(suc, _))
+        out <- rules.disch(pos._1, there).flatMap(gen(_, iv))
+      } yield out
+    }
+
+    /** Every existential of `existential` opened in turn, under the names given, and `use` on the body. */
+    private def chooseAll(existential: Kernel.Thm, names: Seq[String])(use: Kernel.Thm => R[Kernel.Thm]): R[Kernel.Thm] =
+      names match {
+        case Seq() => use(existential)
+        case name +: rest => choose(existential, name)((_, inner) => chooseAll(inner, rest)(use))
+      }
+
+    /** The clause of the list at `index`, split: `p (SUC index)` is prime, above `p index`, and no prime lies between. */
+    private def clause(clauses: Kernel.Thm, index: String): R[Vector[Kernel.Thm]] =
+      at(clauses, nextPrime(s"$P ($index)", s"$P (SUC ($index))")).flatMap(split)
+
+    /**
+     * `m = N` for the numeral `N`, from `N = m * k`, `SUC 0 < m` and `m <= c`: each candidate from
+     * `c` down to 2 other than `N` is refused because `N` is not a multiple of it, which `numLin`
+     * sees once `k` is placed either side of `N / c`.
+     */
+    private def onlyDivisor(n: Int, c: Int, product: Kernel.Thm, low: Kernel.Thm, le: Kernel.Thm): R[Kernel.Thm] = {
+      val M = v("m"); val K = v("k"); val goal = s"$M = $n"
+      if (c <= 1) numLinText(Seq(low, le), goal)
+      else
+        for {
+          sides <- at(fact("NUM_LE_CASES"), s"$M <= $c ==> $M < $c \\/ $M = $c").flatMap(mp(_, le))
+          below <- assume(s"$M < $c").flatMap(lt => numLinText(Seq(lt), s"$M <= ${c - 1}")).flatMap(onlyDivisor(n, c - 1, product, low, _))
+          here <- assume(s"$M = $c").flatMap { equal =>
+            if (c == n) Right(equal)
+            else
+              for {
+                multiple <- rw(equal, product)
+                quotient = n / c
+                out <- cases(s"$K <= $quotient")(
+                  small => numLinText(Seq(multiple, small), goal),
+                  large =>
+                    notLeTheorem.flatMap(at(_, s"~($K <= $quotient) ==> $quotient < $K")).flatMap(mp(_, large))
+                      .flatMap(gt => numLinText(Seq(multiple, gt), goal))
+                )
+              } yield out
+          }
+          out <- rules.disjElim(sides, below, here)
+        } yield out
+    }
+
+    /** `NUM_PRIME N` for a numeral `N`: the prime factor `NUM_PRIME_FACTOR` gives it is `N` itself. */
+    private def primeNumeral(n: Int): R[Kernel.Thm] = {
+      val M = v("m")
+      for {
+        above <- numLinText(Seq.empty, s"SUC 0 < $n")
+        factor <- at(fact("NUM_PRIME_FACTOR"), s"SUC 0 < $n ==> (?m:num. NUM_PRIME m /\\ NUM_DIVIDES m $n)").flatMap(mp(_, above))
+        out <- choose(factor, "m") { (_, held) =>
+          for {
+            parts <- split(held)
+            low <- at(fact("NUM_PRIME_ABOVE_ONE"), s"NUM_PRIME $M ==> SUC 0 < $M").flatMap(mp(_, parts(0)))
+            sizes <- at(fact("NUM_DIVIDES_LE"), s"NUM_DIVIDES $M $n ==> $M <= $n \\/ ($n:num) = 0").flatMap(mp(_, parts(1)))
+            fits <- assume(s"$M <= $n")
+            empty <- assume(s"($n:num) = 0").flatMap(z => numLinText(Seq(z), s"$M <= $n"))
+            high <- rules.disjElim(sizes, fits, empty)
+            quotient <- at(fact("NUM_DIVIDES_ELIM"), s"NUM_DIVIDES $M $n ==> (?k:num. $n = $M * k)").flatMap(mp(_, parts(1)))
+            equal <- choose(quotient, "k")((_, product) => onlyDivisor(n, n, product, low, high))
+            out <- rw(equal, parts(0))
+          } yield out
+        }
+      } yield out
+    }
+
+    /** `~(NUM_PRIME 4)`: 2 divides it. */
+    private def fourNotPrime: R[Kernel.Thm] =
+      for {
+        held <- assumed("NUM_PRIME 4")
+        twice <- num("(4:num) = 2 * 2")
+        divides <- at(fact("NUM_DIVIDES_INTRO"), "(4:num) = 2 * 2 ==> NUM_DIVIDES 2 4").flatMap(mp(_, twice))
+        only <- at(fact("NUM_PRIME_DIVISOR"), "NUM_PRIME 4 ==> NUM_DIVIDES 2 4 ==> 2 = SUC 0 \\/ (2:num) = 4").flatMap(mp(_, held._2, divides))
+        one <- assume("(2:num) = SUC 0").flatMap(e => absurd(Seq(e)))
+        other <- assume("(2:num) = 4").flatMap(e => absurd(Seq(e)))
+        falsity <- rules.disjElim(only, one, other)
+        out <- rules.notIntro(held._1, falsity)
+      } yield out
+
+    /** `NUM_MOD q 2 = 1` for a prime `q` above 2: were it even, 2 would be a divisor other than 1 and `q`. */
+    private def oddPrime(prime: Kernel.Thm, above: Kernel.Thm, Q: String): R[Kernel.Thm] = {
+      val goal = s"NUM_MOD ($Q) 2 = 1"
+      for {
+        below <- two.flatMap(t => at(fact("NUM_MOD_LT"), s"(0:num) < 2 ==> NUM_MOD ($Q) 2 < 2").flatMap(mp(_, t)))
+        whole <- at(fact("NUM_DIV_MOD"), s"2 * NUM_DIV ($Q) 2 + NUM_MOD ($Q) 2 = $Q")
+        out <- cases(s"NUM_MOD ($Q) 2 = 0")(
+          zero =>
+            for {
+              halves <- rw(zero, whole)
+              flat <- numLinText(Seq(halves), s"$Q = 2 * NUM_DIV ($Q) 2")
+              divides <- at(fact("NUM_DIVIDES_INTRO"), s"$Q = 2 * NUM_DIV ($Q) 2 ==> NUM_DIVIDES 2 ($Q)").flatMap(mp(_, flat))
+              only <- at(fact("NUM_PRIME_DIVISOR"), s"NUM_PRIME ($Q) ==> NUM_DIVIDES 2 ($Q) ==> 2 = SUC 0 \\/ 2 = $Q").flatMap(mp(_, prime, divides))
+              one <- assume("(2:num) = SUC 0").flatMap(e => absurd(Seq(e))).flatMap(anyway(_, goal))
+              other <- assume(s"2 = $Q").flatMap(e => absurd(Seq(e, above))).flatMap(anyway(_, goal))
+              out <- rules.disjElim(only, one, other)
+            } yield out,
+          nonzero => positiveOf(nonzero, s"NUM_MOD ($Q) 2").flatMap(pos => numLinText(Seq(pos, below), goal))
+        )
+      } yield out
+    }
+
+    /**
+     * `x <= N` from `lo < N`, `NUM_PRIME N` and the clause that no prime lies strictly between `lo`
+     * and `x`: otherwise `N` would be one.
+     */
+    private def atMost(x: String, lo: Int, n: Int, gaps: Kernel.Thm, prime: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        total <- at(fact("NUM_LE_TOTAL"), s"$x <= $n \\/ $n <= $x")
+        fits <- assume(s"$x <= $n")
+        beyond <- for {
+          le <- assume(s"$n <= $x")
+          sides <- at(fact("NUM_LE_CASES"), s"$n <= $x ==> $n < $x \\/ $n = $x").flatMap(mp(_, le))
+          strict <- for {
+            lt <- assume(s"$n < $x")
+            inside <- numLinText(Seq.empty, s"($lo:num) < $n").flatMap(conj(_, lt))
+            never <- at(gaps, s"($lo:num) < $n /\\ $n < $x ==> ~(NUM_PRIME $n)").flatMap(mp(_, inside))
+            falsity <- rules.notElim(never, prime)
+            out <- anyway(falsity, s"$x <= $n")
+          } yield out
+          equal <- assume(s"$n = $x").flatMap(e => numLinText(Seq(e), s"$x <= $n"))
+          out <- rules.disjElim(sides, strict, equal)
+        } yield out
+        out <- rules.disjElim(total, fits, beyond)
+      } yield out
+
+    /** `!x. ?y. y is the least prime above x`: Euclid's primes above `x`, and the least of them. */
+    private def nextExists: R[Kernel.Thm] = {
+      val X = v("x"); val M = v("m")
+      for {
+        some <- at(fact("NUM_PRIME_UNBOUNDED"), s"?m:num. NUM_PRIME m /\\ $X < m")
+        property <- term(s"\\m:num. NUM_PRIME m /\\ $X < m", Type.fun(Numbers, Type.Bool))
+        least <- fact("NUM_LEAST").flatMap(spec(_, property)).flatMap(mp(_, some))
+        predicate <- predicateOf(s"?y:num. ${nextPrime(X, "y")}")
+        out <- choose(least, "y") { (y, held) =>
+          val Y = v(y.name)
+          for {
+            parts <- split(held)
+            pair <- split(parts(0))
+            between <- for {
+              range <- assumed(s"$X < $M /\\ $M < $Y")
+              ends <- split(range._2)
+              minimal <- at(parts(1), s"$M < $Y ==> ~(NUM_PRIME $M /\\ $X < $M)").flatMap(mp(_, ends(1)))
+              wanted <- prop(s"~(NUM_PRIME $M)")
+              never <- tauto(Seq(minimal, ends(0)), wanted)
+              out <- rules.disch(range._1, never).flatMap(gen(_, mv))
+            } yield out
+            holds <- conjs(pair(0), pair(1), between)
+            out <- introduce(predicate, y, holds)
+          } yield out
+        }
+        general <- gen(out, xv)
+      } yield general
+    }
+
+    /**
+     * A list of the primes exists: by the recursion theorem, from 2, each entry the chosen least
+     * prime above the one before it, which `nextExists` and choice make the least prime above it.
+     */
+    def primesExist: R[Kernel.Thm] =
+      for {
+        nexts <- nextExists
+        choice <- classical.axiom(Classical.Choice).map(Kernel.instType(Map(Classical.TypeVariable -> Numbers), _))
+        recursive <- Right(Kernel.instType(Map("a" -> Numbers), recursion))
+        start <- nm("2")
+        stepper <- term(s"\\x:num. \\n:num. select (\\y:num. ${nextPrime("x", "y")})", Type.fun(Numbers, Type.fun(Numbers, Numbers)))
+        made <- spec(recursive, start, stepper)
+        predicate <- predicateOf(s"?p:num->num. ${enumerates(P)}")
+        out <- choose(made, "fn") { (fn, clauses) =>
+          for {
+            parts <- split(clauses)
+            atSuc <- spec(parts(1), nv)
+            chosen <- Term.destEq(atSuc.conclusion) match {
+              case Some((_, App(_, predicateTerm))) => Right(predicateTerm)
+              case _ => Left(NotOfForm("an entry chosen by select", atSuc.conclusion))
+            }
+            before <- LogicError.lift(Term.app(fn, nv))
+            exists <- spec(nexts, before)
+            reached <- choose(exists, "y")((y, holds) => spec(choice, chosen, y).flatMap(mp(_, holds)))
+            back <- Conv.sym(atSuc)
+            here <- rw(back, reached)
+            every <- gen(here, nv)
+            both <- conj(parts(0), every)
+            out <- introduce(predicate, fn, both)
+          } yield out
+        }
+      } yield out
+
+    /** Every entry is at least its index plus 2: by induction, each entry above the one before. */
+    def primesClimb: R[Kernel.Thm] =
+      for {
+        held <- assumed(enumerates(P))
+        (hT, h) = held
+        parts <- split(h)
+        body <- prop(s"(n:num) + 2 <= $P n")
+        proved <- inductOn(nv, body)(
+          base => numLin(Seq(parts(0)), base),
+          (nn, ih, goal) => clause(parts(1), v(nn.name)).flatMap(c => numLin(Seq(ih, c(1)), goal))
+        )
+        out <- rules.disch(hT, proved).flatMap(gen(_, primesv))
+      } yield out
+
+    /**
+     * The list misses no prime. The least index whose entry reaches `q` exists, since entry `q`
+     * does; at index 0 the entry is 2 and `q` is above 1, and at any later index the entry before
+     * is below `q`, so `q` below the entry would be a prime between two consecutive ones.
+     */
+    def primesAll: R[Kernel.Thm] = {
+      val Q = v("q"); val N = v("n")
+      val goal = s"?n:num. $P n = $Q"
+      for {
+        climb <- lemma("GILBREATH_PRIMES_CLIMB").flatMap(spec(_, primesv))
+        held <- assumed(enumerates(P))
+        (hT, h) = held
+        parts <- split(h)
+        prime <- assumed(s"NUM_PRIME $Q")
+        (qT, hq) = prime
+        far <- mp(climb, h).flatMap(at(_, s"$Q + 2 <= $P $Q"))
+        reach <- numLinText(Seq(far), s"$Q <= $P $Q")
+        some <- existsIntro(s"?n:num. $Q <= $P n", qv, reach)
+        property <- term(s"\\n:num. $Q <= $P n", Type.fun(Numbers, Type.Bool))
+        least <- fact("NUM_LEAST").flatMap(spec(_, property)).flatMap(mp(_, some))
+        above <- at(fact("NUM_PRIME_ABOVE_ONE"), s"NUM_PRIME $Q ==> SUC 0 < $Q").flatMap(mp(_, hq))
+        found <- choose(least, "n") { (n, both) =>
+          for {
+            bs <- split(both)
+            out <- cases(s"$N = 0")(
+              zero =>
+                for {
+                  low <- rw(zero, bs(0))
+                  equal <- numLinText(Seq(low, parts(0), above), s"$P 0 = $Q")
+                  witness <- nm("0")
+                  out <- existsIntro(goal, witness, equal)
+                } yield out,
+              nonzero =>
+                for {
+                  one <- positiveOf(nonzero, N).flatMap(pos => numLinText(Seq(pos), s"1 <= $N"))
+                  pred <- predecessor(one, N)
+                  (suc, back) = pred
+                  prior = s"(NUM_SUB $N 1)"
+                  earlier <- numLinText(Seq(back), s"$prior < $N")
+                  short <- at(bs(1), s"$prior < $N ==> ~($Q <= $P $prior)").flatMap(mp(_, earlier))
+                  lower <- notLeTheorem.flatMap(at(_, s"~($Q <= $P $prior) ==> $P $prior < $Q")).flatMap(mp(_, short))
+                  gaps <- clause(parts(1), prior).flatMap(c => rw(suc, c(2)))
+                  sides <- at(fact("NUM_LE_CASES"), s"$Q <= $P $N ==> $Q < $P $N \\/ $Q = $P $N").flatMap(mp(_, bs(0)))
+                  strict <- for {
+                    lt <- assume(s"$Q < $P $N")
+                    between <- conj(lower, lt)
+                    never <- at(gaps, s"$P $prior < $Q /\\ $Q < $P $N ==> ~(NUM_PRIME $Q)").flatMap(mp(_, between))
+                    falsity <- rules.notElim(never, hq)
+                    out <- anyway(falsity, goal)
+                  } yield out
+                  equal <- for {
+                    e <- assume(s"$Q = $P $N")
+                    s <- Conv.sym(e)
+                    out <- existsIntro(goal, n, s)
+                  } yield out
+                  out <- rules.disjElim(sides, strict, equal)
+                } yield out
+            )
+          } yield out
+        }
+        out <- rules.disch(qT, found).flatMap(rules.disch(hT, _)).flatMap(gen(_, primesv, qv))
+      } yield out
+    }
+
+    /** `p 1 = 3` and `p 2 = 5`: 3 and 5 are prime, 4 is not, and the list skips no prime. */
+    def primesStart: R[Kernel.Thm] = {
+      val P1 = s"$P 1"; val P2 = s"$P 2"
+      for {
+        held <- assumed(enumerates(P))
+        (hT, h) = held
+        parts <- split(h)
+        one <- oneOfSuc
+        twoOfSuc <- numLinText(Seq.empty, "SUC 1 = 2")
+        three <- primeNumeral(3)
+        five <- primeNumeral(5)
+        four <- fourNotPrime
+        first <- clause(parts(1), "0").flatMap(cs =>
+          cs.foldLeft[R[Vector[Kernel.Thm]]](Right(Vector.empty))((acc, c) => for { done <- acc; t <- rw(one, c).flatMap(rw(parts(0), _)) } yield done :+ t))
+        upper1 <- atMost(P1, 2, 3, first(2), three)
+        p1 <- numLinText(Seq(first(1), upper1), s"$P1 = 3")
+        second <- clause(parts(1), "1").flatMap(cs =>
+          cs.foldLeft[R[Vector[Kernel.Thm]]](Right(Vector.empty))((acc, c) => for { done <- acc; t <- rw(twoOfSuc, c).flatMap(rw(p1, _)) } yield done :+ t))
+        upper2 <- atMost(P2, 3, 5, second(2), five)
+        sides <- at(fact("NUM_LE_CASES"), s"$P2 <= 5 ==> $P2 < 5 \\/ $P2 = 5").flatMap(mp(_, upper2))
+        notFour <- for {
+          lt <- assume(s"$P2 < 5")
+          isFour <- numLinText(Seq(lt, second(1)), s"$P2 = 4")
+          primeFour <- rw(isFour, second(0))
+          falsity <- rules.notElim(four, primeFour)
+          out <- anyway(falsity, s"$P2 = 5")
+        } yield out
+        p2 <- assume(s"$P2 = 5").flatMap(rules.disjElim(sides, notFour, _))
+        both <- conj(p1, p2)
+        out <- rules.disch(hT, both).flatMap(gen(_, primesv))
+      } yield out
+    }
+
+    /**
+     * Every gap after the first is even and at least 2: the primes either side are odd, so their
+     * difference is twice the difference of their halves, which is not 0 because they differ.
+     */
+    def primesGaps: R[Kernel.Thm] = {
+      val N = v("n"); val A = s"$P (SUC (SUC $N))"; val B = s"$P (SUC $N)"
+      val Ha = s"NUM_DIV ($A) 2"; val Hb = s"NUM_DIV ($B) 2"
+      val S = s"NUM_SUB ($Ha) ($Hb)"; val G = gap(N)
+      for {
+        climb <- lemma("GILBREATH_PRIMES_CLIMB").flatMap(spec(_, primesv))
+        held <- assumed(enumerates(P))
+        (hT, h) = held
+        parts <- split(h)
+        here <- clause(parts(1), N)
+        next <- clause(parts(1), s"SUC $N")
+        farB <- mp(climb, h).flatMap(at(_, s"SUC $N + 2 <= $B"))
+        aboveB <- numLinText(Seq(farB), s"2 < $B")
+        aboveA <- numLinText(Seq(farB, next(1)), s"2 < $A")
+        oddB <- oddPrime(here(0), aboveB, B)
+        oddA <- oddPrime(next(0), aboveA, A)
+        halfA <- at(fact("NUM_DIV_MOD"), s"2 * $Ha + NUM_MOD ($A) 2 = $A").flatMap(rw(oddA, _))
+        halfB <- at(fact("NUM_DIV_MOD"), s"2 * $Hb + NUM_MOD ($B) 2 = $B").flatMap(rw(oddB, _))
+        le <- numLinText(Seq(next(1)), s"$B <= $A")
+        whole <- at(fact("NUM_SUB_ADD"), s"$B <= $A ==> $G + $B = $A").flatMap(mp(_, le))
+        halfLe <- numLinText(Seq(halfA, halfB, next(1)), s"$Hb <= $Ha")
+        half <- at(fact("NUM_SUB_ADD"), s"$Hb <= $Ha ==> $S + $Hb = $Ha").flatMap(mp(_, halfLe))
+        twice <- numLinText(Seq(halfA, halfB, whole, half), s"$G = 2 * ($S) + 0")
+        below <- two
+        unique <- at(fact("NUM_DIV_MOD_UNIQUE"), s"$G = 2 * ($S) + 0 /\\ (0:num) < 2 ==> $S = NUM_DIV ($G) 2 /\\ 0 = NUM_MOD ($G) 2")
+        even <- conj(twice, below).flatMap(mp(unique, _)).flatMap(rules.conjElim2).flatMap(Conv.sym)
+        wide <- cases(s"$S = 0")(
+          zero => numLinText(Seq(zero, twice, whole, next(1)), s"2 <= $G"),
+          nonzero => positiveOf(nonzero, S).flatMap(pos => numLinText(Seq(pos, twice), s"2 <= $G"))
+        )
+        both <- conj(even, wide)
+        out <- gen(both, nv).flatMap(rules.disch(hT, _)).flatMap(gen(_, primesv))
+      } yield out
+    }
+
+    /** Every row after the first is even from position 1 on, when the second row is: by induction with `GILBREATH_EVEN`. */
+    def evenRows: R[Kernel.Thm] =
+      table { _ =>
+        val I = v("i")
+        for {
+          evenHere <- under("GILBREATH_EVEN")
+          held <- assumed(EvenGaps)
+          (hT, h) = held
+          one <- oneOfSuc
+          body <- prop(s"!i:num. NUM_MOD ($D (SUC (k:num)) (SUC i)) 2 = 0")
+          proved <- inductOn(kv, body)(
+            base =>
+              rewriting(Seq(one), base) { g =>
+                at(h, s"NUM_MOD ($D 1 (SUC $I)) 2 = 0 /\\ 2 <= $D 1 (SUC $I)").flatMap(rules.conjElim1).flatMap(gen(_, iv)).flatMap(landsOn(_)(g))
+              },
+            (kk, ih, _) => {
+              val K = v(kk.name)
+              for {
+                positive <- fromSuccessor(ih, i => s"NUM_MOD ($D (SUC $K) $i) 2 = 0")
+                next <- at(evenHere,
+                  s"(!i:num. 0 < i ==> NUM_MOD ($D (SUC $K) i) 2 = 0) ==> (!i:num. 0 < i ==> NUM_MOD ($D (SUC (SUC $K)) i) 2 = 0)")
+                  .flatMap(mp(_, positive))
+                lt <- numLinText(Seq.empty, s"0 < SUC $I")
+                entry <- at(next, s"0 < SUC $I ==> NUM_MOD ($D (SUC (SUC $K)) (SUC $I)) 2 = 0").flatMap(mp(_, lt))
+                out <- gen(entry, iv)
+              } yield out
+            }
+          )
+          out <- rules.disch(hT, proved)
+        } yield out
+      }
+
+    /**
+     * The normalised table satisfies the table's equation. Below row 1 each entry is half an
+     * absolute difference of two even entries, which is the absolute difference of their halves by
+     * `halved`; at row 1 the halves are of the second row, and taking 1 from both, each at least
+     * 1, leaves their difference as it was.
+     */
+    def normalisedStep: R[Kernel.Thm] =
+      table { step =>
+        val K = v("k"); val I = v("i")
+        val A = s"$D 1 (SUC $I + 1)"; val B = s"$D 1 (SUC $I)"
+        val Ha = s"NUM_DIV ($A) 2"; val Hb = s"NUM_DIV ($B) 2"
+        def stepText(row: String, pos: String): String =
+          s"$F (SUC $row) $pos = NUM_SUB ($F $row ($pos + 1)) ($F $row $pos) + NUM_SUB ($F $row $pos) ($F $row ($pos + 1))"
+        for {
+          rowsHere <- underLemma("GILBREATH_EVEN_ROWS")
+          held <- assumed(EvenGaps)
+          (gT, gaps) = held
+          evens <- mp(rowsHere, gaps)
+          described <- assumed(normalised(F))
+          (fT, fh) = described
+          fs <- split(fh)
+          one <- oneOfSuc
+          shift <- numLinText(Seq.empty, s"SUC ($I + 1) = SUC $I + 1")
+          later <- for {
+            top <- at(fs(1), s"$F (SUC (SUC $K)) $I = NUM_DIV ($D (SUC (SUC (SUC $K))) (SUC $I)) 2")
+            right <- at(fs(1), s"$F (SUC $K) ($I + 1) = NUM_DIV ($D (SUC (SUC $K)) (SUC ($I + 1))) 2").flatMap(rw(shift, _))
+            left <- at(fs(1), s"$F (SUC $K) $I = NUM_DIV ($D (SUC (SUC $K)) (SUC $I)) 2")
+            opened <- stepAt(step, s"(SUC (SUC $K))", s"(SUC $I)")
+            twoShift <- numLinText(Seq.empty, s"SUC (SUC $I) = SUC $I + 1")
+            evenA <- at(evens, s"NUM_MOD ($D (SUC (SUC $K)) (SUC (SUC $I))) 2 = 0").flatMap(rw(twoShift, _))
+            evenB <- at(evens, s"NUM_MOD ($D (SUC (SUC $K)) (SUC $I)) 2 = 0")
+            halves <- halved(s"$D (SUC (SUC $K)) (SUC $I + 1)", s"$D (SUC (SUC $K)) (SUC $I)", evenA, evenB)
+              .flatMap(rules.conjElim1).flatMap(Conv.sym)
+            goal <- prop(stepText(s"(SUC $K)", I))
+            proved <- rewriting(Seq(top, opened, right, left), goal)(landsOn(halves))
+            out <- gen(proved, kv, iv)
+          } yield out
+          first <- for {
+            top <- at(fs(1), s"$F (SUC 0) $I = NUM_DIV ($D (SUC (SUC 0)) (SUC $I)) 2").flatMap(rw(one, _))
+            opened <- stepAt(step, "1", s"(SUC $I)")
+            right <- at(fs(0), s"$F 0 ($I + 1) = NUM_SUB (NUM_DIV ($D 1 (SUC ($I + 1))) 2) 1").flatMap(rw(shift, _))
+            left <- at(fs(0), s"$F 0 $I = NUM_SUB (NUM_DIV ($D 1 (SUC $I)) 2) 1")
+            gapA <- at(gaps, s"NUM_MOD ($D 1 (SUC ($I + 1))) 2 = 0 /\\ 2 <= $D 1 (SUC ($I + 1))").flatMap(rw(shift, _)).flatMap(split)
+            gapB <- at(gaps, s"NUM_MOD ($B) 2 = 0 /\\ 2 <= $B").flatMap(split)
+            halves <- halved(A, B, gapA(0), gapB(0)).flatMap(rules.conjElim1)
+            wholeA <- at(fact("NUM_DIV_MOD"), s"2 * $Ha + NUM_MOD ($A) 2 = $A").flatMap(rw(gapA(0), _))
+            wholeB <- at(fact("NUM_DIV_MOD"), s"2 * $Hb + NUM_MOD ($B) 2 = $B").flatMap(rw(gapB(0), _))
+            backA <- numLinText(Seq(wholeA, gapA(1)), s"1 <= $Ha").flatMap(predecessor(_, s"($Ha)")).map(_._2)
+            backB <- numLinText(Seq(wholeB, gapB(1)), s"1 <= $Hb").flatMap(predecessor(_, s"($Hb)")).map(_._2)
+            goal <- prop(stepText("0", I))
+            proved <- rewriting(Seq(one, top, opened, right, left), goal) { g =>
+              eitherOrder(s"($Ha)", s"($Hb)") { (lo, hi, le) =>
+                val (lo1, hi1) = (s"(NUM_SUB $lo 1)", s"(NUM_SUB $hi 1)")
+                for {
+                  outer <- ordered(le, lo, hi)
+                  le1 <- numLinText(Seq(le, backA, backB), s"$lo1 <= $hi1")
+                  inner <- ordered(le1, lo1, hi1)
+                  out <- numLin(outer ++ inner ++ Seq(halves, backA, backB), g)
+                } yield out
+              }
+            }
+            out <- gen(proved, iv)
+          } yield out
+          goal <- prop(stepText(K, I))
+          entry <- cases(s"$K = 0")(
+            zero => spec(first, iv).flatMap(atI => rewriting(Seq(zero), goal)(landsOn(atI))),
+            nonzero =>
+              for {
+                one1 <- positiveOf(nonzero, K).flatMap(pos => numLinText(Seq(pos), s"1 <= $K"))
+                suc <- predecessor(one1, K).map(_._1)
+                out <- at(later, stepText(s"(SUC (NUM_SUB $K 1))", I)).flatMap(rw(suc, _))
+              } yield out
+          )
+          general <- gen(entry, kv, iv)
+          out <- rules.disch(fT, general).flatMap(gen(_, fv)).flatMap(rules.disch(gT, _))
+        } yield out
+      }
+
+    /**
+     * Every table has a normalised table: `\k i. NUM_SUB (NUM_DIV (d (SUC k) (SUC i)) 2) (NUM_SUB 1 k)`,
+     * which takes 1 at row 0 and nothing after it, so no case split is written. It is what keeps the
+     * hypothesis on `f` in `GILBREATH_PRIMES_CONE` and the two after it from being one nothing
+     * satisfies.
+     */
+    def normalisedExists: R[Kernel.Thm] = {
+      val K = v("k"); val I = v("i")
+      val later = s"NUM_DIV ($D (SUC (SUC $K)) (SUC $I)) 2"
+      for {
+        witness <- term(s"\\k:num. \\i:num. NUM_SUB (NUM_DIV ($D (SUC k) (SUC i)) 2) (NUM_SUB 1 k)", Tables)
+        predicate <- predicateOf(s"?f:num->num->num. ${normalised(F)}")
+        one <- oneOfSuc
+        first <- for {
+          goal <- prop(s"NUM_SUB (NUM_DIV ($D (SUC 0) (SUC $I)) 2) (NUM_SUB 1 0) = NUM_SUB (NUM_DIV ($D 1 (SUC $I)) 2) 1")
+          zero <- at(fact("NUM_SUB_ZERO"), "NUM_SUB 1 0 = 1")
+          out <- rewriting(Seq(one, zero), goal)(byBeta).flatMap(gen(_, iv))
+        } yield out
+        rest <- for {
+          goal <- prop(s"NUM_SUB ($later) (NUM_SUB 1 (SUC $K)) = $later")
+          le <- numLinText(Seq.empty, s"1 <= SUC $K")
+          none <- at(fact("NUM_SUB_EQ_ZERO"), s"1 <= SUC $K ==> NUM_SUB 1 (SUC $K) = 0").flatMap(mp(_, le))
+          same <- at(fact("NUM_SUB_ZERO"), s"NUM_SUB ($later) 0 = $later")
+          out <- rewriting(Seq(none, same), goal)(byBeta).flatMap(gen(_, kv, iv))
+        } yield out
+        both <- conj(first, rest)
+        out <- introduce(predicate, witness, both).flatMap(gen(_, dv))
+      } yield out
+    }
+
+    /** Row 1 of the table over the list: `!j. d 1 j = NUM_SUB (p (SUC j)) (p j)`, the list being increasing. */
+    private def rowOne(step: Kernel.Thm, list: Kernel.Thm, first: Kernel.Thm): R[Kernel.Thm] = {
+      val J = v("j")
+      for {
+        parts <- split(list)
+        c <- clause(parts(1), J)
+        one <- oneOfSuc
+        opened <- stepAt(step, "0", J)
+        succ <- numLinText(Seq.empty, s"$J + 1 = SUC $J")
+        here <- at(first, s"$D 0 $J = $P $J")
+        there <- at(first, s"$D 0 (SUC $J) = $P (SUC $J)")
+        values <- rw(succ, opened).flatMap(rw(there, _)).flatMap(rw(here, _))
+        le <- numLinText(Seq(c(1)), s"$P $J <= $P (SUC $J)")
+        zero <- at(fact("NUM_SUB_EQ_ZERO"), s"$P $J <= $P (SUC $J) ==> NUM_SUB ($P $J) ($P (SUC $J)) = 0").flatMap(mp(_, le))
+        equal <- numLinText(Seq(values, zero), s"$D (SUC 0) $J = NUM_SUB ($P (SUC $J)) ($P $J)").flatMap(rw(one, _))
+        out <- gen(equal, jv)
+      } yield out
+    }
+
+    /** `EvenGaps` for the table over the list, from `GILBREATH_PRIMES_GAPS` read through row 1. */
+    private def evenGapsOf(rows: Kernel.Thm, gaps: Kernel.Thm): R[Kernel.Thm] = {
+      val J = v("j"); val G = s"NUM_SUB ($P (SUC (SUC $J))) ($P (SUC $J))"
+      for {
+        row <- at(rows, s"$D 1 (SUC $J) = $G")
+        here <- at(gaps, s"NUM_MOD ($G) 2 = 0 /\\ 2 <= $G")
+        back <- Conv.sym(row)
+        out <- rw(back, here).flatMap(gen(_, jv))
+      } yield out
+    }
+
+    /** `r c + w c = r 0 + w 0` from the ladder's hypothesis: each stage moves `l s` from the window to the row. */
+    private def sumOfStages(ladder: Kernel.Thm, C: String, R0: String, Ln: String, W: String, Bd: String): R[Kernel.Thm] =
+      for {
+        parts <- split(ladder)
+        body <- prop(s"(s:num) <= $C ==> $R0 s + $W s = $R0 0 + $W 0")
+        reach <- inductOn(sv, body)(
+          base =>
+            for {
+              sides <- logic.destImp(base).toRight(NotOfForm("an implication", base))
+              same <- numLin(Seq.empty, sides._2)
+              out <- rules.disch(sides._1, same)
+            } yield out,
+          (ss, ih, _) => {
+            val U = v(ss.name)
+            for {
+              bound <- assumed(s"SUC $U <= $C")
+              within <- numLinText(Seq(bound._2), s"$U <= $C")
+              lt <- numLinText(Seq(bound._2), s"$U < $C")
+              prior <- mp(ih, within)
+              here <- at(parts(1), s"$U < $C ==> ${stage(R0, Ln, W, Bd, U, F)}").flatMap(mp(_, lt)).flatMap(split)
+              moved <- numLinText(Seq(prior, here(0), here(1)), s"$R0 (SUC $U) + $W (SUC $U) = $R0 0 + $W 0")
+              out <- rules.disch(bound._1, moved)
+            } yield out
+          }
+        )
+        out <- numLinText(Seq.empty, s"$C <= $C").flatMap(c => at(reach, s"$C <= $C ==> $R0 $C + $W $C = $R0 0 + $W 0").flatMap(mp(_, c)))
+      } yield out
+
+    /**
+     * The cone over the primes: a ladder for the normalised table from row 0 with window `n` puts
+     * its entry `n` rows down, at most 1, which is half the entry at position 1 of row `n + 1` of
+     * the table; that entry is even, so it is 0 or 2.
+     */
+    def primesCone: R[Kernel.Thm] =
+      table { step =>
+        val N = v("n"); val C = v("c"); val R0 = "(r:num->num)"; val Ln = "(l:num->num)"; val W = "(w:num->num)"; val Bd = v("D")
+        val X = s"$D (SUC $N) 1"; val H = s"NUM_DIV ($X) 2"
+        for {
+          normalisedHere <- under("GILBREATH_NORMALISED")
+          rowsHere <- underLemma("GILBREATH_EVEN_ROWS")
+          held <- assumed(s"$Setting /\\ ${staged(C, R0, Ln, W, Bd, F)} /\\ $R0 0 = 0 /\\ $W 0 = $N /\\ 1 <= $N")
+          (hT, h) = held
+          parts <- split(h)
+          gapsHere <- spec(known("GILBREATH_PRIMES_GAPS"), primesv).flatMap(mp(_, parts(0)))
+          rows <- rowOne(step, parts(0), parts(1))
+          evenGaps <- evenGapsOf(rows, gapsHere)
+          stepF <- mp(normalisedHere, evenGaps).flatMap(spec(_, fv)).flatMap(mp(_, parts(2)))
+          ladderF <- spec(known("GILBREATH_LADDER"), fv).flatMap(mp(_, stepF))
+          // the ladder's three conjuncts are not parenthesised in the statement, so they come apart with the rest
+          ladder <- conjs(parts(3), parts(4), parts(5))
+          bound <- at(ladderF, s"${staged(C, R0, Ln, W, Bd, F)} ==> $F ($R0 $C + $W $C) 0 <= 1").flatMap(mp(_, ladder))
+          total <- sumOfStages(ladder, C, R0, Ln, W, Bd)
+          landed <- numLinText(Seq(total, parts(6), parts(7)), s"$R0 $C + $W $C = $N")
+          atN <- rw(landed, bound)
+          suc <- predecessor(parts(8), N).map(_._1)
+          one <- oneOfSuc
+          fs <- split(parts(2))
+          value <- at(fs(1), s"$F (SUC (NUM_SUB $N 1)) 0 = NUM_DIV ($D (SUC (SUC (NUM_SUB $N 1))) (SUC 0)) 2")
+            .flatMap(rw(suc, _)).flatMap(rw(one, _))
+          half <- rw(value, atN)
+          even <- mp(rowsHere, evenGaps).flatMap(at(_, s"NUM_MOD ($D (SUC $N) (SUC 0)) 2 = 0")).flatMap(rw(one, _))
+          whole <- at(fact("NUM_DIV_MOD"), s"2 * $H + NUM_MOD ($X) 2 = $X").flatMap(rw(even, _))
+          sides <- at(fact("NUM_LE_CASES"), s"$H <= 1 ==> $H < 1 \\/ $H = 1").flatMap(mp(_, half))
+          goal <- prop(good(X))
+          ends <- logic.destDisj(goal).toRight(NotOfForm("a disjunction", goal))
+          zero <- for {
+            lt <- assume(s"$H < 1")
+            z <- numLinText(Seq(lt, whole), s"$X = 0")
+            out <- rules.disjIntro1(ends._2, z)
+          } yield out
+          two_ <- for {
+            e <- assume(s"$H = 1")
+            t <- numLinText(Seq(e, whole), s"$X = 2")
+            out <- rules.disjIntro2(ends._1, t)
+          } yield out
+          reached <- rules.disjElim(sides, zero, two_)
+          out <- rules.disch(hT, reached).flatMap(gen(_, primesv, fv, cv, rv, lv, wv, boundv, nv))
+        } yield out
+      }
+
+    /**
+     * Every row from 1 to `R + 2` starts with 1 when the ladder certifies every window from 1 to
+     * `R`: row 1 starts with `3 - 2`, row 2 because `d 1 1 = 5 - 3 = 2`, and each later row by
+     * `GILBREATH_FRONT` and `GILBREATH_PRIMES_CONE`, by induction on the row.
+     */
+    def primesFront: R[Kernel.Thm] =
+      table { step =>
+        val Top = v("R"); val R0 = "(r:num->num)"; val Ln = "(l:num->num)"; val W = "(w:num->num)"; val C = v("c"); val Bd = v("D")
+        for {
+          coneHere <- under("GILBREATH_PRIMES_CONE")
+          frontHere <- under("GILBREATH_FRONT")
+          held <- assumed(s"$Setting /\\ (!n:num. 1 <= n /\\ n <= $Top ==> ${certified("n")})")
+          (hT, h) = held
+          parts <- split(h)
+          list <- split(parts(0))
+          start <- spec(known("GILBREATH_PRIMES_START"), primesv).flatMap(mp(_, parts(0))).flatMap(split)
+          rows <- rowOne(step, parts(0), parts(1))
+          one <- oneOfSuc
+          twoOfSuc <- numLinText(Seq.empty, "SUC 1 = 2")
+          firstEntry <- for {
+            r <- at(rows, s"$D 1 0 = NUM_SUB ($P (SUC 0)) ($P 0)").flatMap(rw(one, _))
+            le <- numLinText(Seq(start(0), list(0)), s"$P 0 <= $P 1")
+            sub <- at(fact("NUM_SUB_ADD"), s"$P 0 <= $P 1 ==> NUM_SUB ($P 1) ($P 0) + $P 0 = $P 1").flatMap(mp(_, le))
+            out <- numLinText(Seq(r, sub, start(0), list(0)), s"$D 1 0 = 1")
+          } yield out
+          secondEntry <- for {
+            r <- at(rows, s"$D 1 1 = NUM_SUB ($P (SUC 1)) ($P 1)").flatMap(rw(twoOfSuc, _))
+            le <- numLinText(Seq(start(0), start(1)), s"$P 1 <= $P 2")
+            sub <- at(fact("NUM_SUB_ADD"), s"$P 1 <= $P 2 ==> NUM_SUB ($P 2) ($P 1) + $P 1 = $P 2").flatMap(mp(_, le))
+            two_ <- numLinText(Seq(r, sub, start(0), start(1)), s"$D 1 1 = 2")
+            zero <- prop(s"$D 1 1 = 0")
+            out <- rules.disjIntro2(zero, two_)
+          } yield out
+          body <- prop(s"1 <= (k:num) /\\ k <= $Top + 2 ==> $D k 0 = 1")
+          proved <- inductOn(kv, body)(
+            base =>
+              for {
+                sides <- logic.destImp(base).toRight(NotOfForm("an implication", base))
+                pre <- LogicError.lift(Kernel.assume(sides._1))
+                reached <- numLin(Seq(pre), sides._2)
+                out <- rules.disch(sides._1, reached)
+              } yield out,
+            (kk, ih, _) => {
+              val K = v(kk.name)
+              for {
+                pre <- assumed(s"1 <= SUC $K /\\ SUC $K <= $Top + 2")
+                target <- prop(s"$D (SUC $K) 0 = 1")
+                reached <- cases(s"$K = 0")(
+                  zero => rewriting(Seq(zero, one), target)(landsOn(firstEntry)),
+                  nonzero =>
+                    for {
+                      positive <- positiveOf(nonzero, K)
+                      inRange <- numLinText(Seq(positive, pre._2), s"1 <= $K /\\ $K <= $Top + 2")
+                      here <- mp(ih, inRange)
+                      iff <- at(frontHere, s"$D $K 0 = 1 ==> ($D (SUC $K) 0 = 1 = ${good(s"$D $K 1")})").flatMap(mp(_, here))
+                      atLeastOne <- numLinText(Seq(positive), s"1 <= $K")
+                      sides <- at(fact("NUM_LE_CASES"), s"1 <= $K ==> 1 < $K \\/ 1 = $K").flatMap(mp(_, atLeastOne))
+                      wanted <- prop(good(s"$D $K 1"))
+                      later <- for {
+                        gt <- assume(s"1 < $K")
+                        pred <- predecessor(atLeastOne, K)
+                        (suc, back) = pred
+                        prior = s"(NUM_SUB $K 1)"
+                        range <- numLinText(Seq(gt, back, pre._2), s"1 <= $prior /\\ $prior <= $Top")
+                        low <- rules.conjElim1(range)
+                        certificate <- at(parts(3), s"1 <= $prior /\\ $prior <= $Top ==> ${certified(prior)}").flatMap(mp(_, range))
+                        out <- chooseAll(certificate, Seq("c", "r", "l", "w", "D")) { body =>
+                          for {
+                            bs <- split(body)
+                            hyp <- conjs(parts(0), parts(1), parts(2), bs(2), bs(3), bs(4), bs(0), bs(1), low)
+                            cone <- at(coneHere,
+                              s"$Setting /\\ ${staged(C, R0, Ln, W, Bd, F)} /\\ $R0 0 = 0 /\\ $W 0 = $prior /\\ 1 <= $prior ==> ${good(s"$D (SUC $prior) 1")}")
+                              .flatMap(mp(_, hyp))
+                            out <- rw(suc, cone)
+                          } yield out
+                        }
+                      } yield out
+                      atOne <- assume(s"1 = $K").flatMap(Conv.sym).flatMap(e => rewriting(Seq(e), wanted)(landsOn(secondEntry)))
+                      entry <- rules.disjElim(sides, later, atOne)
+                      out <- Conv.sym(iff).flatMap(s => LogicError.lift(Kernel.eqMp(s, entry)))
+                    } yield out
+                )
+                out <- rules.disch(pre._1, reached)
+              } yield out
+            }
+          )
+          out <- rules.disch(hT, proved).flatMap(gen(_, primesv, fv, ceilingv))
+        } yield out
+      }
+
+    /** The conjecture over the primes when the ladder certifies every window: `GILBREATH_PRIMES_FRONT` at `R = k`. */
+    def primesConjecture: R[Kernel.Thm] =
+      table { _ =>
+        val X = v("x"); val N = v("n")
+        for {
+          frontHere <- under("GILBREATH_PRIMES_FRONT")
+          held <- assumed(s"$Setting /\\ (!n:num. 1 <= n ==> ${certified("n")})")
+          (hT, h) = held
+          parts <- split(h)
+          narrowed <- for {
+            range <- assumed(s"1 <= $N /\\ $N <= $X")
+            low <- rules.conjElim1(range._2)
+            out <- at(parts(3), s"1 <= $N ==> ${certified(N)}").flatMap(mp(_, low))
+            general <- rules.disch(range._1, out).flatMap(gen(_, nv))
+          } yield general
+          hyp <- conjs(parts(0), parts(1), parts(2), narrowed)
+          front <- at(frontHere,
+            s"$Setting /\\ (!n:num. 1 <= n /\\ n <= $X ==> ${certified("n")}) ==> (!k:num. 1 <= k /\\ k <= $X + 2 ==> $D k 0 = 1)")
+            .flatMap(mp(_, hyp))
+          positive <- assumed(s"0 < $X")
+          range <- numLinText(Seq(positive._2), s"1 <= $X /\\ $X <= $X + 2")
+          reached <- at(front, s"1 <= $X /\\ $X <= $X + 2 ==> $D $X 0 = 1").flatMap(mp(_, range))
+          out <- rules.disch(positive._1, reached).flatMap(gen(_, xv)).flatMap(rules.disch(hT, _)).flatMap(gen(_, primesv, fv))
         } yield out
       }
   }

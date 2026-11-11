@@ -128,3 +128,69 @@ window was generalised.
 **What is still not here** is unchanged by this: the primes, and the conjecture. The ladder says
 that a first row whose blocks shrink as its hypothesis asks gives a 1 or a 0 where it lands; that
 the primes' table satisfies such a hypothesis at every depth is not proved here.
+
+## 2026-11-11: the table over the primes
+
+Card `c30eae79`. Nine facts more, published the same way, which carry the ladder above to the primes. Nothing
+here declares a constant: the primes enter as a hypothesis on a function `p`, and the normalised
+table as a hypothesis on a function `f`, so a statement says in its own text which list and which
+table it is about. Writing `E(p)` for `p 0 = 2 /\ (!n. NUM_PRIME (p (SUC n)) /\ p n < p (SUC n) /\
+(!m. p n < m /\ m < p (SUC n) ==> ~NUM_PRIME m))`, each entry the least prime above the one before:
+
+- `GILBREATH_PRIMES_EXIST`: `?p. E(p)`, by the recursion theorem with each entry chosen by `select`
+  among the primes above the last, which Euclid's theorem (`NUM_PRIME_UNBOUNDED`) and the least
+  number principle make inhabited;
+- `GILBREATH_PRIMES_ALL`: `E(p) ==> NUM_PRIME q ==> ?n. p n = q`, so `E` lists every prime and
+  nothing else, in order;
+- `GILBREATH_PRIMES_START`: `E(p) ==> p 1 = 3 /\ p 2 = 5`, 3 and 5 being prime and 4 not;
+- `GILBREATH_PRIMES_GAPS`: every gap after the first, `NUM_SUB (p (SUC (SUC n))) (p (SUC n))`, is
+  even and at least 2, a prime above 2 being odd;
+- `GILBREATH_NORMALISED`: over any table whose second row is even and at least 2 from position 1
+  on, every `f` with `f 0 i = NUM_SUB (NUM_DIV (d 1 (SUC i)) 2) 1` and
+  `f (SUC k) i = NUM_DIV (d (SUC (SUC k)) (SUC i)) 2` satisfies the table's equation. That is the
+  informal `f(k, i) = b_k(i + 1)`, with `b_0(j) = (p_(j+2) - p_(j+1))/2 - 1` and
+  `b_r(j) = d_(r+1)(j)/2`, primes 1-indexed there and 0-indexed here;
+- `GILBREATH_NORMALISED_EXISTS`: every table has such an `f`, the witness being
+  `\k i. NUM_SUB (NUM_DIV (d (SUC k) (SUC i)) 2) (NUM_SUB 1 k)`, which takes 1 at row 0 and nothing
+  after; with `GILBREATH_EXISTS` and `GILBREATH_PRIMES_EXIST` it makes every hypothesis of the
+  three below satisfiable except the ladder's, so none of them is vacuous by its setting;
+- `GILBREATH_PRIMES_CONE`: over the table whose first row is `p`, with `E(p)` and `f` as above, a
+  ladder for `f` from row 0 with window `n`, `1 <= n`, gives `d (SUC n) 1 = 0 \/ d (SUC n) 1 = 2`;
+- `GILBREATH_PRIMES_FRONT`: in the same setting, ladders for every window from 1 to `R` give
+  `d k 0 = 1` for every `k` from 1 to `R + 2`;
+- `GILBREATH_PRIMES_CONJECTURE`: ladders for every window from 1 on give `!k. 0 < k ==> d k 0 = 1`,
+  the left side of `GILBREATH_EQUIVALENT`, which is the conjecture.
+
+**Why the shift.** The table over the primes does not halve at position 0: its first gap, 3 - 2, is
+odd, and `b_k(i)` read from position 0 fails the table's equation wherever position 1 of the row
+above holds 2. Read from position 1 every entry it touches is even, and halving commutes with the
+absolute difference of two even numbers. The cost is the first row: `f 0` is the halved second row
+less one, and the 1 taken from both sides of a difference leaves it as it was only because every
+gap after the first is at least 2.
+
+**Two shapes the kernel forced.** The ladder's hypothesis is written by the same `staged` as
+`GILBREATH_LADDER`, now taking the table's name, and inside the statements it is not parenthesised,
+so its three conjuncts sit at the same level as the rest of the hypothesis; read as a formula that
+changes nothing. And `GILBREATH_PRIMES_EXIST` rests on choice and infinity and not on eta: it
+settles no comparison over the reals, and `GilbreathSpec` asserts that set rather than the three
+the other eight rest on.
+
+**Two lemmas proved on the way and not published**, in `Gilbreath.Lemmas` and checked against their
+text before each use: every entry of the list is at least its index plus 2, and every row after the
+first of a table whose second row is even from position 1 is even from there too, which is
+`GILBREATH_EVEN` by induction on the row.
+
+**What the statements were attacked with before they were proved.** A check in Python, in
+`scratch/` and not kept, over the first 400 primes and 200 rows of their table: the shifted table
+satisfied the equation at all 10 000 entries of rows and positions 0 to 99 and the unshifted one
+failed at 46, every one at position 0; and a ladder built from Chase's `L` at each stage fitted
+every window from 1 to 119, its entry at most 1 each time. These are a photograph. `GilbreathSpec`
+reads the published `GILBREATH_NORMALISED` and `GILBREATH_PRIMES_CONE` with its evaluator against
+the table written from the account, with the unshifted table, a first row with an odd gap and the
+ladders one row short as controls that come out false, and
+`tools/verify/perturb-gilbreath-primes.sh` weakens three hypotheses and shows each proof stop.
+
+**What is still not here** is the one thing the nine leave open by construction: that the ladder
+certifies every window over the primes. `GILBREATH_PRIMES_CONJECTURE` assumes it, so what the
+kernel now holds is the reduction of the conjecture to that hypothesis, and nothing about whether it
+holds.

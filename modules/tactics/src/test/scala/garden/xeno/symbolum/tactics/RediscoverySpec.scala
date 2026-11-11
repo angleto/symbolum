@@ -441,7 +441,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // equal to it. Plus six.
     // 996 with the radical of an ideal, 2026-11-11, ADR 0072: `SQUARE_ZERO` has one hypothesis, read
     // off the run and matching its statement. Plus one.
-    propose.weakenings.size shouldBe 996
+    // 1005 with the table over the primes, 2026-11-11: one antecedent per hypothesis of eight facts
+    // of `Gilbreath.Statements`, two each on `GILBREATH_PRIMES_ALL` and `GILBREATH_NORMALISED`, one
+    // on each of five others, none on `GILBREATH_PRIMES_EXIST`, counted before the run. Plus nine.
+    propose.weakenings.size shouldBe 1005
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

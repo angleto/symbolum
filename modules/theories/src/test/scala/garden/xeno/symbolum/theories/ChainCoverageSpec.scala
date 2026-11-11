@@ -191,9 +191,9 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // names `RuleThirty.Statements` gives. It declares nothing.
     "RuleThirty" -> NotADevelopment,
 
-    // Not a development, for the same reason: Gilbreath's table over any first row, whose facts
-    // are the map `Gilbreath.prove` returns and are published in `Complex.facts` under the names
-    // `Gilbreath.Statements` gives. It declares nothing.
+    // Not a development, for the same reason: Gilbreath's table over any first row and over the
+    // list of the primes, whose facts are the map `Gilbreath.prove` returns and are published in
+    // `Complex.facts` under the names `Gilbreath.Statements` gives. It declares nothing.
     "Gilbreath" -> NotADevelopment,
 
     // Not a development, for the same reason: triangular maps on the naturals, whose facts are the

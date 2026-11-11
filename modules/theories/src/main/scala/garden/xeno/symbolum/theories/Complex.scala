@@ -90,8 +90,11 @@ import garden.xeno.symbolum.logic.*
  * differences over any first row, the parity its entries keep, and the conjecture rewritten as a
  * condition on the second entry of every row, with the head of 0s and 2s that carries it forward
  * one row per entry; and the bound, which a window of entries at most `D` keeps from row to row and
- * which Chase's Lemma 3.2 lowers by one, chained into a ladder down to an entry at most 1. Nothing in
- * it is about the primes, and it is here for the reason Rule 30 is.
+ * which Chase's Lemma 3.2 lowers by one, chained into a ladder down to an entry at most 1; and the
+ * list of the primes, as a hypothesis on a function rather than a constant, with the table over it
+ * halved and shifted so that the ladder applies, which reduces the conjecture to the ladder
+ * certifying every window. None of it is about the complex numbers, and it is here for the reason
+ * Rule 30 is.
  */
 final class Complex private (
   val theory: Theory,
