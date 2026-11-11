@@ -1,7 +1,9 @@
 package garden.xeno.symbolum.tactics
 
+import java.nio.file.{Files, Path, Paths}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import scala.jdk.CollectionConverters.*
 
 /**
  * The syntax of a proof document, read without a chain.
@@ -303,5 +305,59 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
         |  end
         |qed""".stripMargin)
     parsed.errors shouldBe Vector(Malformed(3, "`1h` is not a name"))
+  }
+
+  /* ------------------------------------------------------------------ where a declaration ends */
+
+  private def locate(relative: String): Path = {
+    def search(directory: Path, remaining: Int): Path =
+      if (remaining < 0) fail(s"could not find $relative from ${Paths.get("").toAbsolutePath}")
+      else {
+        val candidate = directory.resolve(relative)
+        if (Files.exists(candidate)) candidate else search(directory.getParent, remaining - 1)
+      }
+    search(Paths.get("").toAbsolutePath, 5)
+  }
+
+  /** Every document this repository writes: the `sym` blocks of the reference, and the published. */
+  private lazy val written: Vector[String] = {
+    val reference = new String(Files.readAllBytes(locate("docs/language.md")), "UTF-8").linesIterator.toVector
+    val opens = reference.indices.filter(i => reference(i).trim == "```sym" || reference(i).trim.startsWith("```sym "))
+    val blocks = opens.map(start => reference.slice(start + 1, reference.indexWhere(_.trim == "```", start + 1)).mkString("\n"))
+    val directory = locate("modules/published/src/main/resources/garden/xeno/symbolum/published")
+    val published = Files.list(directory).iterator().asScala.filter(_.toString.endsWith(".sym")).map(Files.readString(_)).toVector
+    blocks.toVector ++ published
+  }
+
+  "Where a theorem ends" should "be where the reader ends it, on every document this repository writes" in {
+    // `extent` reads the block structure by keyword without reading the steps, for a session that
+    // cuts theorems out of lines of its own language; the reader reads it with the steps. Two
+    // readings of one structure agree only where something compares them, and this is that.
+    val compared = written.flatMap { text =>
+      val raw = text.linesIterator.toVector
+      read(text).declarations.collect { case Declaration.Theorem(line, name, _, proof) =>
+        val expected = proof match {
+          case Justification.By(_, _) => 1
+          case Justification.Block(_, _, closed) => closed - line + 1
+        }
+        withClue(s"$name, on line $line: ") { extent(raw, line - 1) shouldBe expected }
+        proof
+      }
+    }
+    // The input that would make this vacuous is a corpus with no proof block in it. Every theorem
+    // written there has one, so the half where a theorem ends in `by` is held by the cases below.
+    compared.count(_.isInstanceOf[Justification.Block]) should be > 3
+  }
+
+  it should "count nested proofs, and run to the end of the lines when the proof is never closed" in {
+    val nested = Vector("theorem T : P", "proof", "  have h : Q", "  proof", "    by auto", "  qed", "  by auto", "qed", "ask x")
+    extent(nested, 0) shouldBe 8
+    extent(Vector("theorem T : P", "proof", "  show P by auto", "ask x"), 0) shouldBe 4
+    // A comment or a blank line is not the `proof` that opens a block, and does not stop one.
+    extent(Vector("theorem T : P", "", "-- the proof", "proof", "qed", "x"), 0) shouldBe 5
+    // A theorem that ends in `by` is its line whatever follows, as it is to the reader, which then
+    // finds `proof` at the top level and says so.
+    extent(Vector("theorem T : P by auto", "proof", "qed"), 0) shouldBe 1
+    extent(Vector("theorem T : P by auto", "ask x"), 0) shouldBe 1
   }
 }

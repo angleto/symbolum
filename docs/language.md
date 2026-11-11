@@ -339,13 +339,45 @@ Publishing refuses three things a single check cannot see:
 - an axiom. The language has no declaration that asserts one, and the published theory is compared
   with the chain's.
 
+## In the notebook
+
+The notebook (`tools/sbt "published/runMain garden.xeno.symbolum.published.Notebook"`) takes the
+language a declaration at a time. A cell that starts with `theorem` is that theorem, and with
+`proof` on the line after it, the cell runs to the `qed` that closes the proof. The checker's
+elaborator checks it against the session as it stands: the constants the session declared and
+defined read in the claim, and a proof may cite what the session holds by name, an assumption
+included. A proved theorem joins the session with its price, where `from this session` names the
+facts of the session it cited. A proof that does not check is shown as the checker shows it, every
+problem with the goal at that point, and the session gains nothing from it.
+
+```
+declare p : bool
+assume P : p
+theorem Q : p by exact P
+theorem ZERO_RIGHT : !n:num. n + 0 = n
+proof
+  fix n
+  show n + 0 = n by arith
+qed
+```
+
+Pasted whole, that is four cells. `show` inside the proof is the proof's step, because the cell
+ends at `qed` and not at the next line that looks like a command. In the box, Enter runs a cell and
+Shift+Enter starts a new line.
+
+`import NAME` takes a published document into the session: its definitions are made in the
+session's theory, its theorems become facts, and the same happens for every document it imports.
+It is all of that or nothing. A document that does not check, a definition the session already
+made differently, or a theorem whose name the session already holds leaves the session as it was.
+`import` is a cell of its own, and inside a `theorem` cell it is refused. `docs/adr/0074` is the
+decision.
+
 ## What it does not do yet
 
-`docs/adr/0070` plans the work in six increments, and this file describes the first three. Until the
-later ones land:
+`docs/adr/0070` plans the work in six increments. This file describes the first three and the
+fifth, which came before the fourth. Until the others land:
 
 - a published theorem is reached by importing its document; `auto`, `find` and `Ask` search the
   chain's library and not the published one;
-- the goal is shown in the report and not yet in an editor;
-- the notebook does not take documents yet;
+- the goal is shown in the report and in the notebook, and not yet in an editor;
 - there is no `simp` set and no `datatype` declaration.

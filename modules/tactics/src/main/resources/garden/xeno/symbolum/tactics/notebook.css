@@ -3,6 +3,7 @@ h1{font-size:1.1rem;font-weight:600;letter-spacing:.02em;margin:0 0 .25rem}
 .note{color:#666;font-size:.85rem;margin:.25rem 0 1.25rem}
 .cell{border-left:2px solid #e3e3e3;padding:.5rem 0 .5rem .75rem;margin:.75rem 0}
 .head{display:flex;align-items:baseline;gap:.5rem}
+.head code{white-space:pre-wrap}
 .number{color:#999;font-variant-numeric:tabular-nums;min-width:1.5rem}
 code,pre,.legible{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem}
 .back{margin-left:auto;font-size:.7rem;color:#888;background:none;border:1px solid #ddd;border-radius:3px;padding:.1rem .4rem;cursor:pointer}
@@ -27,7 +28,7 @@ code,pre,.legible{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-s
 .page-table th,.page-table td{border:1px solid #e3e3e3;padding:.15rem .45rem;text-align:left}
 .page-table th{background:#f2f2f2;font-weight:600}
 .page .step{margin:.2rem 0 .2rem .5rem}
-#line{width:100%;box-sizing:border-box;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;padding:.55rem .7rem;border:1px solid #ccc;border-radius:4px}
+#line{width:100%;box-sizing:border-box;resize:vertical;min-height:2.4rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;padding:.55rem .7rem;border:1px solid #ccc;border-radius:4px}
 #line:focus{outline:none;border-color:#888}
 #entry.running #line{border-color:#376;background:#fbfffd}
 #entry.running::after{content:'running';display:block;color:#376;font-size:.75rem;margin-top:.2rem}

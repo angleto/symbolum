@@ -74,10 +74,15 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
    * exemption outlives what justified it. Anything not here owes a spec that enters `main`.
    */
   private val CannotBeEntered: Map[String, String] = Map(
-    "garden.xeno.symbolum.tactics.Notebook" ->
+    "garden.xeno.symbolum.published.Notebook" ->
       ("`main` blocks on a CountDownLatch after starting the server, deliberately, because " +
         "`HttpServer.start` returns as soon as it is listening and a `main` that ended there would " +
         "have `sbt runMain` report success and take the server down with it"),
+    "garden.xeno.symbolum.published.Check" ->
+      ("`main` ends the process with the status the documents earned, which is what a script " +
+        "calling the checker reads, so a spec that called it would end the suite; what it prints and " +
+        "the status it chooses are `Check.run`, which `PublishedSpec` enters with a document that " +
+        "imports a published one"),
     "garden.xeno.symbolum.dist.Repl" ->
       ("`main` delegates to the Scala REPL, which reads stdin and does not return, so a spec that " +
         "called it would hang the suite rather than fail it")
@@ -394,5 +399,22 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
     // ends agree.
     Repl.Command shouldBe s"bin/symbolum-${"Repl".toLowerCase}"
     read("build.sbt") should include("s\"symbolum-$name\"")
+  }
+
+  "The README's list of launchers" should "name every launcher the distribution ships, and none it does not" in {
+    // The list was written by hand beside the allowlist with nothing comparing them, so the checker
+    // shipped for the first time without a line there until somebody looked. The script's name is
+    // derived as the packager derives it, the simple name of the main class cut before each capital
+    // and lowercased, `WhatAClaimCosts` to `what-a-claim-costs`, then prefixed as `build.sbt` does.
+    def script(main: String): String =
+      "bin/symbolum-" + main.split('.').last.split("(?=[A-Z])").map(_.toLowerCase).mkString("-")
+    val readme = read("README.md")
+    val named = """bin/symbolum-[a-z-]*[a-z]""".r.findAllMatchIn(readme).map(_.matched).toSet
+    // A parse that found nothing would make the second direction vacuous, and the derivation is
+    // checked against the one name declared rather than derived.
+    named should contain(Repl.Command)
+    script("garden.xeno.symbolum.dist.Repl") shouldBe Repl.Command
+    shipped.map(script).filterNot(named.contains) shouldBe empty
+    named.diff(shipped.map(script).toSet) shouldBe empty
   }
 }

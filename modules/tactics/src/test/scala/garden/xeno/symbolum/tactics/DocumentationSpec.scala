@@ -698,7 +698,8 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val launchers = Vector(
       "garden.xeno.symbolum.tactics.Ask",
       "garden.xeno.symbolum.tactics.Find",
-      "garden.xeno.symbolum.tactics.Notebook",
+      "garden.xeno.symbolum.published.Notebook",
+      "garden.xeno.symbolum.published.Check",
       "garden.xeno.symbolum.examples.WhatAClaimCosts",
       "garden.xeno.symbolum.dist.Repl"
     )

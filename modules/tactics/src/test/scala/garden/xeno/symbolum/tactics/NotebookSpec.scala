@@ -418,6 +418,40 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "take a theorem and its proof as one cell, keeping its indentation, and show the goal where it fails" in {
+    // What a paste of a proof is: many lines, one command. `show` is a step inside the proof and a
+    // command outside it, so a cut by first word would leave four cells here and refuse three.
+    val proved =
+      """theorem ZERO_RIGHT : !n:num. n + 0 = n
+        |proof
+        |  fix n
+        |  show n + 0 = n by arith
+        |qed""".stripMargin
+    val failing =
+      """theorem WRONG : !n:num. n + 1 = n
+        |proof
+        |  fix n
+        |  by arith
+        |qed""".stripMargin
+
+    withServer(fresh) { (base, held) =>
+      val answer = post(base, "/run", s"$proved\n$failing")
+      answer.statusCode shouldBe 200
+
+      val entries = held.get.entries
+      withClue(s"${held.get.render}\n") {
+        entries should have size 2
+        Session.Command.write(entries.head.command) shouldBe proved
+        entries.head.outcome shouldBe a[Session.Outcome.Proved]
+        entries(1).outcome shouldBe a[Session.Outcome.Incomplete]
+      }
+      // The cells as the page shows them: the price under the first, the goal under the second.
+      answer.body should include("inferences: ")
+      answer.body should include("WRONG: not proved")
+      answer.body should include("|- n + 1 = n")
+    }
+  }
+
   it should "drop the blank lines a paste is made of, rather than recording them as commands" in {
     // A transcript holding cells its writer did not write is the same defect as one holding them
     // in an order its writer did not choose. A line that is not blank and does not read is kept,

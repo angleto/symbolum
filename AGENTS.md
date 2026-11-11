@@ -287,14 +287,19 @@ session named would be a different tool with the same name.
   boolean **variable** and a variable pattern matches every lemma there is, so that one is refused
   by shape rather than answered with the whole library.
 - **Working on a theory interactively, in a browser:**
-  `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Notebook"`, then open `http://127.0.0.1:8642`. A column
-  of cells over one `Session`: `declare`, `define`, `assume`, `prove`, `derive`, `ask`, `find`,
-  `show`. The chain is built once when it starts, a few seconds, and each question after that is
+  `tools/sbt "published/runMain garden.xeno.symbolum.published.Notebook"`, then open `http://127.0.0.1:8642`. A column
+  of cells over one `Session`: `declare`, `define`, `assume`, `prove`, `derive`, `theorem`, `import`,
+  `ask`, `find`, `show`. The chain is built once when it starts, a few seconds, and each question after that is
   milliseconds. `DocumentationSpec` compares that list with `Session.Command.Keywords` in both
   directions, and it does so because the list stood at seven for the day after `derive` became the
   eighth: a sentence with no figure in it has nothing watching it, and the paragraph below was
   rewritten in that time to repair another false sentence about `derive` without anybody rereading
   this line.
+
+  A cell starting `theorem` is the proof language's declaration, its proof included, checked by
+  the elaborator the checker uses against the session's theory and facts; an import takes a
+  published document into the session whole or not at all. `docs/adr/0074` is the decision, and
+  `docs/language.md` shows a session using both.
 
   **A session holds exactly one theory, and that is the whole safety argument rather than a
   convenience.** The falsity `SoundnessAttackSpec` derives needs *two* theories that each declare
@@ -378,7 +383,7 @@ logic     -> kernel, sat    connectives, derived rules, rewriting, parser, print
 theories  -> logic          the naturals, the reals, numerals, arithmetic, RING, LINARITH
 core      -> (nothing)      the computer algebra system, published as garden.xeno:symbolum-core
 tactics   -> theories, core the lowest module that sees both halves
-published -> tactics        the proof documents this repository publishes, and the checker command
+published -> tactics        the proof documents this repository publishes, the checker and the notebook
 examples  -> tactics        runnable demonstrations of either half, not published
 mark      -> (nothing)      the figure, the art and the drawing written from it, and its checks
 scan      -> (nothing)      what in a source of this repository is a comment, for the gates that ask

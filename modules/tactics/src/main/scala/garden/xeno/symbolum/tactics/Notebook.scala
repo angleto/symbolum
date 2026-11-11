@@ -9,7 +9,7 @@ import scala.jdk.CollectionConverters.*
 /**
  * The interface: one long-lived process holding one [[Session]], and a page that drives it.
  *
- * `sbt "tactics/runMain garden.xeno.symbolum.tactics.Notebook"`, then open what it prints. The page is a
+ * `tools/sbt "published/runMain garden.xeno.symbolum.published.Notebook"`, then open what it prints. The page is a
  * column of cells; typing a line and pressing enter runs it, and the answer appears under it with
  * the statement set in print where the signature can set it.
  *
@@ -65,8 +65,12 @@ import scala.jdk.CollectionConverters.*
  */
 object Notebook {
 
-  /** How a caller runs this. */
-  val Command: String = "sbt \"tactics/runMain garden.xeno.symbolum.tactics.Notebook [port]\""
+  /**
+   * How a caller runs this. The command is in the publication module, `published.Notebook`,
+   * because an `import` in a session reads the published documents and only a module above them
+   * can; what it runs is [[run]].
+   */
+  val Command: String = "tools/sbt \"published/runMain garden.xeno.symbolum.published.Notebook [port]\""
 
   /** Where it listens. Loopback, always: see the class comment. */
   val Host: String = "127.0.0.1"
@@ -96,12 +100,18 @@ object Notebook {
   /** Written once, because every answer this serves but the 404 is the page or part of it. */
   private val Html: String = "text/html; charset=utf-8"
 
-  def main(arguments: Array[String]): Unit = {
+  /**
+   * The command's body: build the session, serve it, and block until the process is stopped.
+   *
+   * The session is a parameter because what it may import is the caller's to decide: the command
+   * hands it one that reads the published documents.
+   */
+  def run(arguments: Array[String], start: => Session): Unit = {
     val port = arguments.headOption.flatMap(_.toIntOption).getOrElse(DefaultPort)
 
     println("building the chain, which is the slow part and happens once")
     val started = System.nanoTime()
-    val session = new AtomicReference[Session](Session.standard)
+    val session = new AtomicReference[Session](start)
     println(f"ready in ${(System.nanoTime() - started) / 1000000000.0}%.1f s")
 
     val server = serve(port, session)
@@ -126,7 +136,7 @@ object Notebook {
   /**
    * The server, listening, for a caller that decides when to stop it.
    *
-   * Out of [[main]] so that it can be driven, and that is not a testing convenience. The three
+   * Out of [[run]] so that it can be driven, and that is not a testing convenience. The three
    * endpoints below are private and reachable only through a running server, so until this existed
    * the one surface in this project that speaks to a browser was the one nothing exercised, and two
    * of its behaviours are there because of failures this file records: the 404 on an unknown path,
@@ -195,7 +205,9 @@ object Notebook {
    * rule and is the opposite case.
    */
   private def run(exchange: HttpExchange, session: AtomicReference[Session]): Unit = {
-    val lines = body(exchange).linesIterator.map(_.trim).filter(_.nonEmpty).toVector
+    // Not trimmed line by line: a proof's indentation is for its reader, and the transcript keeps
+    // it. A one-line command is trimmed where it is read.
+    val lines = body(exchange).linesIterator.filter(_.trim.nonEmpty).toVector
     advance(exchange, session, current => current.runAll(lines))
   }
 
@@ -326,10 +338,11 @@ object Notebook {
        |<h1>symbolum</h1>
        |<p class="note">One theory, one transcript. Re-running a cell discards everything after it.
        |The printed form does not read back: the line under it is the one that does.
-       |Paste a whole development and it runs line by line, in the order you pasted it.</p>
+       |Paste a whole development and it runs line by line, in the order you pasted it.
+       |Enter runs a cell and Shift+Enter starts a new line, so a theorem and its proof are one cell.</p>
        |<div id="cells">${cells(session)}</div>
        |<form id="entry" autocomplete="off">
-       |  <input id="line" name="line" placeholder="${Session.Command.Keywords.mkString(" | ")}" autofocus>
+       |  <textarea id="line" name="line" rows="1" placeholder="${Session.Command.Keywords.mkString(" | ")}" autofocus></textarea>
        |</form>
        |<p id="trouble" class="trouble"></p>
        |<p class="note">$Help</p>
@@ -350,9 +363,15 @@ object Notebook {
 
     val body = entry.outcome match {
       case Session.Outcome.Extended(what) => s"""<div class="extended">${escape(what)}</div>"""
-      case Session.Outcome.Proved(name, theorem, cutShort) =>
+      case Session.Outcome.Proved(name, theorem, cutShort, price) =>
         proved(session, entry, name, theorem) +
-          cutShort.map(why => s"""<div class="caveat">${escape(why)}</div>""").getOrElse("")
+          cutShort.map(why => s"""<div class="caveat">${escape(why)}</div>""").getOrElse("") +
+          price.map(p => s"""<pre class="report">${escape(Session.Entry.priced(p).mkString("\n"))}</pre>""").getOrElse("")
+      case Session.Outcome.Incomplete(name, problems) =>
+        // The goal at each problem is the point of showing these here: it is what the checker
+        // prints, and a reader repairing a proof in the page needs it as much as one in a file.
+        s"""<div class="refused">${escape(name)}: not proved</div>""" +
+          s"""<pre class="report">${escape(problems.flatMap(Session.Entry.problem).mkString("\n"))}</pre>"""
       case Session.Outcome.Report(text) => s"""<pre class="report">${escape(text)}</pre>"""
       case Session.Outcome.Page(markdown) => s"""<div class="page">${page(markdown)}</div>"""
       case Session.Outcome.Refused(reason, next) =>
@@ -578,8 +597,9 @@ object Notebook {
    */
   private val Help: String =
     "declare p : bool &middot; define twice := \\x:real. x + x &middot; assume NAME : claim &middot; " +
-      "prove NAME : claim &middot; derive NAME : mp FACT FACT &middot; ask claim &middot; " +
-      "find name-or-shape &middot; show NAME"
+      "prove NAME : claim &middot; derive NAME : mp FACT FACT &middot; " +
+      "theorem NAME : claim by arith, or with proof ... qed on the lines after it &middot; import Parity &middot; " +
+      "ask claim &middot; find name-or-shape &middot; show NAME"
 
   /**
    * The page's stylesheet and its behaviour, read from resources beside this class.

@@ -102,13 +102,40 @@ final class Elaborate private (
               Some("two documents this one imports define the same name; one of them has to rename it"), None))
         }
     }
-    val (entries, _, _) = document.declarations.foldLeft((Vector.empty[Entry], start, Held.empty)) {
-      case ((done, scope, held), declaration) =>
-        val (entry, nextScope, nextHeld) = declare(scope, held, imported, declaration)
-        (done :+ entry, nextScope, nextHeld)
-    }
-    Report(entries, document.errors, refusals)
+    Report(declarations(document, start, Held.empty, imported), document.errors, refusals)
   }
+
+  /**
+   * Check a document in a theory somebody else built, against facts it already holds: a notebook
+   * session's, which is the second front end `docs/adr/0070` puts on this elaborator.
+   *
+   * The theory is the session's as it stands, with whatever it declared, defined and assumed, so a
+   * claim about a constant the session introduced reads, and a proof may cite an assumption by
+   * name. The facts are the session's named ones, held as this document's own earlier theorems
+   * are, which is as citations: a price stops at them and names them, and what they rest on still
+   * reaches the theorem through the citation. `imported` carries the facts of the documents the
+   * session imported, whose definitions are already in `scope`, so its definitions are not made
+   * again here.
+   *
+   * An `import` inside the text is refused on its line rather than resolved: in a session an
+   * import changes the one theory every later cell is read in, which makes it a command of its
+   * own and not part of one theorem.
+   */
+  def within(scope: Scope, facts: Vector[(String, Kernel.Thm)], imported: Imported, document: Document.Parsed): Report = {
+    val held = facts.foldLeft(Held.empty.copy(holder = "this session")) { case (acc, (name, theorem)) => acc.proved(name, theorem) }
+    val refused = document.imports.map(taken =>
+      Problem(taken.line, s"`import ${taken.name}` inside a cell: in a session an import is a command of its own",
+        Some(s"run `import ${taken.name}` on a line of its own"), None))
+    Report(declarations(document, scope, held, imported.copy(definitions = Vector.empty)), document.errors, refused)
+  }
+
+  /** Every declaration, in order, each in the scope and with the facts the ones before it left. */
+  private def declarations(document: Document.Parsed, start: Scope, held: Held, imported: Imported): Vector[Entry] =
+    document.declarations.foldLeft((Vector.empty[Entry], start, held)) {
+      case ((done, scope, facts), declaration) =>
+        val (entry, nextScope, nextHeld) = declare(scope, facts, imported, declaration)
+        (done :+ entry, nextScope, nextHeld)
+    }._1
 
   /** Every axiom of the pricing library by statement, for printing a price as names. */
   private lazy val axiomNames: Map[Term, String] =
@@ -129,7 +156,7 @@ final class Elaborate private (
    * refused rather than shadowed.
    */
   private def taken(held: Held, imported: Imported, name: String): Option[(String, String)] =
-    if (held.has(name)) Some((s"this document already declares $name", "give it a name of its own"))
+    if (held.has(name)) Some((s"${held.holder} already declares $name", "give it a name of its own"))
     else
       imported.facts.get(name).map(_.document).orElse(imported.failures.get(name).map(_.document)) match {
         case Some(document) =>
@@ -1016,8 +1043,11 @@ object Elaborate {
   /** The signature a document is read against, which grows with its definitions. */
   final case class Scope(theory: Theory, notation: Notation, logic: Logic) extends Signature
 
-  /** What the document has proved so far, and the names whose proofs did not check. */
-  private final case class Held(facts: Map[String, Kernel.Thm], failures: Map[String, Int]) {
+  /**
+   * What the document has proved so far, and the names whose proofs did not check. `holder` is
+   * what holds them, as a refusal names it: a document, or the session a cell is checked in.
+   */
+  private final case class Held(facts: Map[String, Kernel.Thm], failures: Map[String, Int], holder: String = "this document") {
     def has(name: String): Boolean = facts.contains(name) || failures.contains(name)
     /**
      * `name` held as a fact, recorded as a citation of it (`Kernel.cite`, `docs/adr/0047`): a later

@@ -104,3 +104,4 @@ the rejected option attractive, and they will.
 | [0071](0071-a-system-of-equations-is-decided-by-its-ideal-and-the-kernel-checks-the-cofactors.md) | A system of equations is decided by its ideal, and the kernel checks the cofactors | accepted |
 | [0072](0072-a-denominator-is-cleared-by-a-hypothesis-and-a-power-of-the-difference-by-square-zero.md) | A denominator is cleared by a hypothesis, and a power of the difference by `SQUARE_ZERO` | accepted |
 | [0073](0073-a-document-sees-what-it-imports-and-the-published-ones-share-one-theory.md) | A document sees what it imports, and the published ones share one theory | accepted |
+| [0074](0074-a-notebook-cell-is-a-declaration-of-the-proof-language.md) | A notebook cell is a declaration of the proof language | accepted |

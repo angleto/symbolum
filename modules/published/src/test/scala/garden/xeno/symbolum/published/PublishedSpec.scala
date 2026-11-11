@@ -1,7 +1,7 @@
 package garden.xeno.symbolum.published
 
 import garden.xeno.symbolum.kernel.Derivation
-import garden.xeno.symbolum.tactics.Elaborate
+import garden.xeno.symbolum.tactics.{Elaborate, Session}
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths}
@@ -127,6 +127,24 @@ class PublishedSpec extends AnyFlatSpec with Matchers {
       Files.deleteIfExists(directory)
       ()
     }
+  }
+
+  "The notebook command's session" should "import a published document and cite what it proves" in {
+    // What the command adds to the notebook of `tactics`, asserted on the session it serves. The
+    // control is the same theorem without the import, which does not check, so the import did it.
+    val claim = "theorem MINE : DOUBLE (SUC 0) = SUC (SUC (DOUBLE 0)) by exact DOUBLE_SUC"
+    val imported = Notebook.session.run("import Parity")
+    // Every entry carrying a theorem is a fact, the definition of DOUBLE included, as in a document.
+    val facts = Published.standard.documents.map(_.report.entries.count(_.theorem.isDefined)).sum
+    facts should be > 4
+    imported.entries.last.outcome shouldBe Session.Outcome.Extended(s"imported Doubling, Parity: $facts facts")
+    imported.run(claim).entries.last.outcome match {
+      case Session.Outcome.Proved(_, _, _, price) => price.map(_.imported) shouldBe Some(Vector("Doubling.DOUBLE_SUC"))
+      case other => fail(s"expected a proof, got $other")
+    }
+    val alone = Notebook.session.run(claim)
+    alone.entries.last.outcome should not be a[Session.Outcome.Proved]
+    alone.state.fact("MINE") shouldBe empty
   }
 
   /** Run something that prints, keeping its output out of the suite's log and returning it. */

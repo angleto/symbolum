@@ -71,10 +71,10 @@ let epoch = 0;
  * again since it is valid against the transcript now on the screen, and the ones behind it that
  * were never sent.
  *
- * `line` is an `<input>`, and an input's value sanitisation strips CR and LF, so two commands put
- * back as one block would arrive silently joined into one unreadable line. The message is therefore
- * where the text always is, and the box gets it back only when what it would get carries no line
- * break and nothing else has been typed into it.
+ * `line` is a `<textarea>` since a cell can be a theorem with its proof, which is many lines. It
+ * was an `<input>` until then, whose value sanitisation strips CR and LF, so the box got text back
+ * only when the text had no line break; a textarea keeps them, so it gets back whatever did not
+ * land, provided nothing else has been typed into it. The message still names it in full.
  */
 let unapplied = [];
 const moved = 'Something else wrote to this session, so the cells above are not the ones this page ' +
@@ -89,7 +89,7 @@ function settle(){
   entry.classList.remove('running');
   const block = unapplied.join('\n');
   unapplied = [];
-  if (block !== '' && !/[\r\n]/.test(block) && line.value === '') line.value = block;
+  if (block !== '' && line.value === '') line.value = block;
 }
 async function post(where, what){
   const response = await fetch(where, {
@@ -129,6 +129,14 @@ function send(where, what){
   });
   return queue;
 }
+/*
+ * Enter sends and Shift+Enter starts a new line, which is how a proof is typed into the box. A
+ * textarea does not submit its form on Enter by itself, so this is what does; a key pressed while
+ * an input method is composing a character belongs to the composition and is left alone.
+ */
+line.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); entry.requestSubmit(); }
+});
 entry.addEventListener('submit', e => {
   e.preventDefault();
   const what = line.value.trim();

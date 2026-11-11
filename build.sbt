@@ -1140,11 +1140,12 @@ lazy val published = (project in file("modules/published"))
   .settings(coverageSettings)
   .settings(
     name := "symbolum-published",
-    // Measured 2026-11-11 by `clean coverage published/test published/coverageReport`: 139 of 164
-    // statements, 84.76%. What is not reached is the exit of `Check.main`, the throw of `standard`,
-    // and the refusals of a definition that is not an equation and of an axiom, which no declaration
-    // of the language can produce today. One statement is 0.61%, so the floor leaves one.
-    coverageMinimumStmtTotal := 84.0
+    // Measured 2026-11-11 by `clean coverage published/test published/coverageReport`: 142 of 170
+    // statements, 83.53%. What is not reached is the exit of `Check.main`, `Notebook.main`, which
+    // blocks until the process is stopped, the throw of `standard`, and the refusals of a definition
+    // that is not an equation and of an axiom, which no declaration of the language can produce
+    // today. One statement is 0.59%, so the floor leaves one.
+    coverageMinimumStmtTotal := 82.9
   )
 
 // Runnable demonstrations, of both halves. Separate from `core` so they stay out of the published
@@ -1206,7 +1207,7 @@ lazy val dist = (project in file("modules/dist"))
   .enablePlugins(JavaAppPackaging)
   // `scan` at test scope: `LauncherSpec` compares the text of the launchers with the comments off,
   // and what a comment is is decided one place for the three modules that ask.
-  .dependsOn(tactics, examples, scan % "test->compile")
+  .dependsOn(tactics, examples, published, scan % "test->compile")
   .settings(commonSettings)
   .settings(
     name := "symbolum-dist",
@@ -1237,7 +1238,8 @@ lazy val dist = (project in file("modules/dist"))
     Compile / discoveredMainClasses := Seq(
       "garden.xeno.symbolum.tactics.Ask",
       "garden.xeno.symbolum.tactics.Find",
-      "garden.xeno.symbolum.tactics.Notebook",
+      "garden.xeno.symbolum.published.Notebook",
+      "garden.xeno.symbolum.published.Check",
       "garden.xeno.symbolum.examples.WhatAClaimCosts",
       "garden.xeno.symbolum.dist.Repl"
     ),

@@ -99,8 +99,24 @@ final class Session private (
     (truncate(position - 1).run(command), discarded)
   }
 
-  /** Run a list of commands in order, which is what replaying a transcript is. */
-  def runAll(lines: Vector[String]): Session = lines.foldLeft(this)((session, line) => session.run(line))
+  /**
+   * Run a list of lines in order, which is what replaying a transcript is.
+   *
+   * A command is one line, except a `theorem` whose proof follows it, which runs to the `qed` that
+   * closes it and is one command: `Document.extent` decides where it ends, by the same keywords the
+   * checker reads, so a theorem pasted into a session is the theorem the checker would read.
+   */
+  def runAll(lines: Vector[String]): Session = {
+    @annotation.tailrec
+    def go(session: Session, position: Int): Session =
+      if (position >= lines.size) session
+      else {
+        val keyword = lines(position).trim.takeWhile(!_.isWhitespace).toLowerCase
+        val span = if (keyword == "theorem") Document.extent(lines, position) else 1
+        go(session.run(lines.slice(position, position + span).mkString("\n")), position + span)
+      }
+    go(this, 0)
+  }
 
   /** What this session has assumed of its own, which is what its theorems are believed on. */
   def assumptions: Vector[(String, Term)] = state.assumed
@@ -119,6 +135,9 @@ object Session {
   /** A session over the standard chain, which is the one a caller almost always wants. */
   def standard: Session = of(Chain.standard)
 
+  /** A session over the standard chain that imports from `source`, which answers a document's text. */
+  def standard(source: String => Option[String]): Session = of(Chain.standard, source)
+
   /**
    * A session over a chain of one's own.
    *
@@ -132,7 +151,17 @@ object Session {
    * so what a long-lived process buys is an interactive loop rather than a rescue from an
    * unaffordable one.
    */
-  def of(chain: Chain): Session = new Session(chain, Vector.empty, Surface.of(chain))
+  def of(chain: Chain): Session = of(chain, _ => None)
+
+  /**
+   * A session whose `import` reads documents from `source`.
+   *
+   * A function for the reason `Workspace` takes one: which documents a session may import is the
+   * caller's decision, and the caller that knows the published ones is a module above this one.
+   * With nothing to read, an `import` is refused naming the document it did not find.
+   */
+  def of(chain: Chain, source: String => Option[String]): Session =
+    new Session(chain, Vector.empty, Surface.of(chain, source))
 
   /**
    * What a user writes in a cell.
@@ -179,15 +208,33 @@ object Session {
      */
     case Derive(name: String, step: String)
 
+    /**
+     * `theorem NAME : CLAIM by METHOD`, or the same line followed by `proof ... qed`: a declaration
+     * of the proof language, checked by the elaborator the checker uses, against this session's
+     * theory and the facts it holds. The text is kept whole, proof included, because the text is
+     * what a transcript replays.
+     */
+    case Theorem(text: String)
+
+    /**
+     * `import NAME`, a document's definitions made in this session's theory and its theorems held
+     * as facts, with every document it imports in turn: all of it or, when anything is refused,
+     * none of it.
+     */
+    case Import(name: String)
+
     /** A line that did not read, kept as an entry so that the transcript is still the session. */
     case Unreadable(line: String)
   }
 
   object Command {
 
+    /** What a `theorem` cell is, for a refusal of one that is something else. */
+    val TheoremShape: String = "theorem NAME : CLAIM by METHOD, or the same line followed by proof ... qed"
+
     /** The keyword of each command, which is also what [[write]] emits. */
     val Keywords: Vector[String] =
-      Vector("declare", "define", "assume", "prove", "derive", "ask", "find", "show")
+      Vector("declare", "define", "assume", "prove", "derive", "theorem", "import", "ask", "find", "show")
 
     /**
      * Read one line.
@@ -232,6 +279,9 @@ object Session {
         case "assume" => split(":", "assume <NAME> : <claim>").map(Assume.apply)
         case "prove" => split(":", "prove <NAME> : <claim>").map(Prove.apply)
         case "derive" => split(":", "derive <NAME> : <step>").map(Derive.apply)
+        // Read whole by the document reader when it is run, which is where its errors are told.
+        case "theorem" => Right(Theorem(trimmed))
+        case "import" => nonEmpty("the name of a document").map(Import.apply)
         case "ask" => nonEmpty("a claim").map(Ask.apply)
         case "find" => nonEmpty("a name or a shape").map(Find.apply)
         case "show" => nonEmpty("the name of a fact").map(Show.apply)
@@ -246,6 +296,8 @@ object Session {
       case Assume(name, claim) => s"assume $name : $claim"
       case Prove(name, claim) => s"prove $name : $claim"
       case Derive(name, step) => s"derive $name : $step"
+      case Theorem(text) => text
+      case Import(name) => s"import $name"
       case Ask(claim) => s"ask $claim"
       case Find(query) => s"find $query"
       case Show(name) => s"show $name"
@@ -267,7 +319,14 @@ object Session {
      * beside the theorem: `Derivation.axiomsOf` reports an axiom either way and cannot say which of
      * the two happened, which is what `docs/adr/0031` repairs one floor down in `Prove`.
      */
-    case Proved(name: String, theorem: Kernel.Thm, cutShort: Option[String] = None)
+    case Proved(name: String, theorem: Kernel.Thm, cutShort: Option[String] = None, price: Option[Elaborate.Price] = None)
+
+    /**
+     * A theorem whose proof did not check, and every problem in it: where, why, what to try and the
+     * goal at that point. The elaborator's report for one declaration, which is what makes the goal
+     * visible in a session as it is in the checker's output.
+     */
+    case Incomplete(name: String, problems: Vector[Elaborate.Problem])
 
     /** Text for the reader, changing nothing. */
     case Report(text: String)
@@ -323,7 +382,7 @@ object Session {
      * looks the same whether or not the reader's own assumption is underneath it.
      */
     def restsOn(base: Chain): Set[Term] = outcome match {
-      case Outcome.Proved(_, theorem, _) => Derivation.foreignTo(base.widest.theory, theorem).axioms
+      case Outcome.Proved(_, theorem, _, _) => Derivation.foreignTo(base.widest.theory, theorem).axioms
       case _ => Set.empty
     }
 
@@ -332,9 +391,11 @@ object Session {
       val head = s"[$number] ${Command.write(command)}"
       val body = outcome match {
         case Outcome.Extended(what) => s"    $what"
-        case Outcome.Proved(name, theorem, _) =>
+        case Outcome.Proved(name, theorem, _, price) =>
           val statement = current.legible(theorem.conclusion).getOrElse(current.show(theorem.conclusion))
-          s"    $name  |- $statement"
+          (s"    $name  |- $statement" +: price.toVector.flatMap(Entry.priced).map("    " + _)).mkString("\n")
+        case Outcome.Incomplete(name, problems) =>
+          (s"    $name: not proved" +: problems.flatMap(Entry.problem).map("    " + _)).mkString("\n")
         case Outcome.Report(text) => text.linesIterator.map("    " + _).mkString("\n")
 
         // A terminal has no renderer and markdown was written to be readable without one, which is
@@ -345,6 +406,27 @@ object Session {
       }
       s"$head\n$body"
     }
+  }
+
+  object Entry {
+
+    /** What a theorem the elaborator proved rests on and cost, a line each. */
+    def priced(price: Elaborate.Price): Vector[String] =
+      Vector(
+        s"axioms: ${if (price.axioms.isEmpty) "none" else price.axioms.mkString(", ")}",
+        s"library facts: ${if (price.facts.isEmpty) "none" else price.facts.mkString(", ")}"
+      ) ++
+        (if (price.document.nonEmpty) Vector(s"from this session: ${price.document.mkString(", ")}") else Vector.empty) ++
+        (if (price.imported.nonEmpty) Vector(s"imported: ${price.imported.mkString(", ")}") else Vector.empty) ++
+        Vector(s"inferences: ${price.inferences}") ++
+        price.notes.map(note => s"note: $note")
+
+    /** One problem of a proof, with the line it is on counted from the cell's first line. */
+    def problem(problem: Elaborate.Problem): Vector[String] =
+      Vector(s"line ${problem.line}: ${problem.reason}") ++
+        problem.next.map(step => s"  try: $step").toVector ++
+        problem.refuted.map(r => s"  ${if (r.refutes) "false" else "refutation"}: ${r.reason}").toVector ++
+        problem.goal.toVector.flatMap(_.linesIterator.map("  " + _))
   }
 
   /**
@@ -371,19 +453,31 @@ object Session {
      * be nine accounts of one line each with nothing saying they are one argument. `Script.tidy`
      * is what stops a step cited twice from being printed twice.
      */
-    val script: Script = Script.nothing
+    val script: Script = Script.nothing,
+    /**
+     * The theorems of the documents this session imported, each under the document that holds it.
+     * Apart from [[named]] because a price names them as `DOCUMENT.NAME`, which is how a reader
+     * tells a fact this session proved from one it took.
+     */
+    val imported: Elaborate.Imported = Elaborate.Imported.none,
+    /** The documents imported, in the order their definitions were made in [[theory]]. */
+    val documents: Vector[String] = Vector.empty
   ) extends Signature {
 
-    /** A theorem this session holds under that name. */
-    def fact(name: String): Option[Kernel.Thm] = named.reverse.collectFirst { case (held, theorem) if held == name => theorem }
+    /** A theorem this session holds under that name: its own first, then one it imported. */
+    def fact(name: String): Option[Kernel.Thm] =
+      named.reverse.collectFirst { case (held, theorem) if held == name => theorem }
+        .orElse(imported.facts.get(name).map(_.theorem))
 
     private[tactics] def extended(
       theory: Theory = this.theory,
       logic: Logic = this.logic,
       named: Vector[(String, Kernel.Thm)] = this.named,
       assumed: Vector[(String, Term)] = this.assumed,
-      script: Script = this.script
-    ): State = new State(theory, notation, logic, named, assumed, script)
+      script: Script = this.script,
+      imported: Elaborate.Imported = this.imported,
+      documents: Vector[String] = this.documents
+    ): State = new State(theory, notation, logic, named, assumed, script, imported, documents)
   }
 
   object State {
@@ -400,7 +494,14 @@ object Session {
    * the tactic surface are functions of the base chain, and rebuilding either per command would put
    * the cost the class comment measures back into every cell.
    */
-  private[tactics] final class Surface private (chain: Chain, library: Library, prove: Prove, cost: Cost) {
+  private[tactics] final class Surface private (
+    chain: Chain,
+    library: Library,
+    prove: Prove,
+    cost: Cost,
+    elaborate: Elaborate,
+    source: String => Option[String]
+  ) {
 
     def apply(state: State, command: Command): (Outcome, State) = command match {
       case Command.Declare(name, schema) => declare(state, name, schema)
@@ -408,6 +509,8 @@ object Session {
       case Command.Assume(name, claim) => assume(state, name, claim)
       case Command.Prove(name, claim) => proving(state, name, claim)
       case Command.Derive(name, step) => deriving(state, name, step)
+      case Command.Theorem(text) => theorem(state, text)
+      case Command.Import(name) => importing(state, name)
       case Command.Ask(claim) => (report(Ask.of(state, cost, claim)), state)
       case Command.Find(query) => (report(Find.of(state, library, query)), state)
       case Command.Show(name) => (Outcome.Page(showing(state, name)), state)
@@ -732,6 +835,99 @@ object Session {
       }
     }
 
+    /**
+     * A theorem of the proof language, checked by the elaborator against this session.
+     *
+     * The text is read by the document reader and must be one theorem: [[Session.runAll]] cuts a
+     * submission so that it is, and a cell that is something else is refused saying what it is.
+     * What the elaborator answers is kept whole, the price on a theorem it proved and every problem
+     * of one it did not, each with its goal, so a session shows what the checker shows.
+     */
+    private def theorem(state: State, text: String): (Outcome, State) = {
+      val parsed = Document.read(text)
+      val report = elaborate.within(Elaborate.Scope(state.theory, state.notation, state.logic), state.named, state.imported, parsed)
+      val syntax = parsed.errors.map(e => Elaborate.Problem(e.line, e.reason, None, None))
+      report.entries match {
+        case Vector(entry) if entry.kind == Elaborate.Kind.Theorem =>
+          (entry.status, entry.theorem) match {
+            case (Elaborate.Status.Proved, Some(proved)) if syntax.isEmpty && report.imports.isEmpty =>
+              (Outcome.Proved(entry.name, proved, None, entry.price), state.extended(named = state.named :+ (entry.name -> proved)))
+            case _ => (Outcome.Incomplete(entry.name, syntax ++ report.imports ++ entry.problems), state)
+          }
+        case Vector() if syntax.nonEmpty =>
+          (Outcome.Refused(syntax.map(p => s"line ${p.line}: ${p.reason}").mkString("; "), Some(Command.TheoremShape)), state)
+        case _ =>
+          (Outcome.Refused("a `theorem` cell holds one theorem and nothing else", Some(Command.TheoremShape)), state)
+      }
+    }
+
+    /**
+     * A document's definitions made in this session's theory, and its theorems held as facts,
+     * with every document it imports in turn.
+     *
+     * All or nothing. The documents are checked by `Workspace` over the chain, as the checker checks
+     * them, and then their definitions are made again here, in the order they were checked; a
+     * definition made again is the same constant (`docs/adr/0008`), so a theorem proved where its
+     * document was checked is about the constant this session reads. Anything refused on the way,
+     * a document that does not check, a name this session already uses, leaves the session as it
+     * was, because a session that took half a document would hold theorems about constants it does
+     * not have.
+     *
+     * A document already imported, directly or by another import, is not made twice.
+     */
+    private def importing(state: State, name: String): (Outcome, State) = {
+      val checked = new Workspace(elaborate, source).check(Vector(name))
+      val failing = checked.done.filterNot(_.report.ok)
+      if (checked.find(name).isEmpty)
+        (Outcome.Refused(s"no document named $name", Some("a session imports the documents its command can read: the published ones")), state)
+      else if (failing.nonEmpty)
+        (Outcome.Refused(failing.map(d => s"${d.name} does not check:\n${d.report.render}").mkString("\n"),
+          Some("check it with the checker command and repair it")), state)
+      else {
+        val fresh = checked.done.filterNot(done => state.documents.contains(done.name))
+        val taken = state.named.map(_._1).toSet ++ state.imported.facts.keySet
+        val made = fresh.foldLeft[Either[String, State]](Right(state)) { (acc, done) =>
+          acc.flatMap { current =>
+            val definitions = done.report.entries.filter(_.status == Elaborate.Status.Defined)
+            val widened = definitions.foldLeft[Either[String, State]](Right(current)) { (inner, entry) =>
+              inner.flatMap { here =>
+                entry.theorem.flatMap(t => Term.destEq(t.conclusion)) match {
+                  case None => Left(s"${done.name}: ${entry.name} is defined and its defining theorem is not an equation")
+                  case Some((_, body)) =>
+                    (for {
+                      pair <- LogicError.lift(Kernel.defineConstant(here.theory, entry.name, body))
+                      logic <- here.logic.over(pair._1)
+                    } yield here.extended(theory = pair._1, logic = logic)).left.map(error =>
+                      s"${entry.name}, defined in ${done.name}, cannot be defined in this session: ${error.render(here.show)}")
+                }
+              }
+            }
+            val facts = done.report.entries.collect { case entry if entry.theorem.isDefined => entry.name -> entry.theorem.get }
+            widened.flatMap { here =>
+              facts.find { case (fact, _) => taken.contains(fact) || here.imported.facts.contains(fact) } match {
+                case Some((fact, _)) => Left(s"$fact, declared in ${done.name}, is a name this session already holds")
+                case None =>
+                  val held = facts.map { case (fact, theorem) => fact -> Elaborate.Imported.Fact(done.name, Kernel.cite(fact, theorem)) }
+                  Right(here.extended(
+                    imported = here.imported.copy(facts = here.imported.facts ++ held),
+                    documents = here.documents :+ done.name
+                  ))
+              }
+            }
+          }
+        }
+        made match {
+          case Left(reason) => (Outcome.Refused(reason, Some("nothing was imported; rename the clashing name or import the other document")), state)
+          case Right(next) =>
+            val added = next.documents.drop(state.documents.size)
+            val what =
+              if (added.isEmpty) s"$name is already imported"
+              else s"imported ${added.mkString(", ")}: ${next.imported.facts.size - state.imported.facts.size} facts"
+            (Outcome.Extended(what), next)
+        }
+      }
+    }
+
     /** What a session holds, for a refusal that would otherwise say only that a name is unknown. */
     private def held(state: State): String =
       if (state.named.isEmpty) "nothing yet"
@@ -776,14 +972,14 @@ object Session {
     }
 
     /** Everything a session runs against, built once. */
-    def of(chain: Chain): Surface = {
+    def of(chain: Chain, source: String => Option[String]): Surface = {
       val prove = Prove
         .construct(chain)
         .fold(error => throw new IllegalStateException(s"the tactic surface does not build: ${error.message}"), identity)
       val cost = Cost
         .construct(chain)
         .fold(error => throw new IllegalStateException(s"the cost report does not build: ${error.message}"), identity)
-      new Surface(chain, Library.of(chain), prove, cost)
+      new Surface(chain, Library.of(chain), prove, cost, Elaborate.of(chain), source)
     }
   }
 }

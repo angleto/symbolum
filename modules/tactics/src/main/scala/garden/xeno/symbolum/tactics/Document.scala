@@ -199,6 +199,45 @@ object Document {
     new Reader(lines).document
   }
 
+  /**
+   * How many of `lines`, from `from`, the declaration that starts there runs over.
+   *
+   * For a reader that holds declarations among lines of another language, which is what a notebook
+   * session is: its commands are one line each, and a theorem with a proof is many. A theorem
+   * whose line ends in `by METHOD` is that line, as it is to the reader, whatever follows it. One
+   * whose next line is `proof` runs to the `qed` that closes it, counting the `proof ... qed` of
+   * every `have` and `show` inside, and to the end when the proof is never closed. Anything else is
+   * one line. That is the reader's own block structure, read by keyword and never by indentation, and it
+   * is asked here without reading the steps, so a proof whose steps do not read still has an extent
+   * and its errors are reported by [[read]] on exactly those lines. `DocumentSpec` asserts the two
+   * agree on every proof of `docs/language.md` and of the published documents.
+   *
+   * The first word decides nothing inside a proof: `show` and `assume` are steps there and
+   * commands of a session outside one, which is why the boundary is `qed` and not the next line
+   * that looks like a command.
+   */
+  def extent(lines: Vector[String], from: Int): Int = {
+    val text = lines.map(raw => stripComment(raw).trim)
+    val first = text.lift(from).getOrElse("")
+    val claimed = first.contains(':') && trailingBy(first.drop(first.indexOf(':') + 1).trim)._2.isDefined
+    val opened = text.indexWhere(_.nonEmpty, from + 1)
+    if (claimed || opened < 0 || text(opened) != "proof") 1
+    else {
+      @annotation.tailrec
+      def close(position: Int, depth: Int): Int =
+        if (position >= text.size) text.size - from
+        else {
+          val deeper = text(position) match {
+            case "proof" => depth + 1
+            case "qed" => depth - 1
+            case _ => depth
+          }
+          if (deeper == 0) position + 1 - from else close(position + 1, deeper)
+        }
+      close(opened, 0)
+    }
+  }
+
   private final case class Line(number: Int, text: String) {
     def keyword: String = text.takeWhile(c => !c.isWhitespace && c != ':')
     def rest: String = text.drop(keyword.length).trim
@@ -584,13 +623,13 @@ object Document {
       val right = if (found < 0) "" else text.drop(found + separator.length).trim
       check(found >= 0 && left.nonEmpty && right.nonEmpty, line.number, s"`${line.keyword}` is written `$shape`").map(_ => (left, right))
     }
+  }
 
-    /** `CLAIM by METHOD` split at the last ` by `, or the claim alone. */
-    private def trailingBy(text: String): (String, Option[String]) = {
-      val found = text.lastIndexOf(" by ")
-      if (found >= 0) (text.take(found).trim, Some(text.drop(found + 4).trim))
-      else if (text.startsWith("by ")) ("", Some(text.drop(3).trim))
-      else (text.trim, None)
-    }
+  /** `CLAIM by METHOD` split at the last ` by `, or the claim alone. */
+  private def trailingBy(text: String): (String, Option[String]) = {
+    val found = text.lastIndexOf(" by ")
+    if (found >= 0) (text.take(found).trim, Some(text.drop(found + 4).trim))
+    else if (text.startsWith("by ")) ("", Some(text.drop(3).trim))
+    else (text.trim, None)
   }
 }

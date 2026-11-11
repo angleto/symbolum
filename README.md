@@ -185,7 +185,7 @@ libraryDependencies += "garden.xeno" %% "symbolum" % "7.0.1"
 | `symbolum-theories` | the naturals, the reals, the numerals, `RING`, `LINARITH`, the library |
 | `symbolum-core` | the computer algebra system, which nothing in the proof half believes |
 | `symbolum-tactics` | the lowest module that sees both halves, and where the loop lives |
-| `symbolum-published` | the proof documents the repository publishes, their theorems as a library, and the checker command |
+| `symbolum-published` | the proof documents the repository publishes, their theorems as a library, the checker command and the notebook |
 
 GitHub Packages authenticates every read, whether or not the package is public, so resolving any of
 these needs a token of your own with `read:packages`:
@@ -226,24 +226,27 @@ tar xzf symbolum-7.0.1.tgz
 cd symbolum-7.0.1
 
 bin/symbolum-ask '!x:real. x + 0 = x'    # the claim, its price, and what it rests on
+bin/symbolum-check proof.sym            # a proof written without Scala, checked
 bin/symbolum-find SUM                    # a lemma by name, by constant or by shape
-bin/symbolum-notebook                    # a theory interactively, at http://127.0.0.1:8642
+bin/symbolum-notebook                    # a theory and its proofs interactively, at http://127.0.0.1:8642
 bin/symbolum-repl                        # a Scala REPL with the system on the classpath
 bin/symbolum-what-a-claim-costs          # the demonstration of the proof half
 
 bin/symbolum -main <class>               # anything else in the jars
 ```
 
-The five named scripts are an allowlist rather than everything the jars can run, and `bin/symbolum`
+The named scripts are an allowlist rather than everything the jars can run, and `bin/symbolum`
 is the escape from it. What the allowlist keeps out is the mains that regenerate documents of
 **this repository**: `Lemmas`, `Register`, `Guide`, `Examples`, `Foundation` and `Theorems` resolve
 `docs/...` against the working directory, so a launcher for one of them would write into wherever
 you unpacked the tarball. They are still reachable through `bin/symbolum -main`, which is a
 different thing from being offered.
 
-From a checkout instead of a distribution, each of the five is
-`sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask ..."` and its siblings, which is the spelling
-the rest of this file and [AGENTS.md](AGENTS.md) use.
+From a checkout instead of a distribution, each of them is
+`sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask ..."` and its siblings, and the checker and
+the notebook are `published/runMain` with `garden.xeno.symbolum.published.Check` and `...Notebook`,
+because a document or a session may import the published documents. That is the spelling the rest
+of this file and [AGENTS.md](AGENTS.md) use.
 
 ## A REPL without either
 
@@ -448,7 +451,7 @@ modules/logic       connectives, derived rules, rewriting, the parser and the pr
 modules/theories    the naturals, the reals, numerals, arithmetic, RING and LINARITH
 modules/core        the computer algebra system, published as garden.xeno:symbolum-core
 modules/tactics     the bridge: the algebra system as an oracle whose answers the kernel checks
-modules/published   the proof documents this repository publishes, and the checker command
+modules/published   the proof documents this repository publishes, the checker and the notebook
 modules/examples    runnable demonstrations, not published
 docs/notation.md       every symbol, the prerequisites, and where to look things up
 docs/architecture.md   the correctness argument, and where a change is dangerous
