@@ -469,7 +469,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `RediscoverySpec` counts beside the same figure. Plus eight.
     // 989 with the strict order between numerals, 2026-11-10, card `4102f131`: the five
     // `RediscoverySpec` counts beside the same figure. Plus five.
-    proposals.size shouldBe 989
+    // 995 with the bound and the ladder over Gilbreath's table, 2026-11-11, card `538f5094`: the
+    // six `RediscoverySpec` counts beside the same figure. Plus six.
+    proposals.size shouldBe 995
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1512,7 +1514,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // reads. Plus three.
     // 850 with the strict order between numerals, 2026-11-10, card `4102f131`, read off the run:
     // four of its five weakenings, claims about `NUM_PROV` that no procedure reads. Plus four.
-    open shouldBe 850
+    // 856 with the bound and the ladder over Gilbreath's table, 2026-11-11, card `538f5094`,
+    // predicted before the run from the six of `ddd1ba96` and equal to it: claims about the table
+    // `d` that no procedure reads. Plus six.
+    open shouldBe 856
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2285,7 +2290,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // proposals over its eight facts, which keep `NUM_MOD` and `NUM_POW`. Plus seven.
     // 346 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`, read off the run:
     // the eight new weakenings, each of which names a constant of the naturals. Plus eight.
-    aboutNumbers.size shouldBe 346
+    // 352 with the bound and the ladder over Gilbreath's table, 2026-11-11, card `538f5094`,
+    // predicted before the run and equal to it: the six new weakenings, each keeping `NUM_SUB` and
+    // an entry's index. Plus six.
+    aboutNumbers.size shouldBe 352
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

@@ -28,11 +28,27 @@ import garden.xeno.symbolum.logic.*
  * most 2". `GILBREATH_HEAD`: a row starting with 1 and followed by `n + 1` entries in `{0, 2}` passes
  * on a head of `n`. `GILBREATH_WINDOW`: a head of `n` guarantees the 1 for the next `n` rows.
  *
+ * == The bound and the ladder ==
+ *
+ * Two abbreviations, written out in each statement by `bounded` and `runs`: `M k n D` says
+ * positions 0 to `n` of row `k` are at most `D`, and `B k n D m` says every run of `m` consecutive
+ * entries in `{0, D}` inside them is all zeros, which is Chase's "the longest block in `{0, D}`
+ * containing a `D` has length `L`" at `m = L + 1`. `GILBREATH_BELOW`: `M k (SUC n) D` gives
+ * `M (SUC k) n D`, and `GILBREATH_BELOW_ROWS` the same over `j` rows; at `D = 1` that is the
+ * heredity of a row in `{0, 1}`. `GILBREATH_SHRINK` is Chase's inductive step, `B` at `SUC m` on
+ * row `k` giving `B` at `m` on row `k + 1` inside a bounded window, and `GILBREATH_DROP` lowers the
+ * bound by one when no entry equals it. `GILBREATH_RUNG` is Chase's Lemma 3.2 ("A random analogue of
+ * Gilbreath's conjecture") in this form: `L` rows below a window with no block longer than `L`, the
+ * bound is `D - 1`. `GILBREATH_LADDER` chains rungs, the bound lowered by one per rung, down to the
+ * single entry the last window leaves, which is at most 1. `docs/adr/0065` has the dated record.
+ *
  * == What they do not say ==
  *
- * That the head never runs out, which is the conjecture. The measurements in the note place that
- * question in the gaps modulo 4: a large value meeting the head is absorbed when the head keeps
- * producing 2s, and the kernel has nothing on how the gaps between primes are distributed.
+ * That the head never runs out, which is the conjecture, and that the primes' table has blocks
+ * short enough for the ladder at every depth, which is the same question asked of the bound. The
+ * measurements in the note place it in the gaps modulo 4: a large value meeting the head is
+ * absorbed when the head keeps producing 2s, and the kernel has nothing on how the gaps between
+ * primes are distributed.
  */
 private[theories] object Gilbreath {
 
@@ -53,6 +69,43 @@ private[theories] object Gilbreath {
   /** The entry is 0 or 2. */
   private def good(e: String): String = s"($e = 0 \\/ $e = 2)"
 
+  /** Every entry of row `row` from position 0 to position `width` is at most `bound`. */
+  private def bounded(row: String, width: String, bound: String): String =
+    s"(!i:num. i <= $width ==> $D ($row) i <= $bound)"
+
+  /** The entry is 0 or `bound`. */
+  private def member(e: String, bound: String): String = s"($e = 0 \\/ $e = $bound)"
+
+  /**
+   * The run of `length` entries of row `row` starting at `start`, when it lies in positions 0 to
+   * `width`: if every entry of it is 0 or `bound`, every entry of it is 0. `start` and the other
+   * arguments must not mention `t`, which is bound here.
+   */
+  private def runsFrom(row: String, width: String, bound: String, length: String, start: String): String =
+    s"$start + $length <= SUC ($width) ==> (!t:num. t < $length ==> ${member(s"$D ($row) ($start + t)", bound)}) ==> " +
+      s"(!t:num. t < $length ==> $D ($row) ($start + t) = 0)"
+
+  /**
+   * Every run of `length` consecutive entries in `{0, bound}` inside positions 0 to `width` of row
+   * `row` is all zeros. Chase's "the longest block containing `bound` has length `L`" is this at
+   * `length = L + 1`. The arguments must not mention `j` or `t`, which are bound here.
+   */
+  private def runs(row: String, width: String, bound: String, length: String): String =
+    s"(!j:num. ${runsFrom(row, width, bound, length, "j")})"
+
+  /**
+   * The hypothesis of the ladder: row `r 0` bounded by `D` on positions 0 to `w 0`, and at each
+   * stage `s < c` a rung of `l s` rows taking row `r s` with window `w s` to row `r (SUC s)` with a
+   * window `l s` shorter, the runs of stage `s` bounded by `l s` at the bound `D - s`; and the bound
+   * after `c` stages is at most 1.
+   */
+  private def staged(c: String, r: String, l: String, w: String, bound: String): String =
+    s"${bounded(s"$r 0", s"$w 0", bound)} /\\ (!s:num. s < $c ==> ${stage(r, l, w, bound, "s")}) /\\ NUM_SUB $bound $c <= 1"
+
+  /** Stage `s` of the ladder. */
+  private def stage(r: String, l: String, w: String, bound: String, s: String): String =
+    s"$r (SUC $s) = $r $s + $l $s /\\ $w $s = $w (SUC $s) + $l $s /\\ ${runs(s"$r $s", s"$w $s", s"NUM_SUB $bound $s", s"SUC ($l $s)")}"
+
   /** What `Complex` publishes from here, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     "GILBREATH_EXISTS" -> s"!r:num->num. ?d:num->num->num. (!i:num. d 0 i = r i) /\\ $Step",
@@ -65,7 +118,16 @@ private[theories] object Gilbreath {
     "GILBREATH_WINDOW" -> over(
       s"!n:num. !k:num. $D k 0 = 1 /\\ (!i:num. 0 < i /\\ i <= n ==> ${good(s"$D k i")}) ==> (!j:num. j <= n ==> $D (k + j) 0 = 1)"),
     "GILBREATH_EQUIVALENT" -> over(
-      s"$D 1 0 = 1 ==> ((!k:num. 0 < k ==> $D k 0 = 1) = (!k:num. 0 < k ==> ${good(s"$D k 1")}))")
+      s"$D 1 0 = 1 ==> ((!k:num. 0 < k ==> $D k 0 = 1) = (!k:num. 0 < k ==> ${good(s"$D k 1")}))"),
+    "GILBREATH_BELOW" -> over(s"!k:num. !n:num. !D:num. ${bounded("k", "SUC n", "D")} ==> ${bounded("SUC k", "n", "D")}"),
+    "GILBREATH_BELOW_ROWS" -> over(s"!j:num. !k:num. !n:num. !D:num. ${bounded("k", "n + j", "D")} ==> ${bounded("k + j", "n", "D")}"),
+    "GILBREATH_SHRINK" -> over(
+      s"!k:num. !n:num. !D:num. !m:num. ${bounded("k", "SUC n", "D")} /\\ ${runs("k", "SUC n", "D", "SUC m")} ==> ${runs("SUC k", "n", "D", "m")}"),
+    "GILBREATH_DROP" -> over(s"!k:num. !n:num. !D:num. ${bounded("k", "n", "D")} /\\ ${runs("k", "n", "D", "1")} ==> ${bounded("k", "n", "NUM_SUB D 1")}"),
+    "GILBREATH_RUNG" -> over(
+      s"!L:num. !k:num. !n:num. !D:num. ${bounded("k", "n + L", "D")} /\\ ${runs("k", "n + L", "D", "SUC L")} ==> ${bounded("k + L", "n", "NUM_SUB D 1")}"),
+    "GILBREATH_LADDER" -> over(
+      s"!c:num. !r:num->num. !l:num->num. !w:num->num. !D:num. ${staged("c", "r", "l", "w", "D")} ==> $D (r c + w c) 0 <= 1")
   )
 
   private val Order: Vector[(String, Proofs => R[Kernel.Thm])] = Vector(
@@ -74,7 +136,13 @@ private[theories] object Gilbreath {
     "GILBREATH_EVEN" -> (_.even),
     "GILBREATH_HEAD" -> (_.head),
     "GILBREATH_WINDOW" -> (_.window),
-    "GILBREATH_EQUIVALENT" -> (_.equivalent)
+    "GILBREATH_EQUIVALENT" -> (_.equivalent),
+    "GILBREATH_BELOW" -> (_.below),
+    "GILBREATH_BELOW_ROWS" -> (_.belowRows),
+    "GILBREATH_SHRINK" -> (_.shrink),
+    "GILBREATH_DROP" -> (_.drop),
+    "GILBREATH_RUNG" -> (_.rung),
+    "GILBREATH_LADDER" -> (_.ladder)
   )
 
   /** The facts [[Statements]] names, derived with `kit`. */
@@ -93,6 +161,15 @@ private[theories] object Gilbreath {
     private val iv = Term.variable("i", Numbers)
     private val jv = Term.variable("j", Numbers)
     private val rv = Term.variable("r", Rows)
+    private val lv = Term.variable("l", Rows)
+    private val wv = Term.variable("w", Rows)
+    private val boundv = Term.variable("D", Numbers)
+    private val mv = Term.variable("m", Numbers)
+    private val tv = Term.variable("t", Numbers)
+    private val pv = Term.variable("p", Numbers)
+    private val sv = Term.variable("s", Numbers)
+    private val cv = Term.variable("c", Numbers)
+    private val lengthv = Term.variable("L", Numbers)
 
     /** The equation assumed, and what `body` proves from it discharged. */
     private def table(body: Kernel.Thm => R[Kernel.Thm]): R[Kernel.Thm] =
@@ -406,6 +483,377 @@ private[theories] object Gilbreath {
           } yield out
           both = Kernel.deductAntisym(backward, forward)
           out <- rules.disch(hT, both)
+        } yield out
+      }
+
+    /* ------------------------------------------------------------ the bound and the ladder */
+
+    /** `induct` with the step's variable named `variable` with a `0` after it: see `ComplexKit.induct` for why. */
+    private def inductOn(variable: FVar, body: Term)(
+      base: Term => R[Kernel.Thm],
+      stepCase: (FVar, Kernel.Thm, Term) => R[Kernel.Thm]
+    ): R[Kernel.Thm] =
+      induct(variable, body, Some(Term.variable(s"${variable.name}0", Numbers)))(base, stepCase)
+
+    /** `hyp1 ==> hyp2 ==> claim`, the claim settled by `numLin` from `facts` and both hypotheses. */
+    private def implication2(facts: Seq[Kernel.Thm], hyp1: String, hyp2: String, claim: String): R[Kernel.Thm] =
+      for {
+        first <- assumed(hyp1)
+        second <- assumed(hyp2)
+        proved <- numLinText(facts ++ Seq(first._2, second._2), claim)
+        out <- rules.disch(second._1, proved).flatMap(rules.disch(first._1, _))
+      } yield out
+
+    /**
+     * What the difference at position `p` of row `SUC k` says about the two entries above it, when
+     * both are at most `bound`: a difference equal to `bound` puts both in `{0, bound}`; a difference
+     * in `{0, bound}` makes the two entries agree on membership of `{0, bound}`; two zeros above give
+     * a zero below. The three are what `GILBREATH_SHRINK` walks a run with.
+     */
+    private def pairClaim(row: String, p: String, bound: String): String = {
+      val x = s"$D $row $p"; val y = s"$D $row ($p + 1)"; val below = s"$D (SUC $row) $p"
+      s"($below = $bound ==> ${member(x, bound)} /\\ ${member(y, bound)}) /\\ " +
+        s"(${member(below, bound)} ==> (${member(x, bound)} = ${member(y, bound)})) /\\ " +
+        s"($x = 0 /\\ $y = 0 ==> $below = 0)"
+    }
+
+    /** `!p. d k p <= D ==> d k (p + 1) <= D ==> pairClaim`, at the `k` and `D` free, from the equation. */
+    private def pair(step: Kernel.Thm): R[Kernel.Thm] = {
+      val K = v("k"); val P = v("p"); val Bd = v("D")
+      val X = s"$D $K $P"; val Y = s"$D $K ($P + 1)"; val S = s"$D (SUC $K) $P"
+      for {
+        bx <- assumed(s"$X <= $Bd")
+        by <- assumed(s"$Y <= $Bd")
+        opened <- stepAt(step, K, P)
+        claim <- prop(pairClaim(K, P, Bd))
+        proved <- eitherOrder(s"($X)", s"($Y)") { (lo, hi, le) =>
+          // in each order the difference is `hi - lo`, so it reaches the bound only from 0 to the bound
+          for {
+            ordering <- ordered(le, lo, hi)
+            facts = ordering ++ Seq(bx._2, by._2, opened)
+            low <- implication(facts, s"$S = $Bd", s"$lo = 0")
+            high <- implication(facts, s"$S = $Bd", s"$hi = $Bd")
+            same <- Seq((X, Y), (Y, X)).flatMap { case (a, b) => Seq("0", Bd).map(c => (a, b, c)) }
+              .foldLeft[R[Vector[Kernel.Thm]]](Right(Vector.empty)) { case (acc, (a, b, c)) =>
+                for { done <- acc; f <- implication2(facts, s"$S = 0", s"$a = $c", s"$b = $c") } yield done :+ f
+              }
+            flat <- implication2(facts, s"$X = 0", s"$Y = 0", s"$S = 0")
+            out <- tauto(Seq(low, high) ++ same :+ flat, claim)
+          } yield out
+        }
+        out <- rules.disch(by._1, proved).flatMap(rules.disch(bx._1, _)).flatMap(gen(_, pv))
+      } yield out
+    }
+
+    /** Entries at most `D` on positions 0 to `n + 1` give entries at most `D` on 0 to `n` one row down: `|x - y| <= D`. */
+    def below: R[Kernel.Thm] =
+      table { step =>
+        val K = v("k"); val N = v("n"); val I = v("i"); val Bd = v("D")
+        val X = s"$D $K $I"; val Y = s"$D $K ($I + 1)"
+        for {
+          held <- assumed(bounded(K, s"SUC $N", Bd))
+          (hT, h) = held
+          range <- assumed(s"$I <= $N")
+          bx <- numLinText(Seq(range._2), s"$I <= SUC $N").flatMap(c => at(h, s"$I <= SUC $N ==> $X <= $Bd").flatMap(mp(_, c)))
+          by <- numLinText(Seq(range._2), s"$I + 1 <= SUC $N").flatMap(c => at(h, s"$I + 1 <= SUC $N ==> $Y <= $Bd").flatMap(mp(_, c)))
+          opened <- stepAt(step, K, I)
+          goal <- prop(s"$D (SUC $K) $I <= $Bd")
+          proved <- rewriting(Seq(opened), goal) { g =>
+            eitherOrder(s"($X)", s"($Y)") { (lo, hi, le) => ordered(le, lo, hi).flatMap(f => numLin(f ++ Seq(bx, by), g)) }
+          }
+          out <- rules.disch(range._1, proved).flatMap(gen(_, iv)).flatMap(rules.disch(hT, _)).flatMap(gen(_, kv, nv, boundv))
+        } yield out
+      }
+
+    /** `GILBREATH_BELOW` over `j` rows, the window one shorter per row: by induction on `j`. */
+    def belowRows: R[Kernel.Thm] =
+      table { _ =>
+        val K = v("k"); val N = v("n"); val Bd = v("D")
+        def claim(j: String) = s"!k:num. !n:num. !D:num. ${bounded("k", s"n + $j", "D")} ==> ${bounded(s"k + $j", "n", "D")}"
+        for {
+          belowHere <- under("GILBREATH_BELOW")
+          body <- prop(claim("(j:num)"))
+          proved <- inductOn(jv, body)(
+            _ =>
+              for {
+                held <- assumed(bounded(K, s"$N + 0", Bd))
+                widths <- num(s"$N + 0 = $N")
+                rows <- num(s"$K + 0 = $K")
+                here <- rw(widths, held._2)
+                goal <- prop(bounded(s"$K + 0", N, Bd))
+                reached <- rewriting(Seq(rows), goal)(landsOn(here))
+                out <- rules.disch(held._1, reached).flatMap(gen(_, kv, nv, boundv))
+              } yield out,
+            (jj, hyp, _) => {
+              val J = v(jj.name)
+              for {
+                held <- assumed(bounded(K, s"$N + SUC $J", Bd))
+                widths <- numLinText(Seq.empty, s"$N + SUC $J = SUC ($N + $J)")
+                wide <- rw(widths, held._2)
+                next <- at(belowHere, s"${bounded(K, s"SUC ($N + $J)", Bd)} ==> ${bounded(s"SUC $K", s"$N + $J", Bd)}").flatMap(mp(_, wide))
+                later <- at(hyp, s"${bounded(s"SUC $K", s"$N + $J", Bd)} ==> ${bounded(s"SUC $K + $J", N, Bd)}").flatMap(mp(_, next))
+                rows <- numLinText(Seq.empty, s"SUC $K + $J = $K + SUC $J")
+                reached <- rw(rows, later)
+                out <- rules.disch(held._1, reached).flatMap(gen(_, kv, nv, boundv))
+              } yield out
+            }
+          )
+        } yield proved
+      }
+
+    /**
+     * Chase's inductive step. Take a run `j .. j + m - 1` of row `k + 1` in `{0, D}`; row `k` at
+     * `j .. j + m` lies in the window, and by `pair` every one of those entries has the membership of
+     * `{0, D}` that entry `j` has, by induction along the run. If entry `j` is in, the run of `m + 1`
+     * above is all zeros by the hypothesis on row `k`, and so is every difference. If it is not, no
+     * difference can equal `D`, which would put both its ends in, so each is 0.
+     */
+    def shrink: R[Kernel.Thm] =
+      table { step =>
+        val K = v("k"); val N = v("n"); val Bd = v("D"); val Mm = v("m"); val J = v("j"); val T = v("t")
+        def x(pos: String) = s"$D $K ($pos)"
+        def in(e: String) = member(e, Bd)
+        for {
+          pairHere <- pair(step)
+          held <- assumed(s"${bounded(K, s"SUC $N", Bd)} /\\ ${runs(K, s"SUC $N", Bd, s"SUC $Mm")}")
+          (hT, h) = held
+          parts <- split(h)
+          (wide, blocks) = (parts(0), parts(1))
+          range <- assumed(s"$J + $Mm <= SUC $N")
+          run <- assumed(s"(!t:num. t < $Mm ==> ${in(s"$D (SUC $K) ($J + t)")})")
+          // `pair` at position `j + u` of the run, for `u < m`: both entries above are in the window
+          entries = (u: String, lt: Kernel.Thm) =>
+            for {
+              here <- numLinText(Seq(range._2, lt), s"$J + $u <= SUC $N")
+              b0 <- at(wide, s"$J + $u <= SUC $N ==> ${x(s"$J + $u")} <= $Bd").flatMap(mp(_, here))
+              next <- numLinText(Seq(range._2, lt), s"($J + $u) + 1 <= SUC $N")
+              b1 <- at(wide, s"($J + $u) + 1 <= SUC $N ==> ${x(s"($J + $u) + 1")} <= $Bd").flatMap(mp(_, next))
+              out <- at(pairHere, s"${x(s"$J + $u")} <= $Bd ==> ${x(s"($J + $u) + 1")} <= $Bd ==> ${pairClaim(K, s"($J + $u)", Bd)}")
+                .flatMap(mp(_, b0, b1))
+              claims <- split(out)
+            } yield claims
+          sameBody <- prop(s"$T <= $Mm ==> (${in(x(s"$J + $T"))} = ${in(x(J))})")
+          same <- inductOn(tv, sameBody)(
+            base =>
+              for {
+                zero <- num(s"$J + 0 = $J")
+                out <- rewriting(Seq(zero), base)(tauto(Seq.empty, _))
+              } yield out,
+            (tt, ih, _) => {
+              val U = v(tt.name)
+              for {
+                bound <- assumed(s"SUC $U <= $Mm")
+                within <- numLinText(Seq(bound._2), s"$U <= $Mm")
+                lt <- numLinText(Seq(bound._2), s"$U < $Mm")
+                prior <- mp(ih, within)
+                claims <- entries(U, lt)
+                difference <- at(run._2, s"$U < $Mm ==> ${in(s"$D (SUC $K) ($J + $U)")}").flatMap(mp(_, lt))
+                shift <- numLinText(Seq.empty, s"$J + SUC $U = ($J + $U) + 1")
+                target <- prop(s"${in(x(s"$J + SUC $U"))} = ${in(x(J))}")
+                reached <- rewriting(Seq(shift), target)(tauto(Seq(prior, difference, claims(1)), _))
+                out <- rules.disch(bound._1, reached)
+              } yield out
+            }
+          )
+          // when entry `j` is in, the hypothesis on row `k` makes all `m + 1` entries above zero
+          zeros <- for {
+            yes <- assumed(in(x(J)))
+            lt <- assumed(s"$T < SUC $Mm")
+            within <- numLinText(Seq(lt._2), s"$T <= $Mm")
+            agree <- at(same, s"$T <= $Mm ==> (${in(x(s"$J + $T"))} = ${in(x(J))})").flatMap(mp(_, within))
+            inside <- Conv.sym(agree).flatMap(e => LogicError.lift(Kernel.eqMp(e, yes._2)))
+            every <- rules.disch(lt._1, inside).flatMap(gen(_, tv))
+            block <- numLinText(Seq(range._2), s"$J + SUC $Mm <= SUC (SUC $N)")
+            out <- at(blocks, runsFrom(K, s"SUC $N", Bd, s"SUC $Mm", J)).flatMap(mp(_, block, every))
+            imp <- rules.disch(yes._1, out)
+          } yield imp
+          lt <- assumed(s"$T < $Mm")
+          claims <- entries(T, lt._2)
+          difference <- at(run._2, s"$T < $Mm ==> ${in(s"$D (SUC $K) ($J + $T)")}").flatMap(mp(_, lt._2))
+          within <- numLinText(Seq(lt._2), s"$T <= $Mm")
+          agree <- at(same, s"$T <= $Mm ==> (${in(x(s"$J + $T"))} = ${in(x(J))})").flatMap(mp(_, within))
+          goal <- prop(s"$D (SUC $K) ($J + $T) = 0")
+          reached <- cases(in(x(J)))(
+            yes =>
+              for {
+                all <- mp(zeros, yes)
+                first <- numLinText(Seq(lt._2), s"$T < SUC $Mm")
+                  .flatMap(c => at(all, s"$T < SUC $Mm ==> ${x(s"$J + $T")} = 0").flatMap(mp(_, c)))
+                shift <- numLinText(Seq.empty, s"$J + SUC $T = ($J + $T) + 1")
+                second <- numLinText(Seq(lt._2), s"SUC $T < SUC $Mm")
+                  .flatMap(c => at(all, s"SUC $T < SUC $Mm ==> ${x(s"$J + SUC $T")} = 0").flatMap(mp(_, c)))
+                  .flatMap(rw(shift, _))
+                out <- conj(first, second).flatMap(mp(claims(2), _))
+              } yield out,
+            no => tauto(Seq(no, agree, difference, claims(0)), goal)
+          )
+          out <- rules.disch(lt._1, reached).flatMap(gen(_, tv))
+            .flatMap(rules.disch(run._1, _)).flatMap(rules.disch(range._1, _)).flatMap(gen(_, jv))
+            .flatMap(rules.disch(hT, _)).flatMap(gen(_, kv, nv, boundv, mv))
+        } yield out
+      }
+
+    /**
+     * No entry equals `D` once every run of one entry in `{0, D}` is all zeros, so every entry is
+     * below `D`, or is 0 when `D` is: at most `D - 1` either way.
+     */
+    def drop: R[Kernel.Thm] =
+      table { _ =>
+        val K = v("k"); val N = v("n"); val Bd = v("D"); val I = v("i"); val T = v("t")
+        val E = s"$D $K $I"
+        for {
+          held <- assumed(s"${bounded(K, N, Bd)} /\\ ${runs(K, N, Bd, "1")}")
+          (hT, h) = held
+          parts <- split(h)
+          range <- assumed(s"$I <= $N")
+          top <- at(parts(0), s"$I <= $N ==> $E <= $Bd").flatMap(mp(_, range._2))
+          either <- at(fact("NUM_LE_CASES"), s"$E <= $Bd ==> $E < $Bd \\/ $E = $Bd").flatMap(mp(_, top))
+          goal = s"$E <= NUM_SUB $Bd 1"
+          lower <- for {
+            lt <- assume(s"$E < $Bd")
+            one <- numLinText(Seq(lt), s"1 <= $Bd")
+            back <- at(fact("NUM_SUB_ADD"), s"1 <= $Bd ==> NUM_SUB $Bd 1 + 1 = $Bd").flatMap(mp(_, one))
+            out <- numLinText(Seq(lt, back), goal)
+          } yield out
+          atTop <- for {
+            equal <- assume(s"$E = $Bd")
+            inside <- numLinText(Seq(range._2), s"$I + 1 <= SUC ($N)")
+            single <- for {
+              lt <- assumed(s"$T < 1")
+              zero <- numLinText(Seq(lt._2), s"$I + $T = $I")
+              left <- prop(s"$E = 0")
+              hit <- rules.disjIntro2(left, equal)
+              target <- prop(member(s"$D $K ($I + $T)", Bd))
+              reached <- rewriting(Seq(zero), target)(landsOn(hit))
+              out <- rules.disch(lt._1, reached).flatMap(gen(_, tv))
+            } yield out
+            zeros <- at(parts(1), runsFrom(K, N, Bd, "1", I)).flatMap(mp(_, inside, single))
+            plus <- num(s"$I + 0 = $I")
+            zero <- numLinText(Seq.empty, "(0:num) < 1")
+              .flatMap(c => at(zeros, s"(0:num) < 1 ==> $D $K ($I + 0) = 0").flatMap(mp(_, c))).flatMap(rw(plus, _))
+            out <- numLinText(Seq(zero), goal)
+          } yield out
+          proved <- rules.disjElim(either, lower, atTop)
+          out <- rules.disch(range._1, proved).flatMap(gen(_, iv)).flatMap(rules.disch(hT, _)).flatMap(gen(_, kv, nv, boundv))
+        } yield out
+      }
+
+    /**
+     * Chase's Lemma 3.2: by induction on `L` for every row, window and bound. `L = 0` is
+     * `GILBREATH_DROP`; a rung of `L + 1` is `GILBREATH_SHRINK` and `GILBREATH_BELOW` at row `k`,
+     * which leave a rung of `L` at row `k + 1`.
+     */
+    def rung: R[Kernel.Thm] =
+      table { _ =>
+        val K = v("k"); val N = v("n"); val Bd = v("D")
+        def claim(l: String) =
+          s"!k:num. !n:num. !D:num. ${bounded("k", s"n + $l", "D")} /\\ ${runs("k", s"n + $l", "D", s"SUC $l")} ==> ${bounded(s"k + $l", "n", "NUM_SUB D 1")}"
+        for {
+          dropHere <- under("GILBREATH_DROP")
+          shrinkHere <- under("GILBREATH_SHRINK")
+          belowHere <- under("GILBREATH_BELOW")
+          body <- prop(claim("(L:num)"))
+          proved <- inductOn(lengthv, body)(
+            _ =>
+              for {
+                held <- assumed(s"${bounded(K, s"$N + 0", Bd)} /\\ ${runs(K, s"$N + 0", Bd, "SUC 0")}")
+                widths <- num(s"$N + 0 = $N")
+                one <- fact("NUM_ONE_SUC").flatMap(Conv.sym)
+                here <- rw(widths, held._2).flatMap(rw(one, _))
+                dropped <- at(dropHere, s"${bounded(K, N, Bd)} /\\ ${runs(K, N, Bd, "1")} ==> ${bounded(K, N, s"NUM_SUB $Bd 1")}")
+                  .flatMap(mp(_, here))
+                rows <- num(s"$K + 0 = $K")
+                goal <- prop(bounded(s"$K + 0", N, s"NUM_SUB $Bd 1"))
+                reached <- rewriting(Seq(rows), goal)(landsOn(dropped))
+                out <- rules.disch(held._1, reached).flatMap(gen(_, kv, nv, boundv))
+              } yield out,
+            (ll, hyp, _) => {
+              val L = v(ll.name)
+              val inner = s"$N + $L"
+              for {
+                held <- assumed(s"${bounded(K, s"$N + SUC $L", Bd)} /\\ ${runs(K, s"$N + SUC $L", Bd, s"SUC (SUC $L)")}")
+                widths <- numLinText(Seq.empty, s"$N + SUC $L = SUC ($inner)")
+                here <- rw(widths, held._2)
+                parts <- split(here)
+                shrunk <- at(shrinkHere,
+                  s"${bounded(K, s"SUC ($inner)", Bd)} /\\ ${runs(K, s"SUC ($inner)", Bd, s"SUC (SUC $L)")} ==> ${runs(s"SUC $K", inner, Bd, s"SUC $L")}")
+                  .flatMap(mp(_, here))
+                lowered <- at(belowHere, s"${bounded(K, s"SUC ($inner)", Bd)} ==> ${bounded(s"SUC $K", inner, Bd)}").flatMap(mp(_, parts(0)))
+                both <- conj(lowered, shrunk)
+                later <- at(hyp,
+                  s"${bounded(s"SUC $K", inner, Bd)} /\\ ${runs(s"SUC $K", inner, Bd, s"SUC $L")} ==> ${bounded(s"SUC $K + $L", N, s"NUM_SUB $Bd 1")}")
+                  .flatMap(mp(_, both))
+                rows <- numLinText(Seq.empty, s"SUC $K + $L = $K + SUC $L")
+                reached <- rw(rows, later)
+                out <- rules.disch(held._1, reached).flatMap(gen(_, kv, nv, boundv))
+              } yield out
+            }
+          )
+        } yield proved
+      }
+
+    /**
+     * The counted ladder: `c` rungs, the bound lowered by one per rung, take row `r 0` bounded by `D`
+     * on `w 0 + 1` positions to row `r c` bounded by `D - c` on `w c + 1` positions, by induction on
+     * the stage with `GILBREATH_RUNG`; then `GILBREATH_BELOW_ROWS` takes that window down `w c` rows
+     * to the single entry it bounds, once `D - c` is at most 1.
+     */
+    def ladder: R[Kernel.Thm] =
+      table { _ =>
+        val C = v("c"); val R0 = "(r:num->num)"; val Ln = "(l:num->num)"; val W = "(w:num->num)"
+        val Bd = v("D"); val S = v("s"); val I = v("i")
+        for {
+          rungHere <- under("GILBREATH_RUNG")
+          rowsHere <- under("GILBREATH_BELOW_ROWS")
+          held <- assumed(staged(C, R0, Ln, W, Bd))
+          (hT, h) = held
+          parts <- split(h)
+          body <- prop(s"$S <= $C ==> ${bounded(s"$R0 $S", s"$W $S", s"NUM_SUB $Bd $S")}")
+          reach <- inductOn(sv, body)(
+            base =>
+              for {
+                zero <- at(fact("NUM_SUB_ZERO"), s"NUM_SUB $Bd 0 = $Bd")
+                first <- prop(bounded(s"$R0 0", s"$W 0", s"NUM_SUB $Bd 0"))
+                reached <- rewriting(Seq(zero), first)(landsOn(parts(0)))
+                start <- prop(s"0 <= $C")
+                out <- rules.disch(start, reached)
+              } yield out,
+            (ss, ih, _) => {
+              val U = v(ss.name)
+              val narrow = s"$W (SUC $U) + $Ln $U"
+              for {
+                bound <- assumed(s"SUC $U <= $C")
+                within <- numLinText(Seq(bound._2), s"$U <= $C")
+                lt <- numLinText(Seq(bound._2), s"$U < $C")
+                prior <- mp(ih, within)
+                here <- at(parts(1), s"$U < $C ==> ${stage(R0, Ln, W, Bd, U)}").flatMap(mp(_, lt)).flatMap(split)
+                bounds <- rw(here(1), prior)
+                blocks <- rw(here(1), here(2))
+                rung <- at(rungHere,
+                  s"${bounded(s"$R0 $U", narrow, s"NUM_SUB $Bd $U")} /\\ ${runs(s"$R0 $U", narrow, s"NUM_SUB $Bd $U", s"SUC ($Ln $U)")} ==> " +
+                    bounded(s"$R0 $U + $Ln $U", s"$W (SUC $U)", s"NUM_SUB (NUM_SUB $Bd $U) 1"))
+                lowered <- conj(bounds, blocks).flatMap(mp(rung, _))
+                rows <- Conv.sym(here(0))
+                sub <- at(fact("NUM_SUB_SUB"), s"NUM_SUB (NUM_SUB $Bd $U) 1 = NUM_SUB $Bd ($U + 1)")
+                suc <- numLinText(Seq.empty, s"$U + 1 = SUC $U")
+                reached <- rw(rows, lowered).flatMap(rw(sub, _)).flatMap(rw(suc, _))
+                out <- rules.disch(bound._1, reached)
+              } yield out
+            }
+          )
+          last <- numLinText(Seq.empty, s"$C <= $C")
+            .flatMap(c => at(reach, s"$C <= $C ==> ${bounded(s"$R0 $C", s"$W $C", s"NUM_SUB $Bd $C")}").flatMap(mp(_, c)))
+          weak <- for {
+            range <- assumed(s"$I <= 0 + $W $C")
+            within <- numLinText(Seq(range._2), s"$I <= $W $C")
+            entry <- at(last, s"$I <= $W $C ==> $D ($R0 $C) $I <= NUM_SUB $Bd $C").flatMap(mp(_, within))
+            out <- numLinText(Seq(entry, parts(2)), s"$D ($R0 $C) $I <= 1")
+            general <- rules.disch(range._1, out).flatMap(gen(_, iv))
+          } yield general
+          down <- at(rowsHere, s"${bounded(s"$R0 $C", s"0 + $W $C", "1")} ==> ${bounded(s"$R0 $C + $W $C", "0", "1")}").flatMap(mp(_, weak))
+          end <- numLinText(Seq.empty, "(0:num) <= 0")
+            .flatMap(c => at(down, s"(0:num) <= 0 ==> $D ($R0 $C + $W $C) 0 <= 1").flatMap(mp(_, c)))
+          out <- rules.disch(hT, end).flatMap(gen(_, cv, rv, lv, wv, boundv))
         } yield out
       }
   }

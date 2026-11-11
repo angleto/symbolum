@@ -845,8 +845,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under two new names from `Deduction.Statements`, `NUM_PROV_EXISTS_INTRO` and
     // `NUM_PROV_LESS_NUMERAL`, derived before the run and equal to it. `AGENTS.md`'s figures move by
     // two, two and two, both facts having three leading binders of `num`.
-    library.entries.size shouldBe 1129
-    library.names.distinct.size shouldBe 1126
+    // 1135 and 1132 with the bound and the ladder over Gilbreath's table, 2026-11-11, card
+    // `538f5094`: six facts under six new names from `Gilbreath.Statements`, derived before the run.
+    // Each has one leading quantifier, so `AGENTS.md`'s two other figures do not move.
+    library.entries.size shouldBe 1135
+    library.names.distinct.size shouldBe 1132
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

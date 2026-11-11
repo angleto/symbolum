@@ -436,7 +436,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 989 with the strict order between numerals, 2026-11-10, card `4102f131`: one antecedent per
     // hypothesis, four on `NUM_PROV_EXISTS_INTRO` and one on `NUM_PROV_LESS_NUMERAL`, derived before
     // the run and equal to it. Plus five.
-    propose.weakenings.size shouldBe 989
+    // 995 with the bound and the ladder over Gilbreath's table, 2026-11-11, card `538f5094`: the
+    // table's equation on each of six facts of `Gilbreath.Statements`, counted before the run and
+    // equal to it. Plus six.
+    propose.weakenings.size shouldBe 995
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -143,8 +143,19 @@ private[theories] final case class ComplexKit(
       out <- classical.cases(p, a, b)
     } yield out
 
-  /** A statement by induction on `variable`, with everything else in `predicate` quantified inside. */
-  def induct(variable: FVar, body: Term)(
+  /**
+   * A statement by induction on `variable`, with everything else in `predicate` quantified inside.
+   *
+   * The step's variable is `stepVariable` when one is given, and otherwise the name
+   * `Logic.stripForall` gives it, which is chosen by type among the names the step's statement
+   * leaves free and so is `n` for a number whenever the body does not mention `n`. That name is
+   * blind to the hypotheses a caller holds: measured on 2026-11-11 in `Gilbreath`, the step of
+   * `GILBREATH_BELOW_ROWS` was handed `n`, the window its own body quantifies, and generalising the
+   * window was refused as free in the step's hypothesis; in `GILBREATH_SHRINK` the window is free in
+   * assumptions the body does not mention, so the step would have been about the window under
+   * another name. A caller in that position names the variable.
+   */
+  def induct(variable: FVar, body: Term, stepVariable: Option[FVar] = None)(
     base: Term => Either[LogicError, Kernel.Thm],
     step: (FVar, Kernel.Thm, Term) => Either[LogicError, Kernel.Thm]
   ): Either[LogicError, Kernel.Thm] =
@@ -155,9 +166,16 @@ private[theories] final case class ComplexKit(
       premises <- logic.destImp(opened.conclusion).toRight(NotOfForm("an implication", opened.conclusion))
       halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
       provedBase <- base(halves._1)
-      stepStripped <- Logic.stripForall(halves._2)
-      k <- stepStripped._1.headOption.toRight(NotOfForm("a claim about every number", halves._2))
-      parts <- logic.destImp(stepStripped._2).toRight(NotOfForm("an implication", stepStripped._2))
+      stepOpened <- stepVariable match {
+        case Some(chosen) =>
+          LogicError.lift(Kernel.assume(halves._2)).flatMap(spec(_, chosen)).map(t => (chosen, t.conclusion))
+        case None =>
+          Logic.stripForall(halves._2).flatMap { case (vs, inner) =>
+            vs.headOption.map(k => (k, inner)).toRight(NotOfForm("a claim about every number", halves._2))
+          }
+      }
+      (k, stepBody) = stepOpened
+      parts <- logic.destImp(stepBody).toRight(NotOfForm("an implication", stepBody))
       assumed <- LogicError.lift(Kernel.assume(parts._1))
       reached <- step(k, assumed, parts._2)
       provedStep <- rules.disch(parts._1, reached).flatMap(rules.gen(k, _))

@@ -1271,8 +1271,16 @@ row starting with 1 passes the 1 on exactly when position 1 holds 0 or 2 (`GILBR
 conjecture is that condition at every row (`GILBREATH_EQUIVALENT`); even entries stay even; and a
 head of `n + 1` entries in `{0, 2}` behind the 1 passes on a head of `n`, which guarantees the 1 for
 `n` rows (`GILBREATH_HEAD`, `GILBREATH_WINDOW`). `GILBREATH_EXISTS` exhibits a table for every first
-row. **What is not here**: the primes, which the library does not enumerate, and the conjecture
-itself, which is whether the head lasts; note 917b3939 section 5.2 measures that and nothing proves it.
+row. Since 2026-11-11 the bound as well, from card `538f5094`: a window of entries at most `D` passes
+a window one shorter at most `D` to the next row (`GILBREATH_BELOW`, and over `j` rows
+`GILBREATH_BELOW_ROWS`, which at `D = 1` is the heredity of a row in `{0, 1}`); Chase's inductive
+step, every run of `m + 1` entries in `{0, D}` being all zeros giving the same for runs of `m` one
+row down (`GILBREATH_SHRINK`); Chase's Lemma 3.2, `L` rows down from a window whose blocks in
+`{0, D}` holding a `D` are at most `L` long the bound is `D - 1` (`GILBREATH_DROP`,
+`GILBREATH_RUNG`); and the counted ladder of rungs, each lowering the bound by one, down to an entry
+at most 1 (`GILBREATH_LADDER`). **What is not here**: the primes, which the library does not
+enumerate, and the conjecture itself, which is whether the head lasts, or whether the primes' blocks
+shrink as the ladder asks; note 917b3939 section 5.2 measures that and nothing proves it.
 
 **Finite distributions and Blackwell's easy direction are `Decision`, a link since 2026-10-22.**
 `docs/adr/0063` is the decision. A distribution on `n` outcomes is a function on `[0, n)` that
