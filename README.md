@@ -185,6 +185,7 @@ libraryDependencies += "garden.xeno" %% "symbolum" % "7.0.1"
 | `symbolum-theories` | the naturals, the reals, the numerals, `RING`, `LINARITH`, the library |
 | `symbolum-core` | the computer algebra system, which nothing in the proof half believes |
 | `symbolum-tactics` | the lowest module that sees both halves, and where the loop lives |
+| `symbolum-published` | the proof documents the repository publishes, their theorems as a library, and the checker command |
 
 GitHub Packages authenticates every read, whether or not the package is public, so resolving any of
 these needs a token of your own with `read:packages`:
@@ -447,12 +448,14 @@ modules/logic       connectives, derived rules, rewriting, the parser and the pr
 modules/theories    the naturals, the reals, numerals, arithmetic, RING and LINARITH
 modules/core        the computer algebra system, published as garden.xeno:symbolum-core
 modules/tactics     the bridge: the algebra system as an oracle whose answers the kernel checks
+modules/published   the proof documents this repository publishes, and the checker command
 modules/examples    runnable demonstrations, not published
 docs/notation.md       every symbol, the prerequisites, and where to look things up
 docs/architecture.md   the correctness argument, and where a change is dangerous
 docs/examples.md       what has been proved, and how far the asked-for areas are
 docs/proving.md        how to state and prove things
 docs/language.md       the proof language: writing a proof without Scala, and checking it
+docs/published.md      the published proof documents, with every statement they hold
 docs/where-it-stands.md  what the proof side reaches today, and what is not written
 docs/evaluation.md     benchmarks, measurements, and where a language model fits
 docs/numerics.md       the two capabilities that rest on a numeric library, and what that costs
@@ -721,12 +724,13 @@ Test coverage includes:
 |---|---|
 | [docs/examples.md](docs/examples.md) | A dozen results the system has proved, each as a page carrying its statement, what it rests on and what it cost; and a table of the areas that have been asked for, with the distance to each measured rather than estimated |
 | [docs/proving.md](docs/proving.md) | The guide to the proof assistant: stating something, proving it, and what the tactics decide |
-| [docs/language.md](docs/language.md) | The proof language: a document of definitions and theorems with structured proofs, checked by the kernel, written without Scala. Every step and method, what a report says, and what it does not do yet. Every example in it is checked by `LanguageSpec` |
+| [docs/language.md](docs/language.md) | The proof language: a document of definitions and theorems with structured proofs, checked by the kernel, written without Scala. Every step and method, what a report says, importing and publishing a document, and what it does not do yet. Every example in it is checked by `LanguageSpec` |
 | [docs/architecture.md](docs/architecture.md) | The trust boundary, the module graph, the kernel's ten rules, and where a change is dangerous |
 | [docs/evaluation.md](docs/evaluation.md) | Where the system stands against the benchmarks, what can be measured today, where a language model fits and where it must not, and the order to build in |
 | [docs/numerics.md](docs/numerics.md) | The Fourier transform and the Perron eigenvalue: which library they rest on, what it costs a consumer of the published artifact, what stays exact, and why a number from them is never a theorem |
 | [docs/theorems.md](docs/theorems.md) | A dozen results worth reading, each as a full page: the statement in a form set for reading and a form that parses, what it rests on, the derivation where one was recorded, what it cost, and the exact command that gets it back. The showcase, where `docs/lemmas.md` is the index |
 | [docs/where-it-stands.md](docs/where-it-stands.md) | What the proof side reaches today, development by development, and the gaps between them stated as gaps; the order of the work that closes them is in the task tracker |
+| [docs/published.md](docs/published.md) | Every proof document the repository publishes, with what it imports and every definition and theorem it holds. Written by a command and compared against the code by `PublishedSpec` |
 | [docs/lemmas.md](docs/lemmas.md) | Every lemma the library holds, by development, with its statement: the list to search before proving something that is already there. Written by a command and compared against the code by `LibrarySpec`, so it breaks on the day somebody adds a lemma |
 | [docs/naming.md](docs/naming.md) | How a lemma is named, read off the names the library already holds rather than invented for them, and why the moment to write a convention down is before the size forces one |
 | [docs/reading-register.md](docs/reading-register.md) | Every axiom, every law of the reals, every defined constant and every row of the precedence table, each with whether a person has read it, when, and against which source. Everything says NOT READ, which is the state and not an omission |

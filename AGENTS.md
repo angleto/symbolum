@@ -271,9 +271,10 @@ session named would be a different tool with the same name.
   where it fails if it fails. `|` separates two claims; the claim is **not** quoted, because `sbt`
   hands the arguments over already split and the shell's quotes are gone by then.
 - **Checking a proof written without Scala:**
-  `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Check path/to/file.sym"`, with `--json` for
-  a program reading the report. A document holds `define` and `theorem` declarations with
-  structured proofs, and the theorem each one ends with is the kernel's. `docs/language.md` is the
+  `tools/sbt "published/runMain garden.xeno.symbolum.published.Check path/to/file.sym"`, with `--json`
+  for a program reading the report. A document holds `import`, `define` and `theorem` declarations
+  with structured proofs, and the theorem each one ends with is the kernel's. An import names a
+  published document or a `.sym` file beside the one checked. `docs/language.md` is the
   reference and `docs/adr/0070` the decision. One failed step marks its own declaration and every
   other one is still checked, so a report lists every problem in the file with its line, the
   refusal, what to try and the goal at that point.
@@ -332,6 +333,12 @@ session named would be a different tool with the same name.
   Nothing that did not land disappears: the message names each one, and the box gets it back when
   what it would get is a single line. It is listening on loopback with no authentication: a
   single-user tool, not a service.
+- **Regenerating `docs/published.md`:**
+  `tools/sbt "published/runMain garden.xeno.symbolum.published.Published"`. The documents under
+  `modules/published` are proofs written in the language and published: every run of the suite
+  checks them, and their theorems are a library of their own beside the chain's. `PublishedSpec`
+  compares the page with the code and fails naming this command, as `LibrarySpec` does for the
+  lemmas.
 - **Regenerating `docs/lemmas.md`:** `tools/sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
   replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
   compares the file against the code and fails naming this command, which is the point: the document
@@ -371,6 +378,7 @@ logic     -> kernel, sat    connectives, derived rules, rewriting, parser, print
 theories  -> logic          the naturals, the reals, numerals, arithmetic, RING, LINARITH
 core      -> (nothing)      the computer algebra system, published as garden.xeno:symbolum-core
 tactics   -> theories, core the lowest module that sees both halves
+published -> tactics        the proof documents this repository publishes, and the checker command
 examples  -> tactics        runnable demonstrations of either half, not published
 mark      -> (nothing)      the figure, the art and the drawing written from it, and its checks
 scan      -> (nothing)      what in a source of this repository is a comment, for the gates that ask

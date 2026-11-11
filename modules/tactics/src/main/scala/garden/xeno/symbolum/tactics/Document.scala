@@ -44,8 +44,17 @@ package garden.xeno.symbolum.tactics
  */
 object Document {
 
-  /** A document: what was read, and what could not be. */
-  final case class Parsed(declarations: Vector[Declaration], errors: Vector[Malformed])
+  /**
+   * A document: the documents it imports, what was read, and what could not be.
+   *
+   * The imports are apart from the declarations because they are not checked, they are resolved:
+   * what an import means is decided by whoever holds the other documents, which is `Workspace`, and
+   * a document read on its own has nothing to resolve them against.
+   */
+  final case class Parsed(declarations: Vector[Declaration], errors: Vector[Malformed], imports: Vector[Import] = Vector.empty)
+
+  /** `import NAME`: the document of that name, whose definitions and theorems this one may use. */
+  final case class Import(line: Int, name: String)
 
   /** Text that does not read as the grammar, at a line, with what was expected there. */
   final case class Malformed(line: Int, reason: String)
@@ -92,6 +101,9 @@ object Document {
 
     /** `cases h : P`, then `case pos:` with `h : P` and `case neg:` with `h : ~P`. */
     case Cases(at: Int, name: String, claim: String, branches: Vector[Branch]) extends Step(at)
+
+    /** `cases h from F`, with `F : A \/ B`, then `case left:` with `h : A` and `case right:` with `h : B`. */
+    case CasesFrom(at: Int, name: String, from: String, branches: Vector[Branch]) extends Step(at)
 
     /** `induction x [using LEMMA]`, then one branch per case of the induction principle. */
     case Induction(at: Int, variable: String, using: Option[String], branches: Vector[Branch]) extends Step(at)
@@ -160,6 +172,20 @@ object Document {
     Vector("fix", "assume", "have", "show", "by", "obtain", "cases", "induction", "split", "left", "right",
       "witness", "rewrite", "apply", "calc")
 
+  /**
+   * What a document is called: its file name without `.sym`, and what an `import` names.
+   *
+   * One word, so that a name is a file name on every system and never a path: an import cannot
+   * reach outside the directory its documents are in.
+   */
+  val DocumentName: scala.util.matching.Regex = "[A-Za-z][A-Za-z0-9_]*".r
+
+  /**
+   * `cases NAME from FACT`, told apart from `cases NAME : CLAIM` by having no `:` and the word
+   * `from` where the colon would be. A claim is a term, and `from` is no word of the term language.
+   */
+  private val CasesFromShape: scala.util.matching.Regex = "([^\\s:]+)\\s+from\\s+([^\\s:]+)".r
+
   /** The words a method starts with. */
   val MethodKeywords: Vector[String] =
     Vector("auto", "ring", "linarith", "arith", "rewrite", "exact", "apply", "first")
@@ -196,7 +222,7 @@ object Document {
   private final class Reader(lines: Vector[Line]) {
     private type Read[A] = Either[Malformed, (A, Int)]
 
-    private val Declarations = Set("define", "theorem")
+    private val Declarations = Set("import", "define", "theorem")
 
     private def lastLine: Int = lines.lastOption.map(_.number).getOrElse(0)
     private def at(position: Int): Option[Line] = lines.lift(position)
@@ -204,22 +230,53 @@ object Document {
     private def check(ok: Boolean, line: Int, message: => String): Either[Malformed, Unit] =
       if (ok) Right(()) else fail(line, message)
 
-    /** Every declaration that reads, and an error for each one that does not. */
+    /**
+     * Every import and declaration that reads, and an error for each one that does not.
+     *
+     * Imports come first. One written after a declaration is refused rather than taken, because
+     * what a declaration can cite would otherwise depend on where in the file a line was moved to,
+     * and a reader looks for what a document builds on at its top, as in every language with them.
+     */
     def document: Parsed = {
       @annotation.tailrec
-      def go(position: Int, declarations: Vector[Declaration], errors: Vector[Malformed]): Parsed =
-        if (position >= lines.size) Parsed(declarations, errors)
-        else
-          declaration(position) match {
-            case Right((declaration, next)) => go(next, declarations :+ declaration, errors)
-            case Left(error) =>
-              // Skip to the next line that starts a declaration at the top level. The line that
-              // began this one is always passed over, so the reader always moves.
-              val resume = lines.indexWhere(line => Declarations.contains(line.keyword), position + 1)
-              go(if (resume < 0) lines.size else resume, declarations, errors :+ error)
-          }
-      go(0, Vector.empty, Vector.empty)
+      def go(position: Int, imports: Vector[Import], declarations: Vector[Declaration], errors: Vector[Malformed]): Parsed =
+        if (position >= lines.size) Parsed(declarations, errors, imports)
+        else {
+          val line = lines(position)
+          if (line.keyword == "import") {
+            val read = for {
+              _ <- check(declarations.isEmpty && !errors.exists(error => error.line < line.number && !isImportError(error)), line.number,
+                "`import` comes before every `define` and `theorem`: move it to the top of the document")
+              named <- documentName(line)
+              _ <- imports.find(_.name == named).fold(Right(()): Either[Malformed, Unit])(earlier =>
+                fail(line.number, s"$named is already imported on line ${earlier.line}"))
+            } yield Import(line.number, named)
+            read match {
+              case Right(taken) => go(position + 1, imports :+ taken, declarations, errors)
+              case Left(error) => go(position + 1, imports, declarations, errors :+ error)
+            }
+          } else
+            declaration(position) match {
+              case Right((declaration, next)) => go(next, imports, declarations :+ declaration, errors)
+              case Left(error) =>
+                // Skip to the next line that starts a declaration at the top level. The line that
+                // began this one is always passed over, so the reader always moves.
+                val resume = lines.indexWhere(line => Declarations.contains(line.keyword), position + 1)
+                go(if (resume < 0) lines.size else resume, imports, declarations, errors :+ error)
+            }
+        }
+      go(0, Vector.empty, Vector.empty, Vector.empty)
     }
+
+    /** Whether an error was met on an import line, which does not end the run of imports. */
+    private def isImportError(error: Malformed): Boolean =
+      lines.find(_.number == error.line).exists(_.keyword == "import")
+
+    /** The name an import line gives, which is a document's file name without `.sym`. */
+    private def documentName(line: Line): Either[Malformed, String] =
+      if (line.rest.isEmpty) fail(line.number, "`import` wants the name of a document")
+      else if (DocumentName.matches(line.rest)) Right(line.rest)
+      else fail(line.number, s"`${line.rest}` is not the name of a document: one word of letters, digits and `_`, starting with a letter")
 
     private def declaration(position: Int): Read[Declaration] = {
       val line = lines(position)
@@ -239,7 +296,7 @@ object Document {
             }
           } yield (Declaration.Theorem(line.number, name, claim, read._1), read._2)
         case other =>
-          fail(line.number, s"a document holds `define` and `theorem` at its top level, and this line starts with `$other`")
+          fail(line.number, s"a document holds `import`, `define` and `theorem` at its top level, and this line starts with `$other`")
       }
     }
 
@@ -323,9 +380,16 @@ object Document {
             _ <- check(bound.size == 2, line.number, "`obtain` names exactly one variable and one hypothesis: `obtain x h from FACT`")
             from <- single(line, line.keyword, line.rest.drop(split + 6), "the fact it opens")
           } yield (Step.Obtain(line.number, bound(0), bound(1), from), next)
+        case "cases" if CasesFromShape.matches(line.rest) =>
+          val CasesFromShape(named, from) = line.rest: @unchecked
+          for {
+            _ <- name(line, named)
+            _ <- name(line, from)
+            grouped <- branches(line, next)
+          } yield (Step.CasesFrom(line.number, named, from, grouped._1), grouped._2)
         case "cases" =>
           for {
-            parts <- split(line, line.rest, ":", "cases NAME : CLAIM")
+            parts <- split(line, line.rest, ":", "cases NAME : CLAIM, or cases NAME from FACT")
             (named, claim) = parts
             _ <- name(line, named)
             grouped <- branches(line, next)

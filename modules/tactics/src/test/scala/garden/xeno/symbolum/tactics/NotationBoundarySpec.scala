@@ -888,7 +888,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ) shouldBe true
     printsRawMessage("""Right(s"next: ${Remedy.of(reals, error).message}")""") shouldBe false
 
-    val roots = Vector("tactics", "examples", "dist").map(module => Paths.get(s"modules/$module/src/main"))
+    val roots = Vector("tactics", "published", "examples", "dist").map(module => Paths.get(s"modules/$module/src/main"))
     roots.foreach(root => withClue(s"$root: ")(Files.isDirectory(root) shouldBe true))
 
     val scanned = for {

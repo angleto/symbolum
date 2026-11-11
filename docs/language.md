@@ -2,8 +2,9 @@
 
 **EXCERPT — for anyone scanning the index:**
 How to write a proof without Scala: a document of definitions and theorems with structured proofs,
-checked by the kernel through `tactics/runMain garden.xeno.symbolum.tactics.Check FILE`. Every
-step, every method, what a report says, and what the language does not do yet. The decision is
+checked by the kernel through `published/runMain garden.xeno.symbolum.published.Check FILE`. Every
+step, every method, what a report says, how one document imports another, how a document is
+published into the repository's library, and what the language does not do yet. The decision is
 `docs/adr/0070`; every example in this file is checked by `LanguageSpec`.
 
 *If you modify this file and this excerpt no longer accurately describes its content, you must
@@ -11,7 +12,8 @@ update it.*
 
 ## What it is
 
-A document is a sequence of `define` and `theorem` declarations. A theorem is a claim in the term
+A document is a sequence of `define` and `theorem` declarations, after the `import` lines naming
+the documents it builds on. A theorem is a claim in the term
 language, the one `docs/lemmas.md` is written in, and a proof made of steps, one per line. The
 checker turns each step into calls to the kernel's rules and to the decision procedures. The
 theorem at the end is the kernel's, so the checker can refuse a proof but it cannot accept a false
@@ -35,9 +37,15 @@ qed
 ## Checking a document
 
 ```
-tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Check path/to/file.sym"
-tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Check --json path/to/file.sym"
+tools/sbt "published/runMain garden.xeno.symbolum.published.Check path/to/file.sym"
+tools/sbt "published/runMain garden.xeno.symbolum.published.Check --json path/to/file.sym"
 ```
+
+An import naming a published document ([published.md](published.md)) reads that one, wherever the file is.
+Any other import is read from the file's own directory: `import Geometry` is `Geometry.sym` beside
+it. A file beside it with a published name is not read, and the checker says so on the error
+stream. An imported document is checked too, and is not printed; a problem in it is reported on the import
+line, and that line names the file to check next.
 
 For every declaration the report gives its line and its status, which is one of `proved`,
 `defined`, `incomplete` or `refused`. A declaration that did not check lists its problems. Each
@@ -89,13 +97,14 @@ line 38: theorem ZERO_LEFT: proved
 - `library facts` is the lemmas of the library the proof cites. The walk stops at each named fact,
   so the construction of `num` under `NUM_ADD_ZERO` is not listed again.
 - `from this document` names the document's own theorems the proof cites, when there are any.
+- `imported` names the theorems of imported documents the proof cites, as `DOCUMENT.NAME`.
 - `inferences` is the size of the derivation in kernel inferences.
 - `note` appears when a bound, not the claim, decided part of the price. This is the case
   `Prove` reports as cut short.
 
 `--json` prints the same report as one JSON object per file, for a program driving the checker.
-The exit status is 0 when everything is proved or defined and nothing failed to read, and 1
-otherwise.
+The exit status is 0 when everything is proved or defined, nothing failed to read and every
+import resolved to a document that checks, and 1 otherwise.
 
 **One failure does not stop the checking.** A syntax error ends the declaration it is in, and the
 next declaration is read. A step that fails is reported, and the rest of the proof is still
@@ -122,8 +131,13 @@ it.
 
 | declaration | what it does |
 |---|---|
+| `import NAME` | The definitions and theorems of the document `NAME` can be used here. Imports come before every other declaration. |
 | `define NAME := TERM` | A conservative definition. It costs a name and no belief, and `NAME` is then a fact: the defining equation. |
 | `theorem NAME : CLAIM` | A claim and its proof. Once proved, `NAME` is a fact for every later declaration. |
+
+A name is a fact once declared, so a declaration may not take the name of a lemma of the library
+or of a theorem of an imported document: a later proof citing the name would reach the declaration
+and not the lemma its reader knows. The checker refuses it and says which one it would hide.
 
 ```sym
 define twice := \x:real. x + x
@@ -148,6 +162,7 @@ qed
 | `by M` | any | closed |
 | `obtain x h from F` | any, with `F : ?x. P x` | the same goal, with a fixed `x` and `h : P x` |
 | `cases h : P` | any | branches `pos` with `h : P` and `neg` with `h : ~P` |
+| `cases h from F` | any, with `F : A \/ B` | branches `left` with `h : A` and `right` with `h : B` |
 | `induction x` | any, with `x` fixed | one branch per case of the principle |
 | `induction x using L` | the same | the cases of `L`, numbered from 1 |
 | `split` | `A /\ B` | branches `left` and `right` |
@@ -243,12 +258,94 @@ notebook searches the library by name and by shape.
 What a method returns is checked and never trusted: its conclusion must be the goal as written, and
 it may rest only on hypotheses the proof holds.
 
+## Importing another document
+
+`docs/adr/0073` is the decision this section and the next describe. A document sees exactly what
+it imports, directly or through another import: their definitions,
+made again in the theory it is read in, and their theorems, which it cites by name. A document it
+does not import is invisible to it, even one checked earlier, so what a document rests on is what
+its imports say.
+
+```sym Doubling
+define DOUBLE := \n:num. n + n
+
+theorem DOUBLE_ZERO : DOUBLE 0 = 0
+proof
+  rewrite DOUBLE
+  by arith
+qed
+
+theorem DOUBLE_SUC : !n:num. DOUBLE (SUC n) = SUC (SUC (DOUBLE n))
+proof
+  fix n
+  rewrite DOUBLE
+  by arith
+qed
+```
+
+```sym Parity
+import Doubling
+
+theorem EVEN_OR_ODD : !n:num. ?k:num. n = DOUBLE k \/ n = SUC (DOUBLE k)
+proof
+  fix n
+  induction n
+  case zero:
+    witness 0
+    left
+    by rewrite DOUBLE_ZERO
+  case succ m ih:
+    obtain k hk from ih
+    cases h from hk
+    case left:
+      witness k
+      right
+      by rewrite h
+    case right:
+      witness SUC k
+      left
+      calc SUC m = SUC (SUC (DOUBLE k)) by rewrite h
+           _ = DOUBLE (SUC k) by rewrite DOUBLE_SUC
+    end
+  end
+qed
+```
+
+The price of `EVEN_OR_ODD` lists `imported: Doubling.DOUBLE, Doubling.DOUBLE_SUC, Doubling.DOUBLE_ZERO`.
+
+An import that cannot be used is a problem of the importing document, on the import line: a name
+with no document, a document importing itself, two documents importing each other, or two imported
+documents declaring one name. An imported document that does not check is reported the same way,
+and what it did prove is still imported, so the importer's proofs are checked against the facts
+they were written to use. A proof citing one of its failed declarations is told the proof failed,
+with the document and the line.
+
+## Publishing a document
+
+A document under `modules/published/src/main/resources/garden/xeno/symbolum/published/`, named in
+`Published.Names`, is published. Every run of the suite checks it, its theorems are a library
+(`Published.standard.library`) beside the chain's, and [published.md](published.md) lists them and
+is regenerated with
+
+```
+tools/sbt "published/runMain garden.xeno.symbolum.published.Published"
+```
+
+Publishing refuses three things a single check cannot see:
+
+- a published document that does not check, in any declaration or import;
+- a name two published documents both declare, even when neither imports the other: every
+  published document is made again in one theory, where the kernel refuses a name defined twice;
+- an axiom. The language has no declaration that asserts one, and the published theory is compared
+  with the chain's.
+
 ## What it does not do yet
 
-`docs/adr/0070` plans the work in six increments, and this file describes the first two. Until the
+`docs/adr/0070` plans the work in six increments, and this file describes the first three. Until the
 later ones land:
 
-- a document cannot import another one, and its theorems do not enter the library;
+- a published theorem is reached by importing its document; `auto`, `find` and `Ask` search the
+  chain's library and not the published one;
 - the goal is shown in the report and not yet in an editor;
 - the notebook does not take documents yet;
 - there is no `simp` set and no `datatype` declaration.

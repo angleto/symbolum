@@ -213,4 +213,95 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
     steps(5) shouldBe Step.Show(14, None, Justification.By(14, Method.Linarith(Vector("h", "k"))))
     parsed.declarations(1) shouldBe Declaration.Theorem(16, "U", "!x:real. x = x", Justification.By(16, Method.Apply("LEMMA")))
   }
+
+  "An import" should "be read at the top of a document, apart from the declarations" in {
+    val parsed = read(
+      """-- what this builds on
+        |import Doubling
+        |import Parity_2
+        |define d := \x:num. x + x
+        |theorem T : d 0 = 0 by auto""".stripMargin)
+
+    parsed.errors shouldBe empty
+    parsed.imports shouldBe Vector(Import(2, "Doubling"), Import(3, "Parity_2"))
+    parsed.declarations.map(_.line) shouldBe Vector(4, 5)
+    // The input that would make the first assertion vacuous: a document with no import line.
+    read("define d := \\x:num. x").imports shouldBe empty
+  }
+
+  it should "be refused after a declaration, twice, without a name, or with a name that is a path" in {
+    val parsed = read(
+      """import A
+        |import A
+        |import
+        |import ../secret
+        |import B C
+        |define d := \x:num. x
+        |import Late
+        |theorem T : d 0 = 0 by auto""".stripMargin)
+
+    parsed.imports shouldBe Vector(Import(1, "A"))
+    parsed.errors shouldBe Vector(
+      Malformed(2, "A is already imported on line 1"),
+      Malformed(3, "`import` wants the name of a document"),
+      Malformed(4, "`../secret` is not the name of a document: one word of letters, digits and `_`, starting with a letter"),
+      Malformed(5, "`B C` is not the name of a document: one word of letters, digits and `_`, starting with a letter"),
+      Malformed(7, "`import` comes before every `define` and `theorem`: move it to the top of the document"))
+    // An error on an import line ends nothing: both declarations are read.
+    parsed.declarations.map(_.line) shouldBe Vector(6, 8)
+  }
+
+  it should "be refused after a declaration that failed to read, which is still a declaration" in {
+    val parsed = read(
+      """theorem BROKEN
+        |import Late""".stripMargin)
+    parsed.imports shouldBe empty
+    parsed.errors.map(_.line) shouldBe Vector(1, 2)
+    parsed.errors(1).reason should include("comes before every")
+  }
+
+  "`cases NAME from FACT`" should "read as a split of a fact, apart from `cases NAME : CLAIM`" in {
+    val parsed = read(
+      """theorem T : !p:bool. !q:bool. p \/ q ==> q \/ p
+        |proof
+        |  fix p q
+        |  assume h
+        |  cases k from h
+        |  case left:
+        |    right
+        |    by exact k
+        |  case right:
+        |    left
+        |    by exact k
+        |  end
+        |  cases c : p from q
+        |  case pos:
+        |    by auto
+        |  case neg:
+        |    by auto
+        |  end
+        |qed""".stripMargin)
+
+    parsed.errors shouldBe empty
+    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _)) = parsed.declarations.head: @unchecked
+    val Step.CasesFrom(line, name, from, branches) = steps(2): @unchecked
+    (line, name, from, branches.map(_.label)) shouldBe ((5, "k", "h", Vector("left", "right")))
+    // With a colon it is the claim form, whatever follows: `from` inside a claim is not this step.
+    val Step.Cases(_, named, claim, _) = steps(3): @unchecked
+    (named, claim) shouldBe (("c", "p from q"))
+  }
+
+  it should "refuse a fact or a name that is not a name" in {
+    val parsed = read(
+      """theorem T : T
+        |proof
+        |  cases k from 1h
+        |  case left:
+        |    by auto
+        |  case right:
+        |    by auto
+        |  end
+        |qed""".stripMargin)
+    parsed.errors shouldBe Vector(Malformed(3, "`1h` is not a name"))
+  }
 }

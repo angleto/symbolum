@@ -152,8 +152,8 @@ jobs:
             echo "libraryDependencies += \"garden.xeno\" %% \"symbolum-theories\" % \"$VERSION\""
             echo '```'
             echo ""
-            echo "Published modules: symbolum, symbolum-kernel, symbolum-checker, symbolum-logic,"
-            echo "symbolum-theories, symbolum-core, symbolum-tactics."
+            echo "Published modules: symbolum, symbolum-kernel, symbolum-checker, symbolum-sat,"
+            echo "symbolum-logic, symbolum-theories, symbolum-core, symbolum-tactics, symbolum-published."
             echo ""
             echo "### The distribution"
             echo ""

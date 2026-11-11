@@ -348,6 +348,21 @@ object Derivation {
   def size(theorem: Kernel.Thm): Int = own(theorem).size
 
   /**
+   * The names of the facts a proof cites, read off its own part, so none of them is entered.
+   *
+   * The same walk [[size]] counts, and so the same boundary: a cited fact is where the proof stops,
+   * and what that fact was proved from belongs to the fact. A proof checked against facts of its
+   * own document, or of another document, reaches them as citations, and this is how a report on
+   * such a proof names which of them it used.
+   */
+  def cited(theorem: Kernel.Thm): Set[String] = theorem.derivation match {
+    // A proof that is one citation and nothing else cites that fact, where `own` would start
+    // inside it: a fact asked about by name is a question about its proof, and this one is not.
+    case Citation(name, _) => Set(name)
+    case _ => own(theorem).iterator.map(_.derivation).collect { case Citation(name, _) => name }.toSet
+  }
+
+  /**
    * How many inferences of each rule a proof holds, which is [[size]] taken apart.
    *
    * A proof's **shape** rather than its length, and the two answer different questions about the

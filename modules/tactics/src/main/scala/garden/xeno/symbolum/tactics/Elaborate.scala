@@ -57,15 +57,57 @@ final class Elaborate private (
   /** Check a document read from text. */
   def check(text: String): Report = check(Document.read(text))
 
-  /** Check a document already read. */
+  /**
+   * Check a document already read, on its own.
+   *
+   * Its imports resolve to nothing here, and each is reported as a problem rather than dropped: a
+   * document whose imports were silently ignored would be told that every name it imports does not
+   * exist, which sends its writer looking for a typo.
+   */
   def check(document: Document.Parsed): Report = {
-    val start = Scope(chain.widest.theory, chain.widest.notation, chain.widest.logic)
+    val report = check(document, Imported.none)
+    val unresolved = document.imports.map(taken =>
+      Problem(taken.line, s"`import ${taken.name}` resolves to nothing: this document was checked on its own",
+        Some("check it with `Check FILE`, which reads an import from beside the file, or through `Workspace`"), None))
+    report.copy(imports = unresolved ++ report.imports)
+  }
+
+  /**
+   * Check a document against what it imports.
+   *
+   * The theory it is read in is the chain's widest, with the imported definitions made again in
+   * the order given, and the facts it may cite are the imported theorems beside the library. A
+   * definition made again is the same constant, because a defined constant carries its definition
+   * (`docs/adr/0008`), so a theorem proved where the import was checked is about the constant this
+   * document reads. A definition that cannot be made again, because two imported documents define
+   * one name, is a problem of this document's imports and the rest is still checked.
+   *
+   * Which documents those are, and in which order, is not decided here: `Workspace` resolves the
+   * names an `import` gives, and a document checked through this method on its own gets whatever
+   * the caller hands it.
+   */
+  def check(document: Document.Parsed, imported: Imported): Report = {
+    val base = Scope(chain.widest.theory, chain.widest.notation, chain.widest.logic)
+    val (start, refusals) = imported.definitions.foldLeft((base, Vector.empty[Problem])) {
+      case ((scope, problems), definition) =>
+        val made = for {
+          pair <- LogicError.lift(Kernel.defineConstant(scope.theory, definition.name, definition.body))
+          logic <- scope.logic.over(pair._1)
+        } yield Scope(pair._1, scope.notation, logic)
+        made match {
+          case Right(wider) => (wider, problems)
+          case Left(error) =>
+            (scope, problems :+ Problem(definition.line,
+              s"${definition.name}, defined in ${definition.document}, cannot be defined here: ${error.render(scope.show)}",
+              Some("two documents this one imports define the same name; one of them has to rename it"), None))
+        }
+    }
     val (entries, _, _) = document.declarations.foldLeft((Vector.empty[Entry], start, Held.empty)) {
       case ((done, scope, held), declaration) =>
-        val (entry, nextScope, nextHeld) = declare(scope, held, declaration)
+        val (entry, nextScope, nextHeld) = declare(scope, held, imported, declaration)
         (done :+ entry, nextScope, nextHeld)
     }
-    Report(entries, document.errors)
+    Report(entries, document.errors, refusals)
   }
 
   /** Every axiom of the pricing library by statement, for printing a price as names. */
@@ -77,8 +119,34 @@ final class Elaborate private (
 
   /* ------------------------------------------------------------------ declarations */
 
-  private def declare(scope: Scope, held: Held, declaration: Document.Declaration): (Entry, Scope, Held) =
+  /**
+   * Why `name` cannot be given to a declaration of this document, if it cannot.
+   *
+   * A name is a fact once declared, and a fact is looked up in the proof, then the document, then
+   * its imports, then the library. A document's theorem named like a library lemma or an imported
+   * theorem would therefore hide the other one from every later proof that cites it, and the proof
+   * would read as citing the lemma a reader knows while it rested on something else. So the name is
+   * refused rather than shadowed.
+   */
+  private def taken(held: Held, imported: Imported, name: String): Option[(String, String)] =
+    if (held.has(name)) Some((s"this document already declares $name", "give it a name of its own"))
+    else
+      imported.facts.get(name).map(_.document).orElse(imported.failures.get(name).map(_.document)) match {
+        case Some(document) =>
+          Some((s"$name is declared in $document, which this document imports", "give it a name of its own"))
+        case None =>
+          library.named(name).headOption.map { entry =>
+            (s"$name is a lemma of the library (${entry.development})",
+              "give it a name of its own: a proof citing the name would otherwise reach this declaration and not the lemma")
+          }
+      }
+
+  private def declare(scope: Scope, held: Held, imported: Imported, declaration: Document.Declaration): (Entry, Scope, Held) =
     declaration match {
+      case Document.Declaration.Define(line, name, body) if taken(held, imported, name).isDefined =>
+        val (reason, next) = taken(held, imported, name).get
+        (Entry(name, line, Kind.Definition, Status.Refused, body, Vector(Problem(line, reason, Some(next), None)), None), scope, held)
+
       case Document.Declaration.Define(line, name, body) =>
         val outcome = for {
           term <- Parser.term(scope.theory, scope.notation, body)
@@ -95,17 +163,17 @@ final class Elaborate private (
         }
 
       case Document.Declaration.Theorem(line, name, claimText, proof) =>
-        if (held.has(name))
-          (Entry(name, line, Kind.Theorem, Status.Refused, claimText,
-            Vector(Problem(line, s"this document already declares $name", Some("give the theorem a name of its own"), None)), None),
-            scope, held)
-        else
+        taken(held, imported, name) match {
+          case Some((reason, next)) =>
+            (Entry(name, line, Kind.Theorem, Status.Refused, claimText, Vector(Problem(line, reason, Some(next), None)), None),
+              scope, held)
+          case None =>
           Parser.proposition(scope.theory, scope.notation, claimText) match {
             case Left(error) =>
               (Entry(name, line, Kind.Theorem, Status.Refused, claimText, Vector(problem(scope, line, error, None)), None),
                 scope, held.failed(name, line))
             case Right(claim) =>
-              val checked = new Run(scope, held).establish(Context.empty, claim, proof).flatMap { theorem =>
+              val checked = new Run(scope, held, imported).establish(Context.empty, claim, proof).flatMap { theorem =>
                 if (theorem.conclusion != claim)
                   Checked.failed(Problem(line, s"the proof ends with ${scope.show(theorem.conclusion)}, and the claim is ${scope.show(claim)}",
                     None, None))
@@ -117,13 +185,14 @@ final class Elaborate private (
               checked.value.filter(_ => checked.problems.isEmpty) match {
                 case Some(theorem) =>
                   (Entry(name, line, Kind.Theorem, Status.Proved, scope.show(claim), Vector.empty, Some(theorem),
-                    Some(price(scope, held, theorem, checked.notes))),
+                    Some(price(scope, held, imported, theorem, checked.notes))),
                     scope, held.proved(name, theorem))
                 case None =>
                   (Entry(name, line, Kind.Theorem, Status.Incomplete, scope.show(claim), checked.problems, None),
                     scope, held.failed(name, line))
               }
           }
+        }
     }
 
   /**
@@ -134,24 +203,29 @@ final class Elaborate private (
    * theorem is believed on. `facts` is the library lemmas the proof cites, the walk stopping at each
    * named fact, which is what a person checking the proof reads it against: the transitive closure
    * would list the construction of `num` under every lemma about addition. `document` is this
-   * document's own theorems it cites, which no library holds.
+   * document's own theorems it cites, which no library holds, and `imported` is the theorems of
+   * the documents it imports that it cites, each written `DOCUMENT.NAME`.
    */
-  private def price(scope: Scope, held: Held, theorem: Kernel.Thm, notes: Vector[String]): Price = {
-    val own = held.facts.map { case (name, fact) => fact.conclusion -> name }
-    val cited = Derivation.restingOn(theorem, own.keySet)
+  private def price(scope: Scope, held: Held, imported: Imported, theorem: Kernel.Thm, notes: Vector[String]): Price = {
+    // The document's facts and the imported ones are citations, and the walk stops at them: what
+    // they were proved from is in their own price, not this one's. They are told apart by the name
+    // the citation carries and not by their statement, because two of them can state one thing.
+    val boundary = held.facts.values.map(_.conclusion).toSet ++ imported.facts.values.map(_.theorem.conclusion)
+    val cited = Derivation.cited(theorem)
     Price(
       axioms = Derivation.axiomsOf(theorem).toVector.map(a => axiomNames.getOrElse(a, scope.show(a))).distinct.sorted,
-      facts = priced.restingOn(theorem, named).map(_.name).distinct.sorted,
-      document = own.collect { case (conclusion, name) if cited.contains(conclusion) => name }.toVector.sorted,
+      facts = priced.restingOn(theorem, named ++ boundary).map(_.name).distinct.sorted,
+      document = held.facts.keys.filter(cited.contains).toVector.sorted,
       inferences = Derivation.size(theorem),
-      notes = notes.distinct
+      notes = notes.distinct,
+      imported = imported.facts.collect { case (name, fact) if cited.contains(name) => s"${fact.document}.$name" }.toVector.sorted
     )
   }
 
   /* ------------------------------------------------------------------ one proof */
 
   /** The checking of one declaration's proof. Every method is a function of its arguments. */
-  private final class Run(scope: Scope, held: Held) {
+  private final class Run(scope: Scope, held: Held, imported: Imported) {
 
     private def rules: Rules = scope.logic.rules
     private def logic: Logic = scope.logic
@@ -193,22 +267,26 @@ final class Elaborate private (
       Refuted(Refuted.kind(outcome), Remedy.of(outcome).message)
     }
 
-    /** A fact by name: the proof's own, the document's, then the library's. */
+    /** A fact by name: the proof's own, the document's, its imports', then the library's. */
     private def lookup(line: Int, context: Context, goal: Term, name: String): Either[Problem, Kernel.Thm] =
       context.facts.reverseIterator.collectFirst { case (known, theorem) if known == name => theorem }
         .orElse(held.facts.get(name))
+        .orElse(imported.facts.get(name).map(_.theorem))
         .orElse(library.named(name).headOption.map(_.theorem)) match {
         case Some(theorem) => Right(theorem)
         case None =>
-          held.failures.get(name) match {
-            case Some(declared) =>
-              Left(at(line, context, goal, s"$name is declared on line $declared and its proof did not check, so it is not a fact",
+          held.failures.get(name).map(declared => s"on line $declared")
+            .orElse(imported.failures.get(name).map(failure => s"in ${failure.document} on line ${failure.line}")) match {
+            case Some(where) =>
+              Left(at(line, context, goal, s"$name is declared $where and its proof did not check, so it is not a fact",
                 Some(s"repair $name first; a later proof cannot rest on one that failed")))
             case None =>
               val local = context.facts.map(_._1).distinct
               val here = if (local.isEmpty) "this proof holds no fact of its own" else s"this proof holds ${local.mkString(", ")}"
               Left(at(line, context, goal,
-                s"no fact named $name: $here, this document declares none of that name, and the library has no lemma of that name",
+                s"no fact named $name: $here, this document declares none of that name" +
+                  (if (imported.documents.isEmpty) "" else s", nor does any document it imports (${imported.documents.mkString(", ")})") +
+                  ", and the library has no lemma of that name",
                 Some("`find` searches the library by name and by shape")))
           }
       }
@@ -305,6 +383,20 @@ final class Elaborate private (
             grouped <- labelled(line, context, goal, branches, Vector("pos", "neg"))
             proved <- Checked.all(Vector(branch(context, goal, grouped(0), Some(name -> claim)), branch(context, goal, grouped(1), Some(name -> negation))))
             split <- attempt(line, context, goal)(chain.classical.cases(claim, proved(0), proved(1)))
+          } yield split)
+
+        case Step.CasesFrom(line, name, from, branches) :: rest =>
+          unreachable(line, rest).andThen(for {
+            disjunction <- fact(line, context, goal, from)
+            sides <- logic.destDisj(disjunction.conclusion) match {
+              case Some(found) => Checked.ok(found)
+              case None =>
+                refuse(line, context, goal, s"`cases $name from $from` wants $from to be a disjunction A \\/ B, and it is ${scope.show(disjunction.conclusion)}",
+                  Some("a case split on a proposition is `cases NAME : CLAIM`, which needs no fact"))
+            }
+            grouped <- labelled(line, context, goal, branches, Vector("left", "right"))
+            proved <- Checked.all(Vector(branch(context, goal, grouped(0), Some(name -> sides._1)), branch(context, goal, grouped(1), Some(name -> sides._2))))
+            split <- attempt(line, context, goal)(rules.disjElim(disjunction, proved(0), proved(1)))
           } yield split)
 
         case Step.Induction(line, name, using, branches) :: rest =>
@@ -927,7 +1019,12 @@ object Elaborate {
   /** What the document has proved so far, and the names whose proofs did not check. */
   private final case class Held(facts: Map[String, Kernel.Thm], failures: Map[String, Int]) {
     def has(name: String): Boolean = facts.contains(name) || failures.contains(name)
-    def proved(name: String, theorem: Kernel.Thm): Held = copy(facts = facts + (name -> theorem))
+    /**
+     * `name` held as a fact, recorded as a citation of it (`Kernel.cite`, `docs/adr/0047`): a later
+     * proof that uses it is priced at the name, as a proof citing a library lemma is, rather than
+     * at everything its proof used.
+     */
+    def proved(name: String, theorem: Kernel.Thm): Held = copy(facts = facts + (name -> Kernel.cite(name, theorem)))
     def failed(name: String, line: Int): Held = copy(failures = failures + (name -> line))
   }
 
@@ -1018,8 +1115,44 @@ object Elaborate {
     facts: Vector[String],
     document: Vector[String],
     inferences: Int,
-    notes: Vector[String]
+    notes: Vector[String],
+    imported: Vector[String] = Vector.empty
   )
+
+  /**
+   * What a document is checked against beyond the chain: the definitions and theorems of the
+   * documents it imports, directly or through another import.
+   *
+   * `definitions` is in the order they are to be made again, which is the order of the documents
+   * that made them. `failures` are the declarations of those documents that did not check, kept so
+   * a proof citing one is told it failed rather than that the name does not exist, as it is inside
+   * one document.
+   */
+  final case class Imported(
+    definitions: Vector[Imported.Definition],
+    facts: Map[String, Imported.Fact],
+    failures: Map[String, Imported.Failure]
+  ) {
+
+    /** Every document this holds anything of, by name. */
+    def documents: Vector[String] =
+      (definitions.map(_.document) ++ facts.values.map(_.document) ++ failures.values.map(_.document)).distinct.sorted
+  }
+
+  object Imported {
+
+    /** A definition of an imported document, and the line of the import that brought it. */
+    final case class Definition(document: String, name: String, body: Term, line: Int)
+
+    /** A theorem or a defining equation of an imported document. */
+    final case class Fact(document: String, theorem: Kernel.Thm)
+
+    /** A declaration of an imported document that did not check, on its line there. */
+    final case class Failure(document: String, line: Int)
+
+    /** Nothing imported. */
+    val none: Imported = Imported(Vector.empty, Map.empty, Map.empty)
+  }
 
   enum Kind { case Definition, Theorem }
 
@@ -1051,11 +1184,18 @@ object Elaborate {
     price: Option[Price] = None
   )
 
-  /** A checked document. */
-  final case class Report(entries: Vector[Entry], syntax: Vector[Document.Malformed]) {
+  /**
+   * A checked document.
+   *
+   * `imports` holds the problems of the document's imports rather than of any declaration: an
+   * import naming no document, a cycle, an imported document that does not check, or two imported
+   * definitions of one name.
+   */
+  final case class Report(entries: Vector[Entry], syntax: Vector[Document.Malformed], imports: Vector[Problem] = Vector.empty) {
 
-    /** Every declaration proved or defined, and nothing that failed to read. */
-    def ok: Boolean = syntax.isEmpty && entries.forall(e => e.status == Status.Proved || e.status == Status.Defined)
+    /** Every declaration proved or defined, nothing that failed to read, and every import resolved. */
+    def ok: Boolean =
+      syntax.isEmpty && imports.isEmpty && entries.forall(e => e.status == Status.Proved || e.status == Status.Defined)
 
     /** The report as a reader reads it. */
     def render: String = {
@@ -1065,6 +1205,7 @@ object Elaborate {
           s"  library facts: ${if (price.facts.isEmpty) "none" else price.facts.mkString(", ")}"
         ) ++
           (if (price.document.nonEmpty) Vector(s"  from this document: ${price.document.mkString(", ")}") else Vector.empty) ++
+          (if (price.imported.nonEmpty) Vector(s"  imported: ${price.imported.mkString(", ")}") else Vector.empty) ++
           Vector(s"  inferences: ${price.inferences}") ++
           price.notes.map(note => s"  note: $note")
       def problem(p: Problem): Vector[String] =
@@ -1084,8 +1225,12 @@ object Elaborate {
       val defined = entries.count(_.status == Status.Defined)
       val failed = entries.count(e => e.status == Status.Incomplete || e.status == Status.Refused)
       val summary = s"${entries.size} declarations: $proved proved, $defined defined, $failed not proved" +
-        (if (syntax.nonEmpty) s", ${syntax.size} syntax errors" else "")
-      (syntax.map(e => s"line ${e.line}: syntax: ${e.reason}") ++ entries.flatMap(entry) :+ summary).mkString("\n")
+        (if (syntax.nonEmpty) s", ${syntax.size} syntax errors" else "") +
+        (if (imports.nonEmpty) s", ${imports.size} import problems" else "")
+      def imported(p: Problem): Vector[String] =
+        Vector(s"line ${p.line}: import: ${p.reason}") ++ p.next.map(n => s"  try: $n").toVector
+      (syntax.map(e => s"line ${e.line}: syntax: ${e.reason}") ++ imports.flatMap(imported) ++ entries.flatMap(entry) :+ summary)
+        .mkString("\n")
     }
 
     /**
@@ -1114,14 +1259,16 @@ object Elaborate {
           "goal" -> p.goal.map(string), "refutation" -> p.refuted.map(refuted))
       def price(p: Price): String =
         obj("axioms" -> Some(strings(p.axioms)), "facts" -> Some(strings(p.facts)), "document" -> Some(strings(p.document)),
-          "inferences" -> Some(p.inferences.toString), "notes" -> Some(strings(p.notes)))
+          "inferences" -> Some(p.inferences.toString), "notes" -> Some(strings(p.notes)),
+          "imported" -> Some(p.imported).filter(_.nonEmpty).map(strings))
       def entry(e: Entry): String =
         obj("name" -> Some(string(e.name)), "line" -> Some(e.line.toString), "kind" -> Some(string(e.kind.toString.toLowerCase)),
           "status" -> Some(string(e.status.toString.toLowerCase)), "statement" -> Some(string(e.statement)),
           "price" -> e.price.map(price), "problems" -> Some(e.problems.map(problem).mkString("[", ",", "]")))
       val errors = syntax.map(e => obj("line" -> Some(e.line.toString), "message" -> Some(string(e.reason))))
       obj("ok" -> Some(ok.toString), "declarations" -> Some(entries.map(entry).mkString("[", ",", "]")),
-        "syntax" -> Some(errors.mkString("[", ",", "]")))
+        "syntax" -> Some(errors.mkString("[", ",", "]")),
+        "imports" -> Some(imports).filter(_.nonEmpty).map(_.map(problem).mkString("[", ",", "]")))
     }
   }
 }

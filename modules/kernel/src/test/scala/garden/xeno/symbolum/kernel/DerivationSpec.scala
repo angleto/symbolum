@@ -150,6 +150,18 @@ class DerivationSpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(Cited.through, Set(Cited.statement)) shouldBe Set(Cited.statement)
   }
 
+  it should "be named by a proof that cites it, and what the fact itself cites should not be" in {
+    Derivation.cited(Cited.through) shouldBe Set("F")
+    // The control: the same proof around the citation names nothing, so the name comes from the
+    // citation and not from the statement it shares with the fact.
+    Derivation.cited(Cited.around) shouldBe empty
+    // A proof that is the citation and nothing else cites it.
+    Derivation.cited(Cited.cited) shouldBe Set("F")
+    // A fact citing another one is where the walk stops: G is named, and F, inside G, is not.
+    val outer = Kernel.cite("G", Cited.through)
+    Derivation.cited(force(Kernel.eqMp(Kernel.refl(Cited.statement), outer))) shouldBe Set("G")
+  }
+
   it should "be written out with its fact, so a checker replays the whole of it" in {
     val written = Proof.write(Cited.through)
 

@@ -1,0 +1,22 @@
+-- Doubling a natural number, and how it meets zero, the successor and addition.
+define DOUBLE := \n:num. n + n
+
+theorem DOUBLE_ZERO : DOUBLE 0 = 0
+proof
+  rewrite DOUBLE
+  by arith
+qed
+
+theorem DOUBLE_SUC : !n:num. DOUBLE (SUC n) = SUC (SUC (DOUBLE n))
+proof
+  fix n
+  rewrite DOUBLE
+  by arith
+qed
+
+theorem DOUBLE_ADD : !m:num. !n:num. DOUBLE (m + n) = DOUBLE m + DOUBLE n
+proof
+  fix m n
+  rewrite DOUBLE
+  by arith
+qed

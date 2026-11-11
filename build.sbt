@@ -632,10 +632,10 @@ lazy val coverageSettings = Seq(
  * What ships, and as what.
  *
  * Two kinds of artifact, because a library and an environment are not reached the same way. The
- * six library modules take these settings and go to the registry under their own coordinates, so a
+ * library modules take these settings and go to the registry under their own coordinates, so a
  * development elsewhere writes `libraryDependencies += "garden.xeno" %% "symbolum-theories" % ...`
- * and has the prover; `symbolum` is the aggregate for a consumer who wants all six at one
- * coordinate. What a person runs is none of those. `dist` builds a tarball carrying the jars, the
+ * and has the prover; `symbolum` is the aggregate for a consumer who wants all of them at
+ * one coordinate. What a person runs is none of those. `dist` builds a tarball carrying the jars, the
  * runtime classpath and a launcher per entry point, and that is the second kind: a maven
  * coordinate is consumed by a build tool, never executed by somebody who wants to ask the prover a
  * question.
@@ -695,7 +695,7 @@ lazy val root = (project in file("."))
   // the failure "a suite that is configured but not executed does not exist" names exactly.
   // `DocumentationSpec` asserts the list against the directories now, so the next module is a
   // decision rather than an omission.
-  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark, sat, scan, symbolum, dist)
+  .aggregate(core, kernel, checker, logic, theories, tactics, published, examples, mark, sat, scan, symbolum, dist)
   .settings(
     name := "symbolum-root",
     publish / skip := true
@@ -1127,6 +1127,26 @@ lazy val tactics = (project in file("modules/tactics"))
     }.taskValue
   )
 
+// The proof documents this repository publishes, checked on every run, and their theorems as a
+// library beside the chain's. Above `tactics` because the elaborator that checks a document is
+// there, and a module of its own rather than a directory in `tactics` because what it holds is
+// content rather than machinery: a document added here is a theorem added to what ships, and
+// `docs/published.md` is generated from it. `docs/adr/0070` is the decision, and
+// `garden.xeno.symbolum.published.Published` says what publishing refuses.
+lazy val published = (project in file("modules/published"))
+  .settings(publishSettings)
+  .dependsOn(tactics)
+  .settings(commonSettings)
+  .settings(coverageSettings)
+  .settings(
+    name := "symbolum-published",
+    // Measured 2026-11-11 by `clean coverage published/test published/coverageReport`: 139 of 164
+    // statements, 84.76%. What is not reached is the exit of `Check.main`, the throw of `standard`,
+    // and the refusals of a definition that is not an equation and of an axiom, which no declaration
+    // of the language can produce today. One statement is 0.61%, so the floor leaves one.
+    coverageMinimumStmtTotal := 84.0
+  )
+
 // Runnable demonstrations, of both halves. Separate from `core` so they stay out of the published
 // artifact: while they lived in `core`'s default package they were part of what a consumer
 // downloaded. On `tactics` rather than on `core`, which reaches `core` transitively and reaches
@@ -1158,8 +1178,8 @@ lazy val mark = (project in file("modules/mark"))
     coverageFailOnMinimum := false
   )
 
-// One coordinate for all six library modules, for a consumer who wants the system rather than a
-// link in its chain. It holds no source: what it publishes is a pom naming the six as dependencies,
+// One coordinate for every library module, for a consumer who wants the system rather than a
+// link in its chain. It holds no source: what it publishes is a pom naming them as dependencies,
 // and the empty jar sbt writes beside that pom is left alone rather than switched off, because a
 // pom that declares a jar and ships none fails to resolve under some resolvers and an empty jar is
 // a download nobody notices.
@@ -1167,7 +1187,7 @@ lazy val mark = (project in file("modules/mark"))
 // `dependsOn` and not `aggregate`: aggregation decides which projects a task runs over and puts
 // nothing in the pom, and the pom is the whole content of this module.
 lazy val symbolum = (project in file("modules/aggregate"))
-  .dependsOn(kernel, checker, logic, theories, core, tactics, sat)
+  .dependsOn(kernel, checker, logic, theories, core, tactics, sat, published)
   .settings(publishSettings)
   .settings(
     name := "symbolum"

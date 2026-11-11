@@ -1,0 +1,26 @@
+-- Every natural number is even or odd, by induction, from what Doubling proves.
+import Doubling
+
+theorem EVEN_OR_ODD : !n:num. ?k:num. n = DOUBLE k \/ n = SUC (DOUBLE k)
+proof
+  fix n
+  induction n
+  case zero:
+    witness 0
+    left
+    by rewrite DOUBLE_ZERO
+  case succ m ih:
+    obtain k hk from ih
+    cases h from hk
+    case left:
+      witness k
+      right
+      by rewrite h
+    case right:
+      witness SUC k
+      left
+      calc SUC m = SUC (SUC (DOUBLE k)) by rewrite h
+           _ = DOUBLE (SUC k) by rewrite DOUBLE_SUC
+    end
+  end
+qed

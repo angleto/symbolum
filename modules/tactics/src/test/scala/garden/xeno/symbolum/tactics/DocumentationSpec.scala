@@ -654,11 +654,13 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val build = read("build.sbt")
 
     val applied = build.linesIterator.count(_.contains(".settings(publishSettings)"))
-    withClue("the seven library modules and the aggregate take the publishing settings: ") {
-      // Seven since 2026-09-15, when `sat` landed. It publishes for the reason the other six do and
-      // not because everything does: `logic` depends on it, so a consumer resolving `symbolum-logic`
-      // from a registry cannot get a jar without it.
-      applied shouldBe 8
+    withClue("the eight library modules and the aggregate take the publishing settings: ") {
+      // Seven from 2026-09-15, when `sat` landed: it publishes for the reason the other six do and
+      // not because everything does, since `logic` depends on it and a consumer resolving
+      // `symbolum-logic` from a registry cannot get a jar without it. Eight since 2026-11-11, when
+      // `published` landed, for the same reason seen from a document: an `import Parity` written
+      // outside this repository resolves only against a jar that holds `Parity`.
+      applied shouldBe 9
     }
 
     // The half of the assertion that can go empty. Counting the modules that publish says nothing
