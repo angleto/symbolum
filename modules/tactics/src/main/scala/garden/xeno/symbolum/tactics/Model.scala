@@ -285,8 +285,12 @@ object Model {
    *
    * == What each constant is, and where it declines ==
    *
-   * `ZERO`, `SUC`, `NUM_ADD`, `NUM_MUL`, `NUM_LE` and `NUM_LT` are exact on `BigInt` and total.
-   * `real_of_num` crosses into the reals and is therefore as good as a `Double`, which is the same
+   * `ZERO`, `SUC`, `NUM_ADD`, `NUM_MUL`, `NUM_LE` and `NUM_LT` are exact on `BigInt` and total,
+   * and so are `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1`, which are what a numeral at `num` is made of.
+   * Those three were missing until 2026-11-12 (card `3c9417ce`): `Peano` gained them on 2026-09-12
+   * and nothing here followed, so `1:num` had no value, every claim writing a digit at `num` was
+   * skipped at every point, and `!n:num. n + 1 = n` came back `NeverAsked` from 100 points while
+   * `!n:num. SUC n = n` came back refuted at 4. `real_of_num` crosses into the reals and is therefore as good as a `Double`, which is the same
    * bargain the rest of this file makes. `Sum`, `Power` and `Prod` are computed from their
    * recurrences and decline past [[Terms]], and `Power` also declines where the answer overflows a
    * `Double`: an infinity is not a value, and a caller that read one as a number would have a
@@ -302,12 +306,15 @@ object Model {
    * model rather than being shadowed by an unfolding that cannot finish.
    */
   val Numbers: Model = Model(
-    // The eight operations on `num` and nothing else: `real_of_num`, `Sum`, `Power` and `Prod` all
-    // produce a `Double`, so a claim that mentions one of them is evidence rather than a decision,
-    // however exact its naturals were on the way in.
+    // The operations on `num` and the numeral encoding, and nothing else: `real_of_num`, `Sum`,
+    // `Power` and `Prod` all produce a `Double`, so a claim that mentions one of them is evidence
+    // rather than a decision, however exact its naturals were on the way in.
     exact = Set(
       Natural.NumberZero,
       Natural.NumberSuccessor,
+      Peano.NumeralOne,
+      Peano.NumeralBit0,
+      Peano.NumeralBit1,
       Peano.Addition,
       Peano.Multiplication,
       Peano.Predecessor,
@@ -320,6 +327,11 @@ object Model {
     constants = Reals.constants ++ Map(
       Natural.NumberZero -> Whole(0),
       Natural.NumberSuccessor -> onWhole(n => Some(Whole(n + 1))),
+      // `NUM_ONE_SUC`, `NUM_BIT0_ADD` and `NUM_BIT1_SUC` are the three definitions, read as they are
+      // stated: one, doubling, and the successor of doubling.
+      Peano.NumeralOne -> Whole(1),
+      Peano.NumeralBit0 -> onWhole(n => Some(Whole(n + n))),
+      Peano.NumeralBit1 -> onWhole(n => Some(Whole(n + n + 1))),
       Peano.Addition -> onWholePair((left, right) => Some(Whole(left + right))),
       Peano.Multiplication -> onWholePair((left, right) => Some(Whole(left * right))),
       // Truncated at zero, exactly as `Peano` defines them, and the word "exactly" is the whole of

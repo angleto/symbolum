@@ -187,6 +187,19 @@ class ElaborateRoutesSpec extends AnyFlatSpec with Matchers {
     kind(theorem("!x:real. x + 1 <= x", "  fix x\n  by ring")) shouldBe Some("solved")
   }
 
+  it should "find the point a false claim about num fails at, when the claim writes a digit" in {
+    // The document card `3c9417ce` was opened on. Until 2026-11-12 its refusal read "refutation: the
+    // model says nothing about none of 100 points could be evaluated", because `Model.Numbers` gave
+    // the numeral `1:num` no value; `n = 0` refutes it and no point was asked.
+    val report = check(theorem("!n:num. n + 1 = n", "  fix n\n  by arith"))
+    val refuted = report.entries.lastOption.toVector.flatMap(_.problems).flatMap(_.refuted)
+    withClue(report.render) {
+      refuted.map(_.refutes) shouldBe Vector(true)
+      report.render should include("    false: ")
+      report.render should not include "says nothing about"
+    }
+  }
+
   "The report" should "print the price, the problems and the syntax errors a reader needs" in {
     val report = check(
       """theorem LEMMA : !x:real. x + 0 = x by ring

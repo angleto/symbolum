@@ -319,12 +319,31 @@ class RemedySpec extends AnyFlatSpec with Matchers {
    * caller: a refutation that asked one point, a screen that agreed at one, a fit sampled at one,
    * and a lemma with one leading quantifier called with the wrong number of arguments.
    */
+  /**
+   * `InterpretMore` puts its argument after "says nothing about", so every caller has to hand it a
+   * noun phrase. From 2026-09-20 to 2026-11-12 the refutation's caller handed it a clause, and the
+   * proof language printed "the model says nothing about none of 100 points could be evaluated"
+   * under a failed step (card `3c9417ce`). The whole sentence is pinned for each of the three, because
+   * an `include` on a fragment is exactly what let the clause through: the old pins held "none of 12
+   * points could" and were green over the broken sentence.
+   */
+  "Every caller of InterpretMore" should "hand it something the sentence can be about" in {
+    val tail = ": interpret it, or more points will not help"
+
+    Remedy.of(Refutation.NeverAsked(100)).message shouldBe
+      "the model says nothing about what the claim mentions at any of the 100 points offered" + tail
+    Remedy.of(CollatzScreen.screen(Var("m"), 1, Vector(BigInt(3)))).message shouldBe
+      "the model says nothing about the candidate at n = 3, where it has no value at all" + tail
+    Remedy.of(Ledger.Verdict.Unasked).message shouldBe
+      "the model says nothing about what the statement mentions" + tail
+  }
+
   "The point and argument counts of this file" should "take the singular at one and the plural elsewhere" in {
     Remedy.of(Refutation.Survived(1)).message should include("survived 1 point,")
     Remedy.of(Refutation.Survived(400)).message should include("survived 400 points,")
 
-    Remedy.of(Refutation.NeverAsked(1)).message should include("none of 1 point could")
-    Remedy.of(Refutation.NeverAsked(12)).message should include("none of 12 points could")
+    Remedy.of(Refutation.NeverAsked(1)).message should include("at the 1 point offered:")
+    Remedy.of(Refutation.NeverAsked(12)).message should include("at any of the 12 points offered:")
 
     Remedy.of(Refutation.PremisesNeverHeld(1)).message should include("the one point that answered had")
     Remedy.of(Refutation.PremisesNeverHeld(12)).message should include("all 12 points that answered had")

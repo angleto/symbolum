@@ -163,7 +163,10 @@ final case class AcceptTheConditions(conditions: Vector[String]) extends Remedy 
  * interpret what is uninterpreted, not to try more points: a constant nobody gave a value has the
  * same absence at every point.
  */
-final case class InterpretMore(what: String) extends Remedy {
+final case class InterpretMore(
+  /** A noun phrase naming what has no value, never a clause: it follows "says nothing about". */
+  what: String
+) extends Remedy {
   def message: String = s"the model says nothing about $what: interpret it, or more points will not help"
 }
 
@@ -589,8 +592,12 @@ object Remedy {
     case Refutation.Survived(asked) =>
       APersonLooks(s"the claim survived ${Prose.count(asked, "point")}, which is evidence and not a decision")
 
+    // A noun phrase, because `InterpretMore` puts it after "says nothing about". From 2026-09-20 to
+    // 2026-11-12 this was a clause, and the message read "the model says nothing about none of 100
+    // points could be evaluated" (card `3c9417ce`).
     case Refutation.NeverAsked(offered) =>
-      InterpretMore(s"none of ${Prose.count(offered, "point")} could be evaluated")
+      val which = if (offered == 1) "the" else "any of the"
+      InterpretMore(s"what the claim mentions at $which ${Prose.count(offered, "point")} offered")
 
     // Not `APersonLooks`, which is what `Survived` gets and which would read as "the claim held up";
     // not `RestateTheProblem`, which is what `Contradictory` gets and which would assert what

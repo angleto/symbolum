@@ -90,6 +90,42 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  "A claim written with a numeral at num" should "be asked, because the numeral has a value" in {
+    // Until 2026-11-12 `Model.Numbers` gave `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1` no value (card
+    // `3c9417ce`). `Peano` gained the encoding on 2026-09-12 and the model never followed, so every
+    // claim with a digit at `num` was skipped at all 100 points: `!n:num. n + 1 = n` came back
+    // `NeverAsked` while the same claim spelled `SUC n = n` came back refuted at 4. The pair is the
+    // assertion, because the second is the control that says the sampler reached `num` at all.
+    aboutNumbers("!n:num. SUC n = n") shouldBe a[Refutation.Found]
+    aboutNumbers("!n:num. n + 1 = n") shouldBe a[Refutation.Found]
+    aboutNumbers("!n:num. n + 2 = n") shouldBe a[Refutation.Found]
+    aboutNumbers("!n:num. n * 3 = n + 5") shouldBe a[Refutation.Found]
+    aboutNumbers("(6:num) = 2 + 3") shouldBe a[Refutation.Found]
+  }
+
+  it should "never refute a theorem, which is the direction a wrong digit would break" in {
+    // Each of these is true of the naturals, and each spells a different digit of the encoding: one,
+    // an even numeral, an odd one, and both inside a product. A model reading `NUM_BIT0` as `2n + 1`
+    // or `NUM_BIT1` as `2n` passes the test above and fails here, so the two directions are one
+    // assertion only together. Being asked is part of it: a model that went back to no value would
+    // pass `not a Found` vacuously, so each must also not be `NeverAsked`.
+    Vector(
+      "!n:num. n + 1 = SUC n",
+      "!n:num. n * 2 = n + n",
+      "!n:num. n + 3 = SUC (SUC (SUC n))",
+      "!n:num. n * 6 = (n * 2) * 3",
+      "(5:num) = 2 + 3",
+      "(10:num) * 10 = 100"
+    ).foreach { text =>
+      withClue(s"$text: ") {
+        val outcome = aboutNumbers(text)
+        outcome should not be a[Refutation.Found]
+        outcome should not be a[Refutation.Solved]
+        outcome should not be a[Refutation.NeverAsked]
+      }
+    }
+  }
+
   "A claim about a summand" should "be refutable, which wants a function to be sampled" in {
     // Six of the proposals this was built for quantify over the summand rather than over a number,
     // and `!f n. 0 <= Sum f n` cannot be refuted by an assignment with nothing to put in `f`. The

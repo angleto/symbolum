@@ -2436,7 +2436,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `aboutNumbers` above was red. Plus two.
     // 63 with the rest of the distributions, 2026-10-23, read off the run: one of its residues loses
     // an index bound and the sampler refutes it at a point outside it. Plus one.
-    after shouldBe 63
+    // 64 when `Model.Numbers` gave the numerals of `num` a value, 2026-11-13 (card `3c9417ce`): a
+    // proposal from `GILBREATH_FRONT` writes `NUM_ONE` and `NUM_BIT0 NUM_ONE`, so until then no point
+    // of it could be evaluated, and the sampler refutes it now at `n = 11` with `f` sampled. Read off
+    // a probe listing the refuted proposals on this list that write a numeral: it is the only one.
+    // Plus one.
+    after shouldBe 64
   }
 
   /* ------------------------------------------------------ the false positive it produced */

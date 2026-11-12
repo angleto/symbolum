@@ -1213,6 +1213,12 @@ that could be evaluated at all and came back `NeverAsked`. Measured on that day 
 repository's own proposal audit, then 116 proposals: nineteen named one of those and not one of
 them carried a witness, and sixteen did once the naturals were sampled.
 
+**A numeral at `num` was outside that until 2026-11-12.** `2:num` is `NUM_BIT0 NUM_ONE`, an
+encoding `Peano` gained on 2026-09-12, and the model never gave its three constants a value. So
+`!n:num. SUC n = n` was refuted at 4 while `!n:num. n + 1 = n`, the same claim with a digit in it,
+came back `NeverAsked` from all 100 points. They are computed on `BigInt` now, as one, doubling and
+the successor of doubling, which is what their definitions say.
+
 ```scala
 Refutation(Evaluate.over(chain.reals, Model.Numbers))
   .counterexample(Vector.empty, claim)   // !x:num y:num. real_of_num (x + y) = real_of_num x * real_of_num y
