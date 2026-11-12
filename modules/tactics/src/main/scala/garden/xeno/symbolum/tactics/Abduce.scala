@@ -47,7 +47,7 @@ import garden.xeno.symbolum.theories.{Farkas, Linarith, LinearFact, LinearForm, 
  * answer nor a warning but the absence of both, and the field's own docstring carries the
  * measurement.
  *
- * The four are kept apart for the reason `Refutation` keeps seven outcomes apart.
+ * The four are kept apart for the reason `Refutation` keeps its outcomes apart.
  *
  * == The other answer that is not one ==
  *
@@ -523,7 +523,7 @@ object Abduce {
    * is where the claim fails as it stands, which is what any missing premise has to exclude and is
    * the only part a reader can check without trusting anything here.
    *
-   * The four lists are kept apart for the reason `Refutation` keeps seven outcomes apart. Three of
+   * The four lists are kept apart for the reason `Refutation` keeps its outcomes apart. Three of
    * them close the goal and none of the three is an answer, and a report that merged any into
    * `found` would hand an author something to assume that is impossible, or already what they were
    * trying to prove, or not known to be either.

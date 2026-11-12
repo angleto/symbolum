@@ -68,7 +68,7 @@ unrepeatable is not care: `.toOption`, a `Try`, a `catch` and `isLeft` all colla
 which is the honest weak reading, and the decision is reachable only by naming it. **Decided is not
 refuted.** It is decided over the fragment that procedure decides, with what the fragment cannot read
 standing in as an unknown, and `DoesNotFollow` says so of itself. What refutes a claim is
-`Refutation`, which keeps seven answers apart.
+`Refutation`, which keeps its answers apart.
 
 ```scala
 import garden.xeno.symbolum.theories._
@@ -1182,7 +1182,7 @@ witness has to denote, and a point that gives `x * y` a value unrelated to the o
 and `y` does not satisfy the premises it was found for. `docs/adr/0005` records that asymmetry as a
 decision rather than as a limit more work removes.
 
-Seven outcomes, and telling them apart is the whole point of the file:
+The outcomes, and telling them apart is the whole point of the file:
 
 | Outcome | What it says |
 |---|---|
@@ -1190,8 +1190,9 @@ Seven outcomes, and telling them apart is the whole point of the file:
 | `Contradictory` | there is no such point at all: the premises cannot all hold. A decision, not a count of failures |
 | `NoCounterexample` | nothing satisfies the premises together with the denied conclusion, so the entailment holds over this fragment |
 | `Found` | a point, found by sampling. It answers, and it is a fact about one model |
-| `Survived` | every point answered and none was the one wanted, with the count, because no witness at four points and no witness at four hundred are different findings |
+| `Survived` | no point where the premises held was the one wanted, with the count of those points, because no witness at four points and no witness at four hundred are different findings |
 | `NeverAsked` | no point could be evaluated at all, which is what happens to a universally quantified premise over the reals: there is no finite domain to enumerate and one sample point would prove nothing |
+| `PremisesNeverHeld` | points answered, and some premise was false at every one, so the claim was put to none of them. Not a decision that the premises cannot hold: premises true only on a thin set, `x * x < 1 / 1000000000`, are missed by the sampler as reliably as premises true nowhere. `docs/adr/0077` |
 | `Undecided` | the refusal. A premise that pins an equality and is not part of a linear system is satisfied on a set a sampler never lands on, and reporting `Survived` there would say the same thing about `{x = 1 /\ 0 < x}` as about `{0 < x, x < 0}` while one of the two is satisfiable |
 
 An equality that has to be **false**, such as `~(x = 0)`, trips none of this: it is true almost
@@ -1518,7 +1519,7 @@ beside the verdict. The three stay apart for the reason
 [What would have to be assumed](#what-would-have-to-be-assumed) gives: only the first is an answer.
 
 **An empty field means the question did not arise, not that the answer was no.** That is the same
-discipline `Refutation` keeps seven outcomes for, one level up.
+discipline `Refutation` keeps its outcomes apart for, one level up.
 
 ## Remembering: the ledger
 

@@ -184,20 +184,28 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  /* ------------------------------------------------------- the seven model answers */
+  /* ------------------------------------------------------------ the model answers */
 
   "The model search's outcomes" should "not collapse into fewer next steps" in {
-    // `Refutation` keeps seven answers apart because collapsing any two turns "I could not ask"
-    // into "I asked and it was fine". The three that are not answers must stay three here too.
+    // `Refutation` keeps its answers apart because collapsing any two turns "I could not ask"
+    // into "I asked and it was fine". The four that are not answers must stay four here too.
     val survived = Remedy.of(Refutation.Survived(300))
     val neverAsked = Remedy.of(Refutation.NeverAsked(100))
+    val neverHeld = Remedy.of(Refutation.PremisesNeverHeld(100))
     val undecided = Remedy.of(Refutation.Undecided("a premise forces an equality between reals"))
 
     survived shouldBe a[APersonLooks]
     neverAsked shouldBe a[InterpretMore]
     undecided shouldBe a[AskDifferently]
 
-    Set(survived, neverAsked, undecided) should have size 3
+    // Card 1e3ef954: premises false at every point that answered were read as a claim that had
+    // survived them. The next step is about the premises, and sampling did not settle it, so it is
+    // neither the person `Survived` asks for nor the restatement `Contradictory` asks for.
+    neverHeld shouldBe a[AskDifferently]
+    neverHeld.message should include("whether the premises can hold together")
+    neverHeld.message should not include "survived"
+
+    Set(survived, neverAsked, neverHeld, undecided) should have size 4
   }
 
   it should "read a contradictory premise set as something to restate, not as an answer" in {
@@ -303,7 +311,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The five counts of points and arguments, at one and elsewhere.
+   * The counts of points and arguments, at one and elsewhere.
    *
    * These were found by re-running the census of card db67b658 rather than by reading the card's
    * list, which did not hold them. Each reaches one for a reason in the type rather than in a
@@ -316,6 +324,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
 
     Remedy.of(Refutation.NeverAsked(1)).message should include("none of 1 point could")
     Remedy.of(Refutation.NeverAsked(12)).message should include("none of 12 points could")
+
+    Remedy.of(Refutation.PremisesNeverHeld(1)).message should include("the one point that answered had")
+    Remedy.of(Refutation.PremisesNeverHeld(12)).message should include("all 12 points that answered had")
 
     Remedy.of(CollatzScreen.Agreed(1)).message should include("iteration at 1 point,")
     Remedy.of(CollatzScreen.Agreed(400)).message should include("iteration at 400 points,")
@@ -688,6 +699,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       Refutation.Found(Map("x" -> Model.Quantity(1.0)), 4),
       Refutation.Survived(50),
       Refutation.NeverAsked(50),
+      Refutation.PremisesNeverHeld(50),
       Refutation.Solved(Map("x" -> Rational(3, 4))),
       Refutation.Contradictory(2),
       Refutation.NoCounterexample(2),
@@ -715,7 +727,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       CollatzScreen.NotEvaluable(BigInt(3))
     )
 
-    outcomes should have size 7
+    outcomes should have size 8
     outcomes.foreach(outcome => Remedy.of(outcome).message should not be empty)
     Ledger.Verdict.values.foreach(verdict => Remedy.of(verdict).message should not be empty)
     decided.foreach(verdict => Remedy.of(verdict).message should not be empty)

@@ -270,6 +270,50 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  /**
+   * Card 1e3ef954, `docs/adr/0077`. A point where a premise is false answers nothing about an
+   * entailment, and until 2026-11-12 it was counted as a point that had: `{x * x < 0}` with the
+   * conclusion `x = 7` came back `Survived(100)`. The linear case, `{x < 0, 0 < x}`, was caught a
+   * day earlier because the solver decides it; a product of two unknowns is not a linear atom, so
+   * this one reaches the sampler, and the sampler is what was wrong.
+   *
+   * Seen red on 2026-11-12, onto `d47d4901`, with the count put back to what it was by
+   * `tools/verify/perturb-refutation-premises.sh`: the first assertion below failed reading
+   * `Survived(100)`, the figure the card was opened on. Green on the repair, in the same tree.
+   */
+  it should "not count a point where a premise fails as one where the claim was tested" in {
+    val outcome = counterexample(Vector("x:real * x < 0"), "x:real = 7")
+    outcome match {
+      case Refutation.PremisesNeverHeld(answered) => answered shouldBe Refutation.Points
+      case other => fail(s"expected PremisesNeverHeld, got $other")
+    }
+    outcome.asked shouldBe 0
+
+    // Why the answer is not `Contradictory`: these premises hold, at `x = 0` among others, and the
+    // grid misses the interval they hold on as reliably as it misses the empty one. A sampler
+    // cannot tell the two apart, so the outcome names what was seen and decides nothing.
+    counterexample(Vector("x:real * x < 1 / 1000000000"), "x:real = 7") should matchPattern {
+      case Refutation.PremisesNeverHeld(_) =>
+    }
+
+    // The control, so the answer above cannot be the only one this search now gives: the cube is
+    // positive at about half the points, and the claim, true everywhere, survives exactly those.
+    // Before the repair this read a hundred, the points where the premise failed included.
+    counterexample(Vector("0 < x:real * x * x"), "x:real * x * x * x = x * x * (x * x)") match {
+      case Refutation.Survived(asked) =>
+        asked should be > 0
+        asked should be < Refutation.Points
+      case other => fail(s"expected Survived, got $other")
+    }
+
+    // And the question about the premises alone still counts every point that answered, because
+    // there a point where a premise fails is the answer it is asking for.
+    satisfying(Vector("x:real * x < 0")) match {
+      case Refutation.Survived(asked) => asked shouldBe Refutation.Points
+      case other => fail(s"expected the premises' own question to count every point, got $other")
+    }
+  }
+
   /* ---------------------------------------------------------------- satisfiability */
 
   "A premise set" should "be shown satisfiable by an assignment that satisfies it" in {

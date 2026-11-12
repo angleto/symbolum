@@ -65,8 +65,8 @@ line 22: theorem BROKEN: incomplete
 
 When a method refuses, the checker asks `Refutation` about the goal, with the facts of the proof as
 premises. The answer goes on the `false:` or `refutation:` line, and in the JSON report it is a
-`kind` with one of seven values. They are kept apart, because only the first two say the goal is
-false:
+`kind`, one value per answer `Refutation` gives. They are kept apart, because only the first two
+say the goal is false:
 
 | kind | what it means |
 |---|---|
@@ -74,12 +74,13 @@ false:
 | `solved` | an exact point, found by solving the linear facts with the goal denied: the goal is false |
 | `contradictory` | the facts of the proof cannot all hold, so every goal follows from them |
 | `no-counterexample` | the linear question was decided, and nothing refutes the goal |
-| `survived` | no sampled point refuted it, which is evidence and not a decision |
+| `survived` | no sampled point where the facts held refuted it, which is evidence and not a decision |
 | `never-asked` | no point could be evaluated: a constant the model does not interpret, or a quantifier over the reals |
+| `premises-never-held` | the facts were false at every point that answered, so the goal was tested at none; whether the facts can hold together is the question sampling did not settle |
 | `undecided` | sampling cannot settle a question of this shape |
 
 A goal that `survived` may be true and out of reach of the method named, or false somewhere the
-sampling did not look. The report says which of the seven it is and claims nothing more.
+sampling did not look. The report says which of these it is and claims nothing more.
 
 ### The price of a proved theorem
 

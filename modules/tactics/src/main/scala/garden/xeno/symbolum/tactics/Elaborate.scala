@@ -276,10 +276,11 @@ final class Elaborate private (
      * premises and the goal as the conclusion.
      *
      * The answer is attached to the refusal and never replaces it: the method refused either way,
-     * and what this adds is which of seven situations the refusal is in. Only a found or a solved
-     * point says the goal is false; a goal that survived the points asked is evidence and not a
-     * decision, and a goal no point could be asked about is neither, which is `docs/adr/0005` and
-     * the reason the kind is carried as a field rather than folded into a sentence.
+     * and what this adds is which situation the refusal is in. Only a found or a solved point says
+     * the goal is false; a goal that survived the points where its facts held is evidence and not a
+     * decision, and a goal no point could be asked about is neither, nor is one whose facts failed at
+     * every point that answered. That is `docs/adr/0005`, with `docs/adr/0077` for the last, and it
+     * is the reason the kind is carried as a field rather than folded into a sentence.
      */
     private def refute(context: Context, goal: Term): Refuted = {
       // A conjunction is two facts, and is handed over as two: `Refutation` reads a premise set, and
@@ -1117,11 +1118,13 @@ object Elaborate {
   /**
    * What `Refutation` said about a goal a method did not settle.
    *
-   * `kind` is one of seven words and is the part a program reads: `found` and `solved` say the goal
-   * is false at the point the message names; `contradictory` says the proof's facts cannot all hold;
-   * `no-counterexample` says the linear question was decided and nothing refutes the goal;
-   * `survived` says no sampled point refuted it, which is evidence; `never-asked` says no point could
-   * be evaluated; `undecided` says sampling cannot settle a question of this shape.
+   * `kind` is one word per outcome of `Refutation` and is the part a program reads: `found` and
+   * `solved` say the goal is false at the point the message names; `contradictory` says the proof's
+   * facts cannot all hold; `no-counterexample` says the linear question was decided and nothing
+   * refutes the goal; `survived` says no sampled point where the facts held refuted it, which is
+   * evidence; `never-asked` says no point could be evaluated; `premises-never-held` says the facts
+   * failed at every point that answered, so the goal was tested at none; `undecided` says sampling
+   * cannot settle a question of this shape.
    */
   final case class Refuted(kind: String, reason: String) {
     def refutes: Boolean = kind == "found" || kind == "solved"
@@ -1135,6 +1138,7 @@ object Elaborate {
       case _: Refutation.NoCounterexample => "no-counterexample"
       case _: Refutation.Survived => "survived"
       case _: Refutation.NeverAsked => "never-asked"
+      case _: Refutation.PremisesNeverHeld => "premises-never-held"
       case _: Refutation.Undecided => "undecided"
     }
   }

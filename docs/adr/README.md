@@ -35,7 +35,7 @@ the rejected option attractive, and they will.
 | [0002](0002-locally-nameless-binders.md) | Locally nameless representation for binders | accepted |
 | [0003](0003-trust-boundary-is-the-module-graph.md) | The trust boundary is the module graph | accepted |
 | [0004](0004-reals-axiomatised-not-constructed.md) | The reals are axiomatised, not constructed | superseded by 0053, revised by 0007 |
-| [0005](0005-a-model-is-untrusted-and-answers-only-at-a-point.md) | A model is untrusted, and answers only at a point | accepted |
+| [0005](0005-a-model-is-untrusted-and-answers-only-at-a-point.md) | A model is untrusted, and answers only at a point | accepted, revised by 0077 |
 | [0006](0006-a-type-is-defined-by-a-bijection-with-a-subset.md) | A type is defined by a bijection with a subset of an existing one | accepted |
 | [0007](0007-the-reals-are-constructed.md) | The reals are constructed, and the foundation gains the classical axioms | accepted, extended by 0016, completed by 0053 |
 | [0008](0008-a-constant-carries-what-defined-it.md) | A constant carries the term that defined it | accepted for a DEFINED constant, revised by 0019 for a declared one |
@@ -105,3 +105,4 @@ the rejected option attractive, and they will.
 | [0072](0072-a-denominator-is-cleared-by-a-hypothesis-and-a-power-of-the-difference-by-square-zero.md) | A denominator is cleared by a hypothesis, and a power of the difference by `SQUARE_ZERO` | accepted |
 | [0073](0073-a-document-sees-what-it-imports-and-the-published-ones-share-one-theory.md) | A document sees what it imports, and the published ones share one theory | accepted |
 | [0074](0074-a-notebook-cell-is-a-declaration-of-the-proof-language.md) | A notebook cell is a declaration of the proof language | accepted |
+| [0077](0077-a-point-where-a-premise-fails-did-not-test-the-claim.md) | A point where a premise fails did not test the claim | accepted |

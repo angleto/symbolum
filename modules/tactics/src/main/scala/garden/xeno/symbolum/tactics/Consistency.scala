@@ -170,7 +170,7 @@ object Consistency {
    *
    * Collapsing [[Consistency.Verdict.Contradictory]] into [[Consistency.Verdict.Refused]] would
    * turn "they cannot all hold" into "I could not tell", which is the merge `Refutation` keeps
-   * seven answers to avoid one layer over.
+   * its answers apart to avoid one layer over.
    */
   enum Verdict {
 

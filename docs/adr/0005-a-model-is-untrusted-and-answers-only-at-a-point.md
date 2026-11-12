@@ -1,6 +1,6 @@
 # 0005. A model is untrusted, and answers only at a point
 
-- **Status:** accepted
+- **Status:** accepted, revised by 0077
 - **Date:** 2026-09-04
 
 ## Context

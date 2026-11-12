@@ -33,7 +33,7 @@ minutes against the four it costs quiet. The line was true and said *this build*
 this machine is capped and this session is not in it, and then it prints what to put in front of the
 command; or nothing here is capped either; or nothing else is running and nothing has left a cap
 behind, and then whether there is a queue at all is not something this session can see. Three
-answers rather than two, which is the distinction `Refutation` keeps seven of one floor down.
+answers rather than two, which is the distinction `Refutation` keeps one floor down.
 
 **How it knows, without this file knowing where the cap lives.** A build that HAS a wrapper leaves
 the path in a file under `$TMPDIR`, and a build that has none reads it; the environment of the sbt
@@ -726,12 +726,13 @@ Changing it to the obvious structural order breaks cancellation silently.
 
 **A model answers at a point, and `None` is not `false`.** `Evaluate` returns nothing where the
 model has nothing to say: a constant nobody interpreted, `inv 0`, a quantifier over the reals.
-Every caller skips such a point rather than counting it. `Refutation` keeps seven answers apart for
-the same reason: a point found by sampling, a point found by solving, no witness at the points that
-answered, no point that answered at all, a decision that the premises cannot all hold, a decision
-that the claim cannot be refuted, and a refusal because sampling cannot settle a question of that
-shape. Collapsing any two of them turns "I could
-not ask" into "I asked and it was fine", which is the one way this machinery can mislead.
+Every caller skips such a point rather than counting it. `Refutation` keeps its answers apart for
+the same reason: a point found by sampling, a point found by solving, no witness at the points where
+the premises held, no point that answered at all, points that answered with a premise false at every
+one of them, a decision that the premises cannot all hold, a decision that the claim cannot be
+refuted, and a refusal because sampling cannot settle a question of that shape. Collapsing any two
+of them turns "I could not ask" into "I asked and it was fine", which is the one way this machinery
+can mislead; the fifth was apart from the third only from 2026-11-12, `docs/adr/0077`.
 `docs/adr/0005` has the rest, including what changed on 2026-09-05 and what it did not change.
 
 **A probe goes in `scratch/`, never under `modules/`.** That directory is ignored by git and is in

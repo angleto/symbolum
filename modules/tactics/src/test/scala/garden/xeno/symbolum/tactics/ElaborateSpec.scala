@@ -293,6 +293,12 @@ class ElaborateSpec extends AnyFlatSpec with Matchers {
         |  assume h
         |  by ring
         |qed
+        |theorem NEVER_HELD : !x:real. x * x < 0 ==> x = 7
+        |proof
+        |  fix x
+        |  assume h
+        |  by ring
+        |qed
         |theorem UNREACHED : !x:real. 0 <= x * x * x * x
         |proof
         |  fix x
@@ -305,6 +311,9 @@ class ElaborateSpec extends AnyFlatSpec with Matchers {
     // `{x < 0, 0 < x}` came back as a hundred points survived before `Refutation` asked whether the
     // premises can hold at all; the proof language is what printed it.
     kind("CONTRADICTORY") shouldBe Some("contradictory")
+    // The same shape where no solver reaches, card 1e3ef954: the hypothesis is false at every point
+    // that answered, and this printed "survived" until 2026-11-12, with the goal tested at none.
+    kind("NEVER_HELD") shouldBe Some("premises-never-held")
     // The control: a true claim the method cannot reach is evidence, never reported false.
     kind("UNREACHED") shouldBe Some("survived")
     report.entries.find(_.name == "UNREACHED").flatMap(_.problems.head.refuted).exists(_.refutes) shouldBe false

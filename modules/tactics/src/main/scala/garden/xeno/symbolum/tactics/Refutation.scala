@@ -21,8 +21,9 @@ import garden.xeno.symbolum.theories.{Linarith, LinearFact, LinearForm, Natural,
  * satisfies the premises exactly, and [[Refutation.Contradictory]] and
  * [[Refutation.NoCounterexample]] say that no point does. A **sample** is about the points that were
  * tried: [[Refutation.Found]] is a fact about one of them, [[Refutation.Survived]] is a count of the
- * ones that answered and is not a proof of anything, and [[Refutation.NeverAsked]] says that none of
- * them answered at all.
+ * ones that answered and is not a proof of anything, [[Refutation.NeverAsked]] says that none of
+ * them answered at all, and [[Refutation.PremisesNeverHeld]] that the ones that answered all had a
+ * premise false, so the claim was put to none of them.
  *
  * == What is solved, what is sampled, and what is still refused ==
  *
@@ -52,7 +53,7 @@ import garden.xeno.symbolum.theories.{Linarith, LinearFact, LinearForm, Natural,
  * here already is. `Contradictory` over the reals is close to absolute because the intended model of
  * the reals is the reals; over a carrier the model sized at three it says that none of the nine
  * assignments satisfies the premises, and another model may size the type differently. The
- * distinction the seven outcomes keep is a decision against a sample, not an absolute against a
+ * distinction the outcomes keep is a decision against a sample, not an absolute against a
  * model-relative one, and enumerating a carrier exhaustively is deciding.
  *
  * A premise that has to make an equality between reals true, in a set the solver could not read as a
@@ -98,12 +99,24 @@ final class Refutation private (val evaluate: Evaluate) {
         pinned(premises) match {
           case Some(reason) => Refutation.Undecided(reason)
           case None =>
-            search(
+            val walked = search(
               premises,
               premises :+ opened,
               points,
               assignment => evaluate.proposition(opened, assignment).map(!_)
             )
+
+            // Only a point where every premise held put the entailment to the test, so only those
+            // are counted. Until 2026-11-12 a point where a premise was false counted as one that
+            // answered, and `{x * x < 0}` with the conclusion `x = 7` came back `Survived(100)`
+            // with the claim tested at none of them; the linear case had been caught a day
+            // earlier by `impossible`, and this is the case no solver reaches.
+            walked.found match {
+              case Some(assignment) => Refutation.Found(assignment, walked.held)
+              case None if walked.held > 0 => Refutation.Survived(walked.held)
+              case None if walked.unheld > 0 => Refutation.PremisesNeverHeld(walked.unheld)
+              case None => Refutation.NeverAsked(walked.offered)
+            }
         }
       )
   }
@@ -176,7 +189,16 @@ final class Refutation private (val evaluate: Evaluate) {
     solved(premises, refuting = false).getOrElse(
       pinned(premises) match {
         case Some(reason) => Refutation.Undecided(reason)
-        case None => search(premises, premises, points, _ => Some(true))
+        case None =>
+          // Here a point where a premise is false did answer the question, which is about the
+          // premises alone: it is one more place they were seen not to hold together.
+          val walked = search(premises, premises, points, _ => Some(true))
+          val answered = walked.held + walked.unheld
+          walked.found match {
+            case Some(assignment) => Refutation.Found(assignment, answered)
+            case None if answered > 0 => Refutation.Survived(answered)
+            case None => Refutation.NeverAsked(walked.offered)
+          }
       }
     )
 
@@ -412,55 +434,56 @@ final class Refutation private (val evaluate: Evaluate) {
   private def continuous(ty: Type): Boolean = ty == Real.realType
 
   /**
-   * Try every point, and report the first that answers.
+   * Try every point, and stop at the first where the premises hold and so does `holds`.
    *
    * A point where any premise, or the question itself, has no value in this model is skipped
    * entirely rather than counted as a failure to find anything: a place where the question was not
    * asked is not evidence, which is the rule `Discovery` already follows for an undefined
    * logarithm.
+   *
+   * A point where a premise is false is counted, but apart from the points where they all held,
+   * because the two callers read it in opposite ways. To `satisfying` it is an answer: one more
+   * place the premises were seen not to hold together. To `counterexample` it is not: an
+   * entailment is put to the test only where its premises hold, and a point where one fails says
+   * nothing about the conclusion. One count for both was what made `{x * x < 0}` survive a hundred
+   * points at which no premise held.
    */
   private def search(
     premises: Vector[Term],
     sampled: Vector[Term],
     points: Int,
     holds: Map[String, Value] => Option[Boolean]
-  ): Refutation.Outcome = {
+  ): Refutation.Walk = {
     // Over `sampled` and not over `premises`: a variable the conclusion alone mentions, which is
     // every variable a universal conclusion was opened into, would otherwise have no value and
     // every point would come back unanswered.
     val grid = Refutation.grid(evaluate, sampled, points)
 
-    // The count travels with the search rather than beside it: `Found` reports how many points
+    // The counts travel with the search rather than beside it: `Found` reports how many points
     // had answered when the witness turned up, so a count kept outside a lazy walk would be
     // reporting the state of an iterator instead of the state of the search.
     @annotation.tailrec
     def walk(
       remaining: List[Map[String, Value]],
-      asked: Int
-    ): (Int, Option[Map[String, Value]]) =
+      held: Int,
+      unheld: Int
+    ): Refutation.Walk =
       remaining match {
-        case Nil => (asked, None)
+        case Nil => Refutation.Walk(grid.length, held, unheld, None)
         case assignment :: tail =>
-          val answer =
-            for {
-              all <- evaluate.all(premises, assignment)
-              here <- holds(assignment)
-            } yield all && here
-
-          answer match {
-            case None => walk(tail, asked)
-            case Some(false) => walk(tail, asked + 1)
-            case Some(true) => (asked + 1, Some(assignment))
+          evaluate.all(premises, assignment) match {
+            case None => walk(tail, held, unheld)
+            case Some(false) => walk(tail, held, unheld + 1)
+            case Some(true) =>
+              holds(assignment) match {
+                case None => walk(tail, held, unheld)
+                case Some(false) => walk(tail, held + 1, unheld)
+                case Some(true) => Refutation.Walk(grid.length, held + 1, unheld, Some(assignment))
+              }
           }
       }
 
-    val (asked, found) = walk(grid.toList, 0)
-
-    found match {
-      case Some(assignment) => Refutation.Found(assignment, asked)
-      case None if asked == 0 => Refutation.NeverAsked(grid.length)
-      case None => Refutation.Survived(asked)
-    }
+    walk(grid.toList, 0, 0)
   }
 
   /**
@@ -538,6 +561,35 @@ object Refutation {
   final case class NeverAsked(offered: Int) extends Outcome {
     def asked: Int = 0
   }
+
+  /**
+   * The model answered, and at every point that answered some premise was false, so the
+   * entailment was never put to the test.
+   *
+   * Told apart from three answers it would otherwise be read as. Not [[Survived]], which counts
+   * points where the premises held and the conclusion did too: here there are none, and "survived a
+   * hundred points" was what `{x * x < 0}` with the conclusion `x = 7` printed until 2026-11-12. Not
+   * [[NeverAsked]], whose message says no point could be evaluated, which here is false: `answered`
+   * points were evaluated and every one said a premise fails. And not [[Contradictory]], which is a
+   * decision over every point there is: a premise set that holds on a thin set, `x * x < 1 / 10^9`,
+   * is missed by a sampler as reliably as one that holds nowhere, so sampling cannot say which of
+   * the two this is. Whether the premises can hold together is the next question, and it is a
+   * question about them rather than about the claim.
+   *
+   * Only `counterexample` gives it. To `satisfying` a point where a premise fails is an answer, the
+   * one it was asking for, and its count goes into [[Survived]] there.
+   */
+  final case class PremisesNeverHeld(answered: Int) extends Outcome {
+    def asked: Int = 0
+  }
+
+  /**
+   * What a walk over the grid saw: how many points it was offered, at how many every premise held
+   * and the question answered, at how many some premise was false, and the point it stopped at.
+   * Each caller turns this into the outcome its own question asks for, because the two questions
+   * read a point where a premise fails in opposite ways.
+   */
+  private final case class Walk(offered: Int, held: Int, unheld: Int, found: Option[Map[String, Model.Value]])
 
   /**
    * A point where every premise holds, found by solving rather than by sampling.

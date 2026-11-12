@@ -592,6 +592,19 @@ object Remedy {
     case Refutation.NeverAsked(offered) =>
       InterpretMore(s"none of ${Prose.count(offered, "point")} could be evaluated")
 
+    // Not `APersonLooks`, which is what `Survived` gets and which would read as "the claim held up";
+    // not `RestateTheProblem`, which is what `Contradictory` gets and which would assert what
+    // sampling cannot decide. What is known is that the question moved from the claim to the
+    // premises, and that sampling did not settle it.
+    case Refutation.PremisesNeverHeld(answered) =>
+      val seen =
+        if (answered == 1) "the one point that answered had a premise false there, so the claim was not put to it"
+        else s"all $answered points that answered had a premise false, so the claim was put to none of them"
+      AskDifferently(
+        s"whether the premises can hold together: $seen, and premises that hold only on a set too " +
+          "thin to sample look the same"
+      )
+
     case Refutation.Undecided(reason) => AskDifferently(reason)
   }
 
