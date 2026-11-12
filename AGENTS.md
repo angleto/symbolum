@@ -278,6 +278,11 @@ session named would be a different tool with the same name.
   reference and `docs/adr/0070` the decision. One failed step marks its own declaration and every
   other one is still checked, so a report lists every problem in the file with its line, the
   refusal, what to try and the goal at that point.
+- **The same, in an editor:** `tools/sbt "lsp/runMain garden.xeno.symbolum.lsp.LanguageServer"` is a
+  language server on its standard streams, for an editor to start rather than a person to run. It
+  gives the checker's problems as diagnostics, the goal at the line under the cursor as a hover, and
+  the declarations as an outline. `docs/language.md` has the Neovim configuration and
+  `docs/adr/0076` the decision. Nothing may print to standard output inside it.
 - **Looking for a lemma, by name or by shape:**
   `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SUM"`, or
   `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Find x:real + y:real = y + x"`. It puts the query to all
@@ -384,6 +389,7 @@ theories  -> logic          the naturals, the reals, numerals, arithmetic, RING,
 core      -> (nothing)      the computer algebra system, published as garden.xeno:symbolum-core
 tactics   -> theories, core the lowest module that sees both halves
 published -> tactics        the proof documents this repository publishes, the checker and the notebook
+lsp       -> published      the language server, the elaborator's third front end, not published
 examples  -> tactics        runnable demonstrations of either half, not published
 mark      -> (nothing)      the figure, the art and the drawing written from it, and its checks
 scan      -> (nothing)      what in a source of this repository is a comment, for the gates that ask

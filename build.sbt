@@ -695,7 +695,7 @@ lazy val root = (project in file("."))
   // the failure "a suite that is configured but not executed does not exist" names exactly.
   // `DocumentationSpec` asserts the list against the directories now, so the next module is a
   // decision rather than an omission.
-  .aggregate(core, kernel, checker, logic, theories, tactics, published, examples, mark, sat, scan, symbolum, dist)
+  .aggregate(core, kernel, checker, logic, theories, tactics, published, lsp, examples, mark, sat, scan, symbolum, dist)
   .settings(
     name := "symbolum-root",
     publish / skip := true
@@ -1153,6 +1153,22 @@ lazy val published = (project in file("modules/published"))
 // downloaded. On `tactics` rather than on `core`, which reaches `core` transitively and reaches
 // the proof side too; see the graph at the top of this file for why that costs the trust argument
 // nothing.
+// The language server, the third front end of the elaborator `Check` and the notebook use
+// (`docs/adr/0070`). A module of its own for the reason that record gives: its one external
+// dependency, lsp4j, sits in nothing the prover needs, and `docs/adr/0076` records which of
+// lsp4j's two licences it is taken under. Above `published` because a document an editor opens may
+// import a published one. Not published to the registry: it is a program an editor starts, and it
+// ships in the distribution as `bin/symbolum-language-server`.
+lazy val lsp = (project in file("modules/lsp"))
+  .dependsOn(published)
+  .settings(commonSettings)
+  .settings(coverageSettings)
+  .settings(
+    name := "symbolum-lsp",
+    publish / skip := true,
+    libraryDependencies += "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "1.0.0"
+  )
+
 lazy val examples = (project in file("modules/examples"))
   .dependsOn(tactics)
   .settings(commonSettings)
@@ -1207,7 +1223,7 @@ lazy val dist = (project in file("modules/dist"))
   .enablePlugins(JavaAppPackaging)
   // `scan` at test scope: `LauncherSpec` compares the text of the launchers with the comments off,
   // and what a comment is is decided one place for the three modules that ask.
-  .dependsOn(tactics, examples, published, scan % "test->compile")
+  .dependsOn(tactics, examples, published, lsp, scan % "test->compile")
   .settings(commonSettings)
   .settings(
     name := "symbolum-dist",
@@ -1240,6 +1256,7 @@ lazy val dist = (project in file("modules/dist"))
       "garden.xeno.symbolum.tactics.Find",
       "garden.xeno.symbolum.published.Notebook",
       "garden.xeno.symbolum.published.Check",
+      "garden.xeno.symbolum.lsp.LanguageServer",
       "garden.xeno.symbolum.examples.WhatAClaimCosts",
       "garden.xeno.symbolum.dist.Repl"
     ),

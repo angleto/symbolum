@@ -303,7 +303,13 @@ class StyleSpec extends AnyFlatSpec with Matchers {
         "2026-09-16, in `Notebook.advance` and nowhere else, because the pool runs two exchanges " +
         "at once and the atomic's own `updateAndGet` answers the wrong question here: it makes " +
         "the write safe by RE-APPLYING the command to a state its writer never read, which is " +
-        "the reordering that file records rather than a defence against it")
+        "the reordering that file records rather than a defence against it"),
+    "Server.scala" ->
+      ("one `AtomicReference` holding the language server's client, the text of each open document " +
+        "and its report, which is the whole state of a process an editor keeps for a session. The " +
+        "state is an immutable value replaced whole; what goes inside `updateAndGet` is the " +
+        "replacing of a map entry and never a check, since the function may run more than once, " +
+        "and a report is stored only when the text it was checked from is still the one held")
   )
 
   /**

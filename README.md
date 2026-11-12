@@ -228,6 +228,7 @@ cd symbolum-7.0.1
 bin/symbolum-ask '!x:real. x + 0 = x'    # the claim, its price, and what it rests on
 bin/symbolum-check proof.sym            # a proof written without Scala, checked
 bin/symbolum-find SUM                    # a lemma by name, by constant or by shape
+bin/symbolum-language-server             # for an editor to start: docs/language.md says how
 bin/symbolum-notebook                    # a theory and its proofs interactively, at http://127.0.0.1:8642
 bin/symbolum-repl                        # a Scala REPL with the system on the classpath
 bin/symbolum-what-a-claim-costs          # the demonstration of the proof half
@@ -452,6 +453,7 @@ modules/theories    the naturals, the reals, numerals, arithmetic, RING and LINA
 modules/core        the computer algebra system, published as garden.xeno:symbolum-core
 modules/tactics     the bridge: the algebra system as an oracle whose answers the kernel checks
 modules/published   the proof documents this repository publishes, the checker and the notebook
+modules/lsp         the language server an editor starts, not published
 modules/examples    runnable demonstrations, not published
 docs/notation.md       every symbol, the prerequisites, and where to look things up
 docs/architecture.md   the correctness argument, and where a change is dangerous

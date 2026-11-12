@@ -212,10 +212,10 @@ final class Elaborate private (
               checked.value.filter(_ => checked.problems.isEmpty) match {
                 case Some(theorem) =>
                   (Entry(name, line, Kind.Theorem, Status.Proved, scope.show(claim), Vector.empty, Some(theorem),
-                    Some(price(scope, held, imported, theorem, checked.notes))),
+                    Some(price(scope, held, imported, theorem, checked.notes)), checked.goals),
                     scope, held.proved(name, theorem))
                 case None =>
-                  (Entry(name, line, Kind.Theorem, Status.Incomplete, scope.show(claim), checked.problems, None),
+                  (Entry(name, line, Kind.Theorem, Status.Incomplete, scope.show(claim), checked.problems, None, None, checked.goals),
                     scope, held.failed(name, line))
               }
           }
@@ -325,14 +325,32 @@ final class Elaborate private (
     /** `goal` by `proof`, in `context`. */
     def establish(context: Context, goal: Term, proof: Justification): Checked[Kernel.Thm] =
       proof match {
-        case Justification.By(line, method) => settle(line, context, goal, method)
-        case Justification.Block(_, steps, closed) => run(context, goal, steps.toList, closed)
+        case Justification.By(line, method) => seen(line, context, goal)(settle(line, context, goal, method))
+        case Justification.Block(line, steps, closed) => seen(line, context, goal)(run(context, goal, steps.toList, closed))
       }
+
+    /**
+     * `body`, with the goal it was given recorded at `line`, before anything `body` records.
+     *
+     * The goals are what an editor shows at a line of a proof that checked as well as one that did
+     * not. A line can be recorded more than once, by `fix m n` opening one name at a time and by a
+     * one-line `have` whose `by` is on it, and the first record is the goal the line was given.
+     */
+    private def seen[A](line: Int, context: Context, goal: Term)(body: => Checked[A]): Checked[A] = {
+      val result = body
+      result.copy(goals = Goal(line, context.render(scope, goal)) +: result.goals)
+    }
 
     /* -------------------------------------------------------------- steps */
 
     /** The steps of one block, applied to `goal` in order, ending with one that closes it. */
     private def run(context: Context, goal: Term, steps: List[Step], end: Int): Checked[Kernel.Thm] =
+      steps match {
+        case Nil => step(context, goal, steps, end)
+        case first :: _ => seen(first.line, context, goal)(step(context, goal, steps, end))
+      }
+
+    private def step(context: Context, goal: Term, steps: List[Step], end: Int): Checked[Kernel.Thm] =
       steps match {
         case Nil =>
           Checked.failed(at(end, context, goal, "the block ends with the goal still open",
@@ -564,7 +582,8 @@ final class Elaborate private (
 
     private def introduce(branch: Document.Branch, context: Context, goal: Term, names: List[String]): Checked[Kernel.Thm] =
       names match {
-        case Nil => run(context, goal, branch.steps.toList, branch.steps.lastOption.map(_.line).getOrElse(branch.line))
+        case Nil =>
+          seen(branch.line, context, goal)(run(context, goal, branch.steps.toList, branch.steps.lastOption.map(_.line).getOrElse(branch.line)))
         case name :: more =>
           if (logic.destForallPredicate(goal).isDefined)
             for {
@@ -807,7 +826,7 @@ final class Elaborate private (
      */
     private def calc(line: Int, context: Context, goal: Term, links: Vector[Document.Link]): Checked[Kernel.Thm] =
       Checked.all(links.map { link =>
-        read(link.line, context, goal, link.claim, Some(Type.Bool)).flatMap(claim => settle(link.line, context, claim, link.method))
+        read(link.line, context, goal, link.claim, Some(Type.Bool)).flatMap(claim => seen(link.line, context, claim)(settle(link.line, context, claim, link.method)))
       }).flatMap { theorems =>
         theorems.tail.foldLeft(Checked.ok(theorems.head): Checked[Kernel.Thm])((acc, next) => acc.flatMap(compose(line, context, goal, _, next)))
       }.flatMap { chained =>
@@ -1008,21 +1027,22 @@ object Elaborate {
    * part and keeps every part's problems: recovery is a choice made where the parts are independent,
    * not a default that would check steps against goals nothing produced.
    */
-  final case class Checked[+A](value: Option[A], problems: Vector[Problem], notes: Vector[String]) {
-    def map[B](f: A => B): Checked[B] = Checked(value.map(f), problems, notes)
+  final case class Checked[+A](value: Option[A], problems: Vector[Problem], notes: Vector[String], goals: Vector[Goal] = Vector.empty) {
+    def map[B](f: A => B): Checked[B] = Checked(value.map(f), problems, notes, goals)
 
     def flatMap[B](f: A => Checked[B]): Checked[B] = value match {
       case Some(a) =>
         val next = f(a)
-        Checked(next.value, problems ++ next.problems, notes ++ next.notes)
-      case None => Checked(None, problems, notes)
+        Checked(next.value, problems ++ next.problems, notes ++ next.notes, goals ++ next.goals)
+      case None => Checked(None, problems, notes, goals)
     }
 
     /** What this met, then `other` in full. */
-    def andThen[B](other: Checked[B]): Checked[B] = Checked(other.value, problems ++ other.problems, notes ++ other.notes)
+    def andThen[B](other: Checked[B]): Checked[B] =
+      Checked(other.value, problems ++ other.problems, notes ++ other.notes, goals ++ other.goals)
 
     /** What this met, and no value. */
-    def discard: Checked[Nothing] = Checked(None, problems, notes)
+    def discard: Checked[Nothing] = Checked(None, problems, notes, goals)
   }
 
   object Checked {
@@ -1037,7 +1057,8 @@ object Elaborate {
       Checked(
         if (parts.forall(_.value.isDefined)) Some(parts.flatMap(_.value)) else None,
         parts.flatMap(_.problems),
-        parts.flatMap(_.notes)
+        parts.flatMap(_.notes),
+        parts.flatMap(_.goals)
       )
   }
 
@@ -1105,6 +1126,9 @@ object Elaborate {
 
   /* ------------------------------------------------------------------ the report */
 
+  /** The goal a line of a proof was given, as a reader is shown it: fixed, known, to be proved. */
+  final case class Goal(line: Int, text: String)
+
   /** One thing wrong, where it is, what to try, and the goal at that point when there was one. */
   final case class Problem(
     line: Int,
@@ -1113,7 +1137,14 @@ object Elaborate {
     goal: Option[String],
     /** Whether the goal that did not settle is false, where a method was asked and refused. */
     refuted: Option[Refuted] = None
-  )
+  ) {
+
+    /** What follows the reason, a line each: what to try, what refutation said, and the goal. */
+    def detail: Vector[String] =
+      next.map(step => s"try: $step").toVector ++
+        refuted.map(r => s"${if (r.refutes) "false" else "refutation"}: ${r.reason}").toVector ++
+        goal.toVector.flatMap(_.linesIterator)
+  }
 
   /**
    * What `Refutation` said about a goal a method did not settle.
@@ -1151,7 +1182,23 @@ object Elaborate {
     inferences: Int,
     notes: Vector[String],
     imported: Vector[String] = Vector.empty
-  )
+  ) {
+
+    /**
+     * The price as a reader reads it, one line per reading. `holder` names where the theorems
+     * under `document` came from: this document for the checker and an editor, this session for
+     * the notebook.
+     */
+    def lines(holder: String): Vector[String] =
+      Vector(
+        if (axioms.isEmpty) "axioms: none" else s"axioms: ${axioms.mkString(", ")}",
+        s"library facts: ${if (facts.isEmpty) "none" else facts.mkString(", ")}"
+      ) ++
+        (if (document.nonEmpty) Vector(s"from $holder: ${document.mkString(", ")}") else Vector.empty) ++
+        (if (imported.nonEmpty) Vector(s"imported: ${imported.mkString(", ")}") else Vector.empty) ++
+        Vector(s"inferences: $inferences") ++
+        notes.map(note => s"note: $note")
+  }
 
   /**
    * What a document is checked against beyond the chain: the definitions and theorems of the
@@ -1215,8 +1262,19 @@ object Elaborate {
     problems: Vector[Problem],
     theorem: Option[Kernel.Thm],
     /** What a proved theorem rests on and what it cost; nothing for anything else. */
-    price: Option[Price] = None
-  )
+    price: Option[Price] = None,
+    /** The goal at each line of the proof, in the order the lines were checked; see [[goalAt]]. */
+    goals: Vector[Goal] = Vector.empty
+  ) {
+
+    /**
+     * The goal at `line` of this declaration's proof: the one the last line at or above it was
+     * given. So a blank line, a comment or a `qed` shows the goal of the step above it. Nothing
+     * above the first recorded line, and nothing for a definition.
+     */
+    def goalAt(line: Int): Option[Goal] =
+      goals.filter(_.line <= line).maxByOption(_.line).flatMap(found => goals.find(_.line == found.line))
+  }
 
   /**
    * A checked document.
@@ -1233,20 +1291,8 @@ object Elaborate {
 
     /** The report as a reader reads it. */
     def render: String = {
-      def priced(price: Price): Vector[String] =
-        Vector(
-          if (price.axioms.isEmpty) "  axioms: none" else s"  axioms: ${price.axioms.mkString(", ")}",
-          s"  library facts: ${if (price.facts.isEmpty) "none" else price.facts.mkString(", ")}"
-        ) ++
-          (if (price.document.nonEmpty) Vector(s"  from this document: ${price.document.mkString(", ")}") else Vector.empty) ++
-          (if (price.imported.nonEmpty) Vector(s"  imported: ${price.imported.mkString(", ")}") else Vector.empty) ++
-          Vector(s"  inferences: ${price.inferences}") ++
-          price.notes.map(note => s"  note: $note")
-      def problem(p: Problem): Vector[String] =
-        Vector(s"  line ${p.line}: ${p.reason}") ++
-          p.next.map(n => s"    try: $n").toVector ++
-          p.refuted.map(r => s"    ${if (r.refutes) "false" else "refutation"}: ${r.reason}").toVector ++
-          p.goal.toVector.flatMap(_.linesIterator.map(l => s"    $l"))
+      def priced(price: Price): Vector[String] = price.lines("this document").map("  " + _)
+      def problem(p: Problem): Vector[String] = s"  line ${p.line}: ${p.reason}" +: p.detail.map("    " + _)
       def entry(e: Entry): Vector[String] = {
         val word = e.kind match { case Kind.Definition => "define"; case Kind.Theorem => "theorem" }
         val head = s"line ${e.line}: $word ${e.name}: ${e.status.toString.toLowerCase}"
@@ -1298,7 +1344,9 @@ object Elaborate {
       def entry(e: Entry): String =
         obj("name" -> Some(string(e.name)), "line" -> Some(e.line.toString), "kind" -> Some(string(e.kind.toString.toLowerCase)),
           "status" -> Some(string(e.status.toString.toLowerCase)), "statement" -> Some(string(e.statement)),
-          "price" -> e.price.map(price), "problems" -> Some(e.problems.map(problem).mkString("[", ",", "]")))
+          "price" -> e.price.map(price), "problems" -> Some(e.problems.map(problem).mkString("[", ",", "]")),
+          "goals" -> Some(e.goals).filter(_.nonEmpty).map(_.map(g => obj("line" -> Some(g.line.toString), "goal" -> Some(string(g.text))))
+            .mkString("[", ",", "]")))
       val errors = syntax.map(e => obj("line" -> Some(e.line.toString), "message" -> Some(string(e.reason))))
       obj("ok" -> Some(ok.toString), "declarations" -> Some(entries.map(entry).mkString("[", ",", "]")),
         "syntax" -> Some(errors.mkString("[", ",", "]")),

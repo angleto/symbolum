@@ -411,22 +411,11 @@ object Session {
   object Entry {
 
     /** What a theorem the elaborator proved rests on and cost, a line each. */
-    def priced(price: Elaborate.Price): Vector[String] =
-      Vector(
-        s"axioms: ${if (price.axioms.isEmpty) "none" else price.axioms.mkString(", ")}",
-        s"library facts: ${if (price.facts.isEmpty) "none" else price.facts.mkString(", ")}"
-      ) ++
-        (if (price.document.nonEmpty) Vector(s"from this session: ${price.document.mkString(", ")}") else Vector.empty) ++
-        (if (price.imported.nonEmpty) Vector(s"imported: ${price.imported.mkString(", ")}") else Vector.empty) ++
-        Vector(s"inferences: ${price.inferences}") ++
-        price.notes.map(note => s"note: $note")
+    def priced(price: Elaborate.Price): Vector[String] = price.lines("this session")
 
     /** One problem of a proof, with the line it is on counted from the cell's first line. */
     def problem(problem: Elaborate.Problem): Vector[String] =
-      Vector(s"line ${problem.line}: ${problem.reason}") ++
-        problem.next.map(step => s"  try: $step").toVector ++
-        problem.refuted.map(r => s"  ${if (r.refutes) "false" else "refutation"}: ${r.reason}").toVector ++
-        problem.goal.toVector.flatMap(_.linesIterator.map("  " + _))
+      s"line ${problem.line}: ${problem.reason}" +: problem.detail.map("  " + _)
   }
 
   /**

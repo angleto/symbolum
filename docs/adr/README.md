@@ -106,5 +106,6 @@ the rejected option attractive, and they will.
 | [0073](0073-a-document-sees-what-it-imports-and-the-published-ones-share-one-theory.md) | A document sees what it imports, and the published ones share one theory | accepted |
 | [0074](0074-a-notebook-cell-is-a-declaration-of-the-proof-language.md) | A notebook cell is a declaration of the proof language | accepted |
 | [0075](0075-the-order-picks-the-root-the-ideal-leaves-open.md) | The order picks the root the ideal leaves open | accepted |
+| [0076](0076-the-language-server-shows-the-goal-each-line-was-given.md) | The language server shows the goal each line was given | accepted |
 | [0077](0077-a-point-where-a-premise-fails-did-not-test-the-claim.md) | A point where a premise fails did not test the claim | accepted |
 | [0078](0078-the-object-logic-instantiates-at-any-substitutable-term.md) | The object logic instantiates at any substitutable term, not only at a closed one | accepted, extends 0040 |

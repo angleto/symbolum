@@ -83,6 +83,10 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
         "calling the checker reads, so a spec that called it would end the suite; what it prints and " +
         "the status it chooses are `Check.run`, which `PublishedSpec` enters with a document that " +
         "imports a published one"),
+    "garden.xeno.symbolum.lsp.LanguageServer" ->
+      ("`main` serves the protocol on the process's own standard streams until the editor closes " +
+        "them, so a spec that called it would hang the suite on its stdin; the protocol itself is " +
+        "`Server`, which `ServerSpec` speaks to over pipes from `initialize` to `exit`"),
     "garden.xeno.symbolum.dist.Repl" ->
       ("`main` delegates to the Scala REPL, which reads stdin and does not return, so a spec that " +
         "called it would hang the suite rather than fail it")

@@ -104,6 +104,8 @@ line 38: theorem ZERO_LEFT: proved
   `Prove` reports as cut short.
 
 `--json` prints the same report as one JSON object per file, for a program driving the checker.
+Each theorem there also carries `goals`, the goal each line of its proof was given, which is what an
+editor shows (see "In an editor" below).
 The exit status is 0 when everything is proved or defined, nothing failed to read and every
 import resolved to a document that checks, and 1 otherwise.
 
@@ -373,12 +375,56 @@ made differently, or a theorem whose name the session already holds leaves the s
 `import` is a cell of its own, and inside a `theorem` cell it is refused. `docs/adr/0074` is the
 decision.
 
+## In an editor
+
+`bin/symbolum-language-server` in the distribution is a language server: an editor starts it and
+speaks the Language Server Protocol to it on its standard streams. From a checkout it is
+`tools/sbt "lsp/runMain garden.xeno.symbolum.lsp.LanguageServer"`. It checks the text the editor
+holds with the checker's elaborator, and gives back three things:
+
+- every problem as a diagnostic on its line, in the checker's words, with what to try and the goal
+  at that point;
+- on hover, the goal at the line under the cursor, for a proof that checks as much as for one that
+  does not, and on a declaration's first line its status and, once proved, its price;
+- the declarations as an outline, each over the lines it spans.
+
+The goal at a line is the one that line's step was given, before the step acts: on `fix n` the goal
+does not have `n` yet, and on the line after it, it does. A link of a `calc` shows the relation that
+link proves. A line with no step on it, `qed` or a blank line, shows the goal of the step above it.
+
+An import reads the published document of that name first, then the document of that name beside
+this one as the editor holds it, saved or not, and then the file on disk. A change to a document
+checks again every open document in its directory, so an importer sees an unsaved change to what it
+imports. A file beside the document with a published name is not read, and a warning on the import
+line says so.
+
+Neovim needs the file type and the command, here in `init.lua`, with the path to the distribution
+written in:
+
+```lua
+vim.filetype.add({ extension = { sym = "symbolum" } })
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "symbolum",
+  callback = function(args)
+    vim.lsp.start({
+      name = "symbolum",
+      cmd = { "/path/to/symbolum/bin/symbolum-language-server" },
+      root_dir = vim.fs.dirname(vim.api.nvim_buf_get_name(args.buf)),
+    })
+  end,
+})
+```
+
+The first document opened waits for the chain to be built, which is the slow part and happens once
+per editor session. Zed starts a language server only for a language an extension declares, and no
+extension for this one exists yet. `docs/adr/0076` is the decision.
+
 ## What it does not do yet
 
-`docs/adr/0070` plans the work in six increments. This file describes the first three and the
-fifth, which came before the fourth. Until the others land:
+`docs/adr/0070` plans the work in six increments. This file describes the first five, the fifth
+having come before the fourth. Until the sixth lands:
 
 - a published theorem is reached by importing its document; `auto`, `find` and `Ask` search the
   chain's library and not the published one;
-- the goal is shown in the report and in the notebook, and not yet in an editor;
-- there is no `simp` set and no `datatype` declaration.
+- there is no `simp` set and no `datatype` declaration;
+- the editor has no extension for Zed, and no completion or go-to-definition in any editor.
