@@ -146,22 +146,30 @@ final class Ideal private (val order: Order, val budget: Long) {
       inverses <- traverse(stated.collect { case App(Const(Real.Inverse, _), r) if nonZero.contains(r) => r })(
         r => inverseEquation(r, nonZero(r))
       )
-    } yield {
-      val all = equations ++ inverses
-      val atoms = (all.flatMap((_, l, r) => Vector(l, r)) ++ Vector(left, right)).flatMap(atomsOf).distinct
-      val index = atoms.zipWithIndex.toMap
-      def poly(term: Term): Groebner.Poly = polynomialOf(term, index, atoms.length)
-      Problem(
-        variables,
-        antecedents,
-        left,
-        right,
-        all,
-        atoms,
-        all.map((_, l, r) => Groebner.subtract(poly(l), poly(r))),
-        Groebner.subtract(poly(left), poly(right))
-      )
-    }
+    } yield assemble(variables, antecedents, left, right, equations ++ inverses)
+
+  /** The problem over a set of equations: their atoms, and every side as a polynomial over them. */
+  private def assemble(
+    variables: Vector[FVar],
+    antecedents: Vector[Term],
+    left: Term,
+    right: Term,
+    all: Vector[(Kernel.Thm, Term, Term)]
+  ): Problem = {
+    val atoms = (all.flatMap((_, l, r) => Vector(l, r)) ++ Vector(left, right)).flatMap(atomsOf).distinct
+    val index = atoms.zipWithIndex.toMap
+    def poly(term: Term): Groebner.Poly = polynomialOf(term, index, atoms.length)
+    Problem(
+      variables,
+      antecedents,
+      left,
+      right,
+      all,
+      atoms,
+      all.map((_, l, r) => Groebner.subtract(poly(l), poly(r))),
+      Groebner.subtract(poly(left), poly(right))
+    )
+  }
 
   /** `G |- ~(r = 0)` from a fact `~(r = 0)` or `0 < r`, keyed by `r`; nothing from any other fact. */
   private def nonZeroOf(fact: Kernel.Thm): Either[LogicError, Option[(Term, Kernel.Thm)]] =
@@ -189,7 +197,18 @@ final class Ideal private (val order: Order, val budget: Long) {
    * difference, up to [[Ideal.Squarings]]. A budget run out at any stage is reported as such
    * rather than as a refusal, because a search that stopped has not said the goal is outside.
    */
-  private def settle(goal: Term, problem: Problem): Either[LogicError, Kernel.Thm] = {
+  private def settle(goal: Term, problem: Problem): Either[LogicError, Kernel.Thm] =
+    radicalOrNot(goal, problem) match {
+      case Left(remainder) => ordered(goal, problem, remainder)
+      case Right(settled) => settled
+    }
+
+  /**
+   * The difference or one of its squarings as a member, settled; or `Left` with the plain
+   * difference's remainder when every one of them is outside the ideal, which is the one answer
+   * the order may still change.
+   */
+  private def radicalOrNot(goal: Term, problem: Problem): Either[Groebner.Poly, Either[LogicError, Kernel.Thm]] = {
     def ask(target: Groebner.Poly) = Groebner.membership(problem.generators, target, problem.atoms.length, budget)
     ask(problem.target) match {
       case Groebner.Membership.NotMember(remainder, _) =>
@@ -197,13 +216,141 @@ final class Ideal private (val order: Order, val budget: Long) {
         val answers = powers.map(ask).zipWithIndex.map((answer, i) => (answer, i + 1))
         answers.find(!_._1.isInstanceOf[Groebner.Membership.NotMember]) match {
           case Some((Groebner.Membership.Member(cofactors, _), squarings)) =>
-            radical(problem, cofactors, squarings).left.map(reason => NotRebuilt(goal, "IDEAL", reason))
-          case Some((other, _)) => certify(goal, problem, other)
-          case None => certify(goal, problem, Groebner.Membership.NotMember(remainder, 0L))
+            Right(radical(problem, cofactors, squarings).left.map(reason => NotRebuilt(goal, "IDEAL", reason)))
+          case Some((other, _)) => Right(certify(goal, problem, other))
+          case None => Left(remainder)
         }
-      case answer => certify(goal, problem, answer)
+      case answer => Right(certify(goal, problem, answer))
     }
   }
+
+  /**
+   * The order's turn, once the difference `D` and its squarings are all outside the ideal.
+   *
+   * The search asks for the least `p` with `p(D)` in the ideal, written `D^m * q(D)` with `q(0)`
+   * not zero. Where `m` is at least one and `q` is not a constant, `D` is zero at every common zero
+   * where `q(D)` is not, so the goal follows from `q(D)` having a sign. That sign is asked of
+   * `Linarith`, positive and then negative, and one it proves makes `Q * inv Q = 1` a theorem for
+   * the signed cofactor `Q`, which joins the equations exactly as a denominator does. In that larger
+   * ideal `D^m` is a member, so the radical above finishes the proof. The kernel never sees `p`: it
+   * sees memberships, an inverse justified by a proved sign, and squarings.
+   *
+   * == Why the sign is asked in normal form ==
+   *
+   * `Linarith` multiplies the hypotheses as they are written, and the sign often needs a product
+   * of hypotheses the equations have rewritten. In `amc12b_2002_p7` the cofactor reduces to
+   * `3 * (c - 1)^2`, and what makes it positive is `(c - 2)^2 > 0`, which is the square of
+   * `0 < a` once `a` is written as `c - 2`. So every order hypothesis `l < r` or `l <= r` whose
+   * atoms the ideal knows is reduced first: `r - l = N` is a member of the ideal, rebuilt like any
+   * other, `0 < N` follows from it linearly, and `Linarith` is asked for the cofactor's own normal
+   * form from those reduced facts. Reducing changes nothing modulo the ideal, so the cofactor's
+   * normal form serves wherever the cofactor did.
+   *
+   * Every refusal here is the one the plain difference earned, `OutsideTheIdeal` with its
+   * remainder, except a budget run out, which is reported as such.
+   */
+  private def ordered(goal: Term, problem: Problem, remainder: Groebner.Poly): Either[LogicError, Kernel.Thm] = {
+    val arity = problem.atoms.length
+    lazy val outside = certify(goal, problem, Groebner.Membership.NotMember(remainder, 0L))
+    Groebner.minimalPolynomial(problem.generators, problem.target, arity, Ideal.Degree, budget) match {
+      case Left(exhausted) => certify(goal, problem, exhausted)
+      case Right(None) => outside
+      case Right(Some(coefficients)) =>
+        val m = coefficients.indexWhere(!_.isZero)
+        val q = coefficients.drop(m)
+        if (m == 0 || q.length < 2) outside
+        else {
+          val powers = Vector.iterate(Groebner.one(arity), q.length)(Groebner.multiply(_, problem.target))
+          val cofactor = q.indices.foldLeft(Groebner.zero)((acc, k) =>
+            Groebner.add(acc, Groebner.multiply(Groebner.constant(q(k), arity), powers(k)))
+          )
+          val bounds = orderFacts(problem)
+          Groebner.remainders(problem.generators, cofactor +: bounds.map(_.difference), arity, budget) match {
+            case Left(exhausted) => certify(goal, problem, exhausted)
+            case Right(normal) =>
+              val reduced = bounds.zip(normal.tail).flatMap((bound, n) => reduce(problem, bound, n))
+              Iterator(normal.head, Groebner.negate(normal.head))
+                .map(signed => signedInverse(problem, reduced, signed))
+                .collectFirst { case Some(equation) => equation }
+                .fold(outside) { equation =>
+                  val larger =
+                    assemble(problem.variables, problem.antecedents, problem.left, problem.right, problem.equations :+ equation)
+                  radicalOrNot(goal, larger).getOrElse(outside)
+                }
+          }
+        }
+    }
+  }
+
+  /** An order hypothesis `l < r` or `l <= r` over atoms the ideal knows, with `r - l` as a polynomial. */
+  private final case class Bound(fact: Kernel.Thm, left: Term, right: Term, strict: Boolean, difference: Groebner.Poly)
+
+  private def orderFacts(problem: Problem): Vector[Bound] = {
+    val index = problem.atoms.zipWithIndex.toMap
+    val facts = traverse(problem.antecedents)(a => LogicError.lift(Kernel.assume(a)).flatMap(project))
+      .map(_.flatten).getOrElse(Vector.empty)
+    facts.flatMap { fact =>
+      val read = Order.destLess(reals, fact.conclusion).toOption.map((l, r) => (l, r, true))
+        .orElse(Order.destLessEqual(reals, fact.conclusion).toOption.map((l, r) => (l, r, false)))
+      read.collect {
+        case (l, r, strict) if Term.typeOf(l) == real && (atomsOf(l) ++ atomsOf(r)).forall(index.contains) =>
+          val poly = (t: Term) => polynomialOf(t, index, problem.atoms.length)
+          Bound(fact, l, r, strict, Groebner.subtract(poly(r), poly(l)))
+      }
+    }
+  }
+
+  /**
+   * `G |- 0 < N`, or `0 <= N`, from an order hypothesis and `r - l = N`, `N` being the normal form
+   * of `r - l`; `None` when anything on the way is refused, which only drops the fact.
+   */
+  private def reduce(problem: Problem, bound: Bound, normal: Groebner.Poly): Option[Kernel.Thm] =
+    (for {
+      prover <- linarith
+      written <- termOf(normal, problem.atoms)
+      difference <- Linarith.difference(reals, bound.right, bound.left)
+      cofactors <- Groebner.membership(problem.generators, Groebner.subtract(bound.difference, normal), problem.atoms.length, budget) match {
+        case Groebner.Membership.Member(found, _) => Right(found)
+        case _ => Left(NotOfForm("the difference of an order hypothesis equal to its normal form", bound.fact.conclusion))
+      }
+      equal <- rebuild(difference, written, problem.equations, cofactors, problem.atoms)
+      signed <- signOf(written, bound.strict)
+      claim <- implications(Vector(bound.fact.conclusion, equal.conclusion), signed)
+      closed <- prover.prove(claim)
+      opened <- rules.mp(closed, bound.fact).flatMap(rules.mp(_, equal))
+    } yield opened).toOption
+
+  /**
+   * `G |- Q * inv Q = 1` for the polynomial `Q` written as a term, when `Linarith` proves `0 < Q`
+   * from the reduced order facts; `None` when it does not, or when anything on the way is refused,
+   * since a sign nobody proved is a goal this procedure does not settle.
+   */
+  private def signedInverse(problem: Problem, reduced: Vector[Kernel.Thm], q: Groebner.Poly): Option[(Kernel.Thm, Term, Term)] =
+    (for {
+      prover <- linarith
+      written <- termOf(q, problem.atoms)
+      positive <- signOf(written, strict = true)
+      claim <- implications(reduced.map(_.conclusion), positive)
+      closed <- prover.prove(claim)
+      opened <- reduced.foldLeft(Right(closed): Either[LogicError, Kernel.Thm])((acc, fact) => acc.flatMap(rules.mp(_, fact)))
+      nonZero <- order.nonZero.flatMap(rules.spec(written, _)).flatMap(rules.mp(_, opened))
+      equation <- inverseEquation(written, nonZero)
+    } yield equation).toOption
+
+  /** `0 < t`, or `0 <= t`. */
+  private def signOf(term: Term, strict: Boolean): Either[LogicError, Term] =
+    for {
+      zero <- Numeral.of(reals, 0)
+      relation <- constant(if (strict) Real.Order else Real.NonStrictOrder, Type.fun(real, Type.fun(real, Type.Bool)))
+      signed <- LogicError.lift(Term.appAll(relation, List(zero, term)))
+    } yield signed
+
+  /** `a1 ==> ... ==> an ==> c`. */
+  private def implications(antecedents: Vector[Term], conclusion: Term): Either[LogicError, Term] =
+    antecedents.foldRight(Right(conclusion): Either[LogicError, Term])((a, acc) => acc.flatMap(reals.logic.mkImp(a, _)))
+
+  /** Built once and only when a goal reaches the order, over the same order as everything here. */
+  private lazy val linarith: Either[LogicError, Linarith] = Linarith.construct(order)
 
   private def certify(goal: Term, problem: Problem, membership: Groebner.Membership): Either[LogicError, Kernel.Thm] =
     membership match {
@@ -441,6 +588,15 @@ object Ideal {
    * needs one squaring, and a higher power doubles the degree the search works at each time.
    */
   val Squarings: Int = 2
+
+  /**
+   * The highest degree at which the search looks for a polynomial in the difference that the
+   * ideal holds, when the order is asked. Chosen and not measured: the two statements that ask for
+   * the order need two by hand, `t * (t + 1440)` and `t * (t + 75)`, and degree one is shown
+   * short by `tools/verify/perturb-ideal-order.sh`. A higher degree costs one more reduction each
+   * and a longer cofactor for `Linarith` to sign.
+   */
+  val Degree: Int = 4
 
   /**
    * Over an order, for `NON_ZERO` and `SQUARE_ZERO`, and the ring it was built on, which is the one

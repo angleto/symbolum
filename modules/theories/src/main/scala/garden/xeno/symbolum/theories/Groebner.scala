@@ -102,6 +102,89 @@ object Groebner {
     }
   }
 
+  /**
+   * The remainders of `targets` modulo one Groebner basis of the ideal of `generators`, or the
+   * budget spent before the basis was complete. Two polynomials with one remainder differ by a
+   * member of the ideal, which is what [[minimalPolynomial]] reads.
+   */
+  def remainders(
+    generators: Vector[Poly],
+    targets: Vector[Poly],
+    arity: Int,
+    budget: Long = Budget
+  ): Either[Membership.Exhausted, Vector[Poly]] = {
+    val k = generators.length
+    val seeds = generators.indices.toVector
+      .filter(i => generators(i).nonEmpty)
+      .map(i => Tracked(generators(i), Vector.tabulate(k)(j => if (i == j) one(arity) else zero)))
+    val reduced = basis(seeds, Meter(0L, budget)).flatMap { (complete, start) =>
+      targets.foldLeft(Right((Vector.empty[Poly], start)): Either[Long, (Vector[Poly], Meter)]) { (acc, target) =>
+        acc.flatMap((done, meter) =>
+          reduce(Tracked(target, Vector.fill(k)(zero)), complete, meter).map((r, charged) => (done :+ r.poly, charged))
+        )
+      }
+    }
+    reduced match {
+      case Left(spent) => Left(Membership.Exhausted(spent, budget))
+      case Right((found, _)) => Right(found)
+    }
+  }
+
+  /**
+   * The monic polynomial `p` of least degree, at most `degree`, with `p(target)` in the ideal of
+   * `generators`, as its coefficients from the constant up; `None` when no degree up to the bound
+   * has one.
+   *
+   * The remainders of `1, target, target^2, ...` modulo one basis are vectors over the monomials,
+   * and the first of them that is a combination of the ones before it gives `p`: the combination
+   * has remainder zero, so it is a member. One exists at some degree exactly when the target takes
+   * finitely many values on the generators' common zeros, the complex ones included, which is the
+   * case of a system with finitely many solutions. Not trusted: the caller asks the membership of
+   * `p(target)` again and the kernel rebuilds that.
+   */
+  def minimalPolynomial(
+    generators: Vector[Poly],
+    target: Poly,
+    arity: Int,
+    degree: Int,
+    budget: Long = Budget
+  ): Either[Membership.Exhausted, Option[Vector[Rational]]] = {
+    val powers = Vector.iterate(one(arity), degree + 1)(multiply(_, target))
+    remainders(generators, powers, arity, budget).map(dependency)
+  }
+
+  /**
+   * The first vector that is a combination of the ones before it, as the coefficients of that
+   * dependency with its own coefficient one. Gaussian elimination in the order the vectors come:
+   * every row kept is reduced by the rows before it, so reducing by the rows in order never
+   * reintroduces a pivot already cleared.
+   */
+  private def dependency(vectors: Vector[Poly]): Option[Vector[Rational]] = {
+    val length = vectors.length
+
+    @tailrec
+    def go(k: Int, rows: Vector[(Monomial, Poly, Vector[Rational])]): Option[Vector[Rational]] =
+      if (k == length) None
+      else {
+        val start = (vectors(k), Vector.tabulate(length)(i => if (i == k) Rational.one else Rational.zero))
+        val (residue, combination) = rows.foldLeft(start) { case ((poly, combo), (pivot, row, rowCombo)) =>
+          poly.get(pivot) match {
+            case None => (poly, combo)
+            case Some(c) =>
+              val factor = c / row(pivot)
+              (subtract(poly, row.map((m, v) => m -> factor * v)),
+               combo.indices.map(i => combo(i) - factor * rowCombo(i)).toVector)
+          }
+        }
+        leading(residue) match {
+          case None => Some(combination.take(k + 1))
+          case Some((pivot, _)) => go(k + 1, rows :+ ((pivot, residue, combination)))
+        }
+      }
+
+    go(0, Vector.empty)
+  }
+
   /* -------------------------------------------------------------- polynomial arithmetic */
 
   val zero: Poly = Map.empty

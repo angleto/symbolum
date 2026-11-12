@@ -77,6 +77,38 @@ class IdealSpec extends AnyFlatSpec with Matchers {
     )
   }
 
+  "amc12b_2002_p19" should "follow once the order says which root of its difference's polynomial is meant" in {
+    // `x * y * z - 720` is outside the ideal and so are its squares; what the ideal holds is the
+    // difference times a cofactor, and the cofactor is positive under the three hypotheses.
+    proved(
+      "!x y z:real. 0 < x /\\ 0 < y /\\ 0 < z ==> x * (y + z) = 152 ==> y * (z + x) = 162 ==> " +
+        "z * (x + y) = 170 ==> x * y * z = 720"
+    )
+  }
+
+  "amc12b_2002_p7" should "follow once the order rules out the roots below zero" in {
+    // Over the reals here, where `ReachSpec` reads it over `real_of_num` atoms: the cubic has the
+    // roots `-6`, `-1` and `4`, and only the last is positive.
+    proved(
+      "!a b c:real. 0 < a /\\ 0 < b /\\ 0 < c ==> b = a + 1 ==> c = b + 1 ==> " +
+        "a * b * c = 8 * (a + b + c) ==> a * a + (b * b + c * c) = 77"
+    )
+  }
+
+  "A root the order picks from below" should "be proved through the cofactor's negation" in {
+    // The ideal holds `(x + 1) * (x - 1)`, and `x - 1` is negative here, so its sign is proved as
+    // `0 < -(x - 1)`: the second of the two the search asks.
+    proved("!x:real. x < 0 ==> x * x = 1 ==> x = neg 1")
+  }
+
+  "A root the order does not pick" should "be refused as outside the ideal and never as decided" in {
+    // `x * x = x` has the roots `0` and `1`, and nothing says which: the cofactor `x` has no sign
+    // under the hypotheses, so the order adds nothing and the refusal is the ideal's.
+    val error = refused("!x:real. x * x = x ==> x = 1")
+    error shouldBe a[OutsideTheIdeal]
+    error.standing shouldBe LogicError.Standing.Unread
+  }
+
   "x * x = 0 ==> x = 0" should "be proved through the radical, being outside the ideal itself" in {
     proved("!x:real. x * x = 0 ==> x = 0")
   }
@@ -113,9 +145,11 @@ class IdealSpec extends AnyFlatSpec with Matchers {
     refused("!x y:real. x = 1 / y ==> x * y = 1") shouldBe a[OutsideTheIdeal]
   }
 
-  "A claim needing the order" should "be refused as outside the ideal" in {
-    // True of the reals, a = 2 being the positive root, and out of reach of any ideal.
-    refused("!a:real. 0 < a ==> a * a = 4 ==> a = 2") shouldBe a[OutsideTheIdeal]
+  "A claim needing the order" should "be proved, the order saying which root is meant" in {
+    // This was the line drawn under the ideal alone, and was refused as outside it until the order
+    // joined: `a * a - 4` is `(a - 2) * (a + 2)`, and `a + 2` is positive under `0 < a`. The refusal
+    // the line now rests on is `x * x = x ==> x = 1` above, where neither root is excluded.
+    proved("!a:real. 0 < a ==> a * a = 4 ==> a = 2")
   }
 
   "A search that runs out of budget" should "say so, and not that the goal is outside the ideal" in {
