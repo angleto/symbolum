@@ -534,7 +534,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     recovered should not be empty
   }
 
-  "The audit of this repository's own library" should "find no unnecessary hypothesis" in {
+  "The audit of this repository's own library" should "find no unnecessary hypothesis" taggedAs Corpus in {
     // The right answer for a curated library, and worth asserting because it is the outcome the
     // machinery exists to be able to reach honestly. If a lemma is ever over-stated this fails and
     // names it.
@@ -545,7 +545,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "decide most of the proposals false, which is the machine working" in {
+  it should "decide most of the proposals false, which is the machine working" taggedAs Corpus in {
     // A dropped hypothesis that was load-bearing makes the claim false, and the procedure says so
     // with the point it fails at. That count is the evidence that the loop is running rather than
     // returning nothing because it does nothing.
@@ -873,7 +873,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     withAPoint shouldBe 81
   }
 
-  it should "leave the rest in the two buckets that mean different things" in {
+  it should "leave the rest in the two buckets that mean different things" taggedAs Corpus in {
     // `Open` is a proposal no procedure here settles: it might be true and might be false and the
     // system says neither. `Unreadable` is a proposal about a shape no procedure can take, which is
     // a different fact and is kept apart for the reason `Refutation` keeps seven outcomes apart.
@@ -1973,7 +1973,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
       findings.count(_.standing.contains(Novelty.Standing.Decided)) shouldBe findings.size
   }
 
-  "The proposals about the naturals" should "carry the point they fail at, which they did not" in {
+  "The proposals about the naturals" should "carry the point they fail at, which they did not" taggedAs Corpus in {
     // The measurement card `88463baa` was opened for, as an A/B on one line. `Model.Reals`
     // interprets the constants the theory of the reals declares and nothing about `num`, so
     // every claim naming `Sum`, `Power`, `Prod`, `SUC`, `NUM_ADD`, `NUM_MUL`, `NUM_LE` or
@@ -2441,7 +2441,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------ the false positive it produced */
 
-  "The certified weakening of `MUL_INVERSE`" should "not be read as an unnecessary hypothesis" in {
+  "The certified weakening of `MUL_INVERSE`" should "not be read as an unnecessary hypothesis" taggedAs Corpus in {
     // The finding of the first run, and the reason this test exists. Dropping `~(x = 0)` from
     // `MUL_INVERSE` gives `!x. x * inv x = 1`, which is FALSE at zero, and the prover reports it
     // `Conditional`: `Field` proves it while assuming exactly the hypothesis that was dropped.
@@ -2470,5 +2470,24 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // And the other side: what the substitution source earned is a gain rather than a defect, and
     // the two are different questions asked of the same word.
     earned.count(_.gained) shouldBe earned.size - 1
+  }
+
+  "The audit over a handful of lemmas" should "put every proposal to the prover and keep what it said" in {
+    // Unmarked, so that the coverage run reaches `audit`, which otherwise only the corpus pass above
+    // reaches. `FewLemmas` says why these lemmas; the assertions are about the shape of an audit
+    // and about the two outcomes the lemmas were chosen for, not about the library's counts.
+    val few = FewLemmas.propose
+    val audited = few.audit
+
+    few.library.names.distinct.sorted shouldBe FewLemmas.Names.sorted
+    audited.map(_.proposal) shouldBe few.proposals
+    audited.map(_.standing) shouldBe audited.map(_.reading.map(_.standing))
+    audited.map(_.proposal.source).toSet shouldBe Propose.Source.values.toSet
+
+    audited.filter(_.proposal.from == "NUM_LE_CASES").map(_.standing) shouldBe
+      Vector(Some(Novelty.Standing.False))
+    audited.filter(_.proposal.from == "ADD_ASSOC").map(_.standing) shouldBe
+      Vector(Some(Novelty.Standing.Immediate))
+    audited.exists(_.unnecessary) shouldBe false
   }
 }

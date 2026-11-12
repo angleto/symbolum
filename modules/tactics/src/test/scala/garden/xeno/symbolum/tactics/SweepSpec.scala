@@ -41,7 +41,7 @@ class SweepSpec extends AnyFlatSpec with Matchers {
   // bought was independence from a pass nobody else had touched, which `StandardSweep.entries`
   // keeps: it is the ledger as the first pass left it, taken before the second pass below writes.
 
-  "A second pass over the same ledger" should "settle nothing, which is the whole reason the file exists" in {
+  "A second pass over the same ledger" should "settle nothing, which is the whole reason the file exists" taggedAs Corpus in {
     // The property the ledger was built for and that nothing exercised over a generator's output
     // until this file. It is asserted as an identity rather than as a ratio: one claim re-settled
     // is one certification paid for twice, and there is no threshold at which that is acceptable.
@@ -57,7 +57,7 @@ class SweepSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "have written one entry per proposal it settled, and no more" in {
+  it should "have written one entry per proposal it settled, and no more" taggedAs Corpus in {
     // The file and the tally have to agree, or one of the two is describing a different run. The
     // generator can propose the same claim twice from two lemmas, so the comparison is against the
     // distinct statements rather than against the count.
@@ -68,7 +68,7 @@ class SweepSpec extends AnyFlatSpec with Matchers {
     entries.size shouldBe report.settled
   }
 
-  "Each source" should "report what it adds to the file per claim it settles" in {
+  "Each source" should "report what it adds to the file per claim it settles" taggedAs Corpus in {
     // The figure the ledger was supposed to make askable, and the reason `Propose` keeps its two
     // sources apart. It is printed and not asserted: it measures this repository's library and
     // moves when the library does. What IS asserted is that both sources answered, because a
@@ -115,5 +115,26 @@ class SweepSpec extends AnyFlatSpec with Matchers {
 
     mapped.map(_._2).distinct.size shouldBe 5
     mapped.toMap.apply(Novelty.Standing.Decided) shouldBe Ledger.Verdict.DecidedNotCertified
+  }
+
+  "A sweep over a handful of lemmas" should "settle each proposal once, and remember it on a second pass" in {
+    // Unmarked, so that the coverage run reaches `Sweep.run` on both of its paths, the one that asks
+    // the prover and the one that finds the answer in the ledger. The property is the one the
+    // corpus pass above asserts over the whole library, at a size that costs seconds.
+    val (ledger, _) = freshLedger()
+    val few = FewLemmas.propose
+
+    val first = Sweep(few, ledger).run()
+    first.offered shouldBe few.proposals.size
+    first.remembered shouldBe 0
+    first.settled should be > 0
+    ledger.entries.size shouldBe first.settled
+    first.tallies.map(_.source).toSet shouldBe Propose.Source.values.toSet
+    first.lines.size shouldBe first.tallies.size
+
+    val second = Sweep(few, ledger).run()
+    second.settled shouldBe 0
+    second.remembered shouldBe first.settled
+    second.remembered + second.tallies.map(_.refused).sum shouldBe second.offered
   }
 }

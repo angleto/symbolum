@@ -483,7 +483,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The guide's sweep example" should "run, and produce a line per source in the shape it prints" in {
+  "The guide's sweep example" should "run, and produce a line per source in the shape it prints" taggedAs Corpus in {
     // The numbers in the guide are a photograph of one run against this repository's library and
     // move when the library does, so what is pinned is the shape. A figure worth pinning would have
     // to be about something that does not change every time somebody proves a lemma.

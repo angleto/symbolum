@@ -202,7 +202,9 @@ lazy val commonSettings = Seq(
    * Not a convenience. The two commands ask different questions: coverage asks which lines the suite
    * exercises, and `ReachSpec` exercises the same lines as the other two corpus suites while costing
    * more than the rest of the build put together. Measured on 2026-09-11: the instrumented run was
-   * still inside it after seventeen minutes, where the whole suite without it takes about two.
+   * still inside it after seventeen minutes, where the whole suite without it takes about two. Since
+   * 2026-11-12 the passes over the whole library, `ProposeSpec`'s audit and `StandardSweep`, are
+   * marked the same way, and the tag's file has the measurement that moved them.
    *
    * What must NOT happen is the corpus being skipped by an ordinary run, because the figures in
    * `docs/evaluation.md` are meant to fail here rather than go quietly stale. Hence the condition on

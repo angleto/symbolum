@@ -115,7 +115,10 @@ session named would be a different tool with the same name.
 - **Coverage, with the floors enforced:** `tools/coverage-gate.sh`. This one
   **skips the corpus measurements**, which `tools/sbt test` does not: the two ask different questions, and
   `ReachSpec` exercises the same lines as the other corpus suites while costing more than the rest
-  of the build put together. `build.sbt` and `garden.xeno.symbolum.tactics.Corpus` carry the argument.
+  of the build put together. Since 2026-11-12 the library is a corpus too: the audit and the sweep
+  put every proposal the library yields to the prover, and they were the whole of why CI's coverage
+  job had been cancelled at ninety minutes since 2026-11-06. A pass over a handful of lemmas keeps
+  their lines under coverage. `build.sbt` and `garden.xeno.symbolum.tactics.Corpus` carry the argument.
 
   **It is a script and not the four sbt commands, because the four are a sequence and sbt stops at
   the first one that fails.** So `coverageReport` does not run when `test` is red, and until
