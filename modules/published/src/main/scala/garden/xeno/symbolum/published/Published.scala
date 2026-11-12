@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets
  * A document written in the proof language (`docs/language.md`) is checked by the kernel wherever it
  * is checked, and that makes it a theorem for whoever checked it. What publishing adds is that the
  * repository holds it: the document is one of [[Published.Names]], it is checked on every run of
- * the suite, its theorems are a [[Library]] a caller asks the way it asks the chain's, and
+ * the suite, its theorems are a `Library` a caller asks the way it asks the chain's, and
  * `docs/published.md` lists them and is compared with this code. `docs/adr/0070` is the decision,
  * this module is its third increment, and `docs/adr/0073` decides what a document sees and why the
  * published ones are made again in one theory.
