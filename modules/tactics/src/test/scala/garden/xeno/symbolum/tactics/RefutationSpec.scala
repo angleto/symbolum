@@ -581,7 +581,7 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
     val measure: Value = Mapping(
       entityType,
       {
-        case Element(_, index) => Some(Quantity(index.toDouble))
+        case Element(_, index) => Quantity.of(index.toDouble)
         case _ => None
       }
     )

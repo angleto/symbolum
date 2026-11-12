@@ -216,7 +216,8 @@ class RemedySpec extends AnyFlatSpec with Matchers {
   }
 
   it should "settle a witness whether it was sampled or solved" in {
-    Remedy.of(Refutation.Found(Map("x" -> Model.Quantity(1.5)), 12)) shouldBe a[Settled]
+    val point = Model.Quantity.of(1.5).getOrElse(fail("1.5 is a real"))
+    Remedy.of(Refutation.Found(Map("x" -> point), 12)) shouldBe a[Settled]
     Remedy.of(Refutation.Solved(Map("x" -> Rational(1, 2)))) shouldBe a[Settled]
   }
 
@@ -696,7 +697,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
 
   "Every model outcome and every verdict" should "produce a next step that says something" in {
     val outcomes: Vector[Refutation.Outcome] = Vector(
-      Refutation.Found(Map("x" -> Model.Quantity(1.0)), 4),
+      Refutation.Found(Map("x" -> Model.Quantity.of(1.0).getOrElse(fail("1.0 is a real"))), 4),
       Refutation.Survived(50),
       Refutation.NeverAsked(50),
       Refutation.PremisesNeverHeld(50),

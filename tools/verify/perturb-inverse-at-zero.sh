@@ -40,7 +40,8 @@ run "1-undefined" "$MODEL" \
 # Expect red on the same test, and NOT where one would guess: `inv x = 0` at 0 comes back
 # Some(true), because Evaluate.indistinguishable scales its tolerance by the larger magnitude and
 # an infinite scale calls Infinity equal to 0. The red is `x * inv x * x = x`, which is NaN there.
-# Observed so on 2026-11-10.
+# Observed so on 2026-11-10. Since card 2dc227a8 a Quantity is finite by construction, so the
+# infinity never becomes a value: expect the red on `inv x = 0` at 0 instead, coming back None.
 run "2-infinity" "$MODEL" \
   "$FIXED" \
   'unary(argument => Some(1.0 / argument))' \

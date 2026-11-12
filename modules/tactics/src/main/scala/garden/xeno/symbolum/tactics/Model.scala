@@ -74,8 +74,41 @@ object Model {
   /** A proposition's value. */
   final case class Truth(value: Boolean) extends Value
 
-  /** A real, as far as a `Double` is one. See the note above. */
-  final case class Quantity(value: Double) extends Value
+  /**
+   * A real, as far as a `Double` is one. See the note above.
+   *
+   * **Finite by construction**, and the constructor is private so that this is a property of the
+   * type rather than of every operation that produces one. A `Double` past its range is an infinity
+   * and an undefined operation is a NaN, and neither is a real: what one of them does to a
+   * comparison is erratic rather than merely wrong, measured on 2026-11-12 (card `2dc227a8`). The
+   * tolerance of [[Evaluate.indistinguishable]] scales by the larger magnitude, so an infinite
+   * operand admits any difference and `x * x = 0` at `x = 1e200` came back true; while
+   * `x * x + neg (x * x)` there is `Inf - Inf`, a NaN that every comparison answers false, so a
+   * claim that is a theorem came back false, which is the model refuting a theorem. Where the
+   * arithmetic leaves the reals the model has no value, and every caller already skips such a
+   * point. `EvaluateSpec` holds both directions and the control beside them.
+   *
+   * Until then `Power`, `Sum`, `Prod` and `real_of_num` checked for this one by one and addition,
+   * multiplication and `inv` did not, which is how a guard written per operation ends.
+   */
+  final case class Quantity private (value: Double) extends Value
+
+  object Quantity {
+
+    /** The real `value` is, or `None` when it is an infinity or a NaN. */
+    def of(value: Double): Option[Quantity] =
+      if (value.isNaN || value.isInfinite) None else Some(new Quantity(value))
+
+    val Zero: Quantity = new Quantity(0.0)
+    val One: Quantity = new Quantity(1.0)
+
+    /** Public whatever the constructor is, as `kernel.TyApp` says, so it checks as well. */
+    def fromProduct(product: Product): Quantity = product.productIterator.toList match {
+      case List(value: Double) =>
+        of(value).getOrElse(throw new IllegalArgumentException(s"not a real: $value"))
+      case _ => throw new IllegalArgumentException(s"not the fields of a quantity: $product")
+    }
+  }
 
   /** The `index`-th inhabitant of a declared type, and nothing else is known about it. */
   final case class Element(carrier: String, index: Int) extends Value
@@ -112,7 +145,7 @@ object Model {
   /** A one-argument function on reals, undefined where `operation` says so. */
   def unary(operation: Double => Option[Double]): Value =
     Mapping(real, {
-      case Quantity(argument) => operation(argument).map(Quantity.apply)
+      case Quantity(argument) => operation(argument).flatMap(Quantity.of)
       case _ => None
     })
 
@@ -194,7 +227,10 @@ object Model {
    *    `inv 0 = 0` comes back **true**, by accident, since [[Evaluate.indistinguishable]] scales
    *    its tolerance by the larger magnitude and an infinite scale admits any difference; while
    *    `x * inv x * x = x` at zero is `NaN`, which every comparison answers false, so a theorem
-   *    comes back false there. `tools/verify/perturb-inverse-at-zero.sh` reproduces both.
+   *    comes back false there. `tools/verify/perturb-inverse-at-zero.sh` reproduced both that day.
+   *    Since 2026-11-12 neither can happen, here or anywhere: [[Model.Quantity.of]] refuses an
+   *    infinity, so this alternative would now be the next one, a point without a value (card
+   *    `2dc227a8`).
    *  - Undefined, which is what this was until 2026-11-10 (card `354256d9`). It matched the theory
    *    while `MUL_INVERSE`, true only under `~(x = 0)`, was all the theory said; afterwards it said
    *    nothing where the chain says something, so every point reaching `inv 0` was skipped and a
@@ -211,10 +247,10 @@ object Model {
   val Reals: Model = Model(
     carriers = Map.empty,
     constants = Map(
-      Real.Zero -> Quantity(0.0),
-      Real.One -> Quantity(1.0),
-      Real.Addition -> binary((left, right) => Some(Quantity(left + right))),
-      Real.Multiplication -> binary((left, right) => Some(Quantity(left * right))),
+      Real.Zero -> Quantity.Zero,
+      Real.One -> Quantity.One,
+      Real.Addition -> binary((left, right) => Quantity.of(left + right)),
+      Real.Multiplication -> binary((left, right) => Quantity.of(left * right)),
       Real.Negation -> unary(argument => Some(-argument)),
       // Exact comparison on purpose: within the tolerance and away from zero the reciprocal is the
       // answer, and the tolerance belongs to equality between values, not to which branch runs.
@@ -301,7 +337,7 @@ object Model {
         onWholePair((left, right) => Some(Whole(if (left <= right) BigInt(0) else left - right))),
       Peano.NonStrictOrder -> onWholePair((left, right) => Some(Truth(left <= right))),
       Peano.StrictOrder -> onWholePair((left, right) => Some(Truth(left < right))),
-      Peano.EmbeddingName -> onWhole(n => finite(n.toDouble)),
+      Peano.EmbeddingName -> onWhole(n => Quantity.of(n.toDouble)),
       Series.PowerName -> Mapping(real, {
         case Quantity(base) => Some(onWhole(exponent => raised(base, exponent)))
         case _ => None
@@ -311,13 +347,9 @@ object Model {
     )
   )
 
-  /** A quantity, unless it is not one: an infinity and a NaN are places without a value. */
-  private def finite(value: Double): Option[Value] =
-    if (value.isNaN || value.isInfinite) None else Some(Quantity(value))
-
   /** `base ^ exponent`, declining where the exponent is unreasonable or the answer is not a number. */
   private def raised(base: Double, exponent: BigInt): Option[Value] =
-    if (exponent < 0 || exponent > Terms) None else finite(math.pow(base, exponent.toDouble))
+    if (exponent < 0 || exponent > Terms) None else Quantity.of(math.pow(base, exponent.toDouble))
 
   /**
    * `Sum` and `Prod`, which are the same fold over the same recurrence with a different unit.
@@ -345,7 +377,7 @@ object Model {
                   }
                 } yield combine(total, quantity)
               }
-              .flatMap(finite)
+              .flatMap(Quantity.of)
         })
       case _ => None
     })

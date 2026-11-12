@@ -48,6 +48,10 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
 
   private val bools: Vector[Value] = Vector(Truth(false), Truth(true))
 
+  /** A real written in a test, finite by inspection; `Quantity.of` says why it could fail. */
+  private def real(value: Double): Value =
+    Quantity.of(value).getOrElse(fail(s"$value is not a real"))
+
   /* ------------------------------------------------------------------- the naturals */
 
   private lazy val chain = Chain.standard
@@ -97,7 +101,7 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     val squares = Mapping(
       TyApp("num", Nil),
       {
-        case Whole(index) => Some(Quantity((index * index).toDouble))
+        case Whole(index) => Quantity.of((index * index).toDouble)
         case _ => None
       }
     )
@@ -113,7 +117,7 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     // Not a limit of the arithmetic: a screening loop that asked for a sum of a million terms per
     // candidate would have stopped being a screen. A point past the bound is a point where the
     // question was not asked, which every caller here already knows how to skip.
-    val constant = Mapping(TyApp("num", Nil), _ => Some(Quantity(1.0)))
+    val constant = Mapping(TyApp("num", Nil), _ => Some(Quantity.One))
 
     onNumbers("Sum (f:num->real) (n:num) = 1", Map("f" -> constant, "n" -> Whole(BigInt(Model.Terms)))) should
       not be empty
@@ -140,16 +144,16 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
         case other => fail(s"$name is $other")
       }
 
-    applied("SUC", Quantity(1.0)) shouldBe None
-    applied("NUM_ADD", Quantity(1.0)) shouldBe None
+    applied("SUC", real(1.0)) shouldBe None
+    applied("NUM_ADD", real(1.0)) shouldBe None
     applied("real_of_num", Truth(true)) shouldBe None
     applied("Power", Whole(BigInt(2))) shouldBe None
-    applied("Sum", Quantity(1.0)) shouldBe None
+    applied("Sum", real(1.0)) shouldBe None
 
     // And one step in: the outer application succeeds because the first argument is right, and the
     // inner one declines.
     applied("NUM_ADD", Whole(BigInt(1))) match {
-      case Some(Mapping(_, apply)) => apply(Quantity(2.0)) shouldBe None
+      case Some(Mapping(_, apply)) => apply(real(2.0)) shouldBe None
       case other => fail(s"NUM_ADD at one is $other")
     }
   }
@@ -159,14 +163,14 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     // printed as `Mapping(num,Lambda$0x78000150e898@13cd7ea5)` is a rumour rather than a
     // counterexample.
     Model.show(Whole(BigInt(7))) shouldBe "7"
-    Model.show(Quantity(1.5)) shouldBe "1.5"
+    Model.show(real(1.5)) shouldBe "1.5"
     Model.show(Truth(true)) shouldBe "true"
     Model.show(Element("agent", 2)) shouldBe "agent#2"
 
     val summand = Mapping(
       TyApp("num", Nil),
       {
-        case Whole(index) => Some(Quantity(index.toDouble))
+        case Whole(index) => Quantity.of(index.toDouble)
         case _ => None
       }
     )
@@ -185,7 +189,7 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "unfold the abbreviations rather than restate them" in {
-    val point = Map("x" -> Quantity(2.0), "y" -> Quantity(5.0))
+    val point = Map("x" -> real(2.0), "y" -> real(5.0))
 
     at("x - y = neg 3", point) shouldBe Some(true)
     at("x / y = x * inv y", point) shouldBe Some(true)
@@ -201,14 +205,54 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     // model says what the chain says (card `354256d9`). Three directions, because each alone is
     // satisfiable by a wrong model: the value itself, a claim false only at zero coming back false,
     // and claims true at zero coming back true, which is what an `Infinity` would break.
-    val zero = Map("x" -> Quantity(0.0))
+    val zero = Map("x" -> real(0.0))
 
-    at("inv x * x = 1", Map("x" -> Quantity(2.0))) shouldBe Some(true)
+    at("inv x * x = 1", Map("x" -> real(2.0))) shouldBe Some(true)
     at("inv x = 0", zero) shouldBe Some(true)
     at("inv x * x = 1", zero) shouldBe Some(false)
     at("x * inv x * x = x", zero) shouldBe Some(true)
     at("x / x = 0", zero) shouldBe Some(true)
-    at("inv (x - x) = 0", Map("x" -> Quantity(1.7))) shouldBe Some(true)
+    at("inv (x - x) = 0", Map("x" -> real(1.7))) shouldBe Some(true)
+  }
+
+  it should "have no answer where the arithmetic leaves the reals, not an accidental one" in {
+    // Card `2dc227a8`. A `Double` past its range is an infinity, and an infinity reaching a
+    // comparison is wrong in both directions, which is why both are asserted. The tolerance scales
+    // by the larger magnitude, so an infinite operand admits any difference and `x * x = 0` came
+    // back true; and `x * x + neg (x * x)` is `Inf - Inf`, a NaN, which every comparison answers
+    // false, so a claim true by reflexivity came back false: the model refuting a theorem. `inv` at
+    // a subnormal is a third road to the same place, and the order a fourth.
+    val huge = Map("x" -> real(1e200))
+    val tiny = Map("x" -> real(Double.MinPositiveValue))
+
+    at("x * x = 0", huge) shouldBe None
+    at("x * x + neg (x * x) = 0", huge) shouldBe None
+    at("inv x = 0", tiny) shouldBe None
+    at("0 < x * x", huge) shouldBe None
+
+    // The control, so that each `None` above is the overflow and not a point the model never reads:
+    // the same claims short of the overflow are answered, and answered right.
+    val large = Map("x" -> real(1e150))
+    at("x * x = 0", large) shouldBe Some(false)
+    at("x * x + neg (x * x) = 0", large) shouldBe Some(true)
+    at("0 < x * x", large) shouldBe Some(true)
+    at("inv x * x = 1", Map("x" -> real(1e-300))) shouldBe Some(true)
+  }
+
+  it should "construct no quantity that is not a real" in {
+    // The guarantee above is the constructor's rather than each operation's, so that a constant
+    // added later cannot hand an infinity to a comparison by forgetting to check for one. Until
+    // 2026-11-12 `Power`, `Sum`, `Prod` and `real_of_num` checked and addition, multiplication and
+    // `inv` did not.
+    Quantity.of(Double.PositiveInfinity) shouldBe None
+    Quantity.of(Double.NegativeInfinity) shouldBe None
+    Quantity.of(Double.NaN) shouldBe None
+    Quantity.of(Double.MaxValue).map(_.value) shouldBe Some(Double.MaxValue)
+    Quantity.of(Double.MinPositiveValue).map(_.value) shouldBe Some(Double.MinPositiveValue)
+
+    // `fromProduct` is public whatever the constructor is, so it is the other door, and it refuses.
+    an[IllegalArgumentException] should be thrownBy Quantity.fromProduct(Tuple1(Double.NaN))
+    Quantity.fromProduct(Tuple1(2.5)).value shouldBe 2.5
   }
 
   it should "keep the order and the equality from contradicting each other" in {
@@ -381,7 +425,7 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     at("x - 1 = x", wrong) shouldBe None
 
     // And the other way: a truth value asked to be a number.
-    at("p:bool /\\ p:bool", Map("p" -> Quantity(1.0))) shouldBe None
+    at("p:bool /\\ p:bool", Map("p" -> real(1.0))) shouldBe None
   }
 
   it should "have nothing to say when the model does not size the type" in {

@@ -742,7 +742,7 @@ object Refutation {
    */
   private def sampled(ty: Type, position: Int, step: Int): Option[Model.Value] =
     if (ty == naturalType) Some(Model.Whole(whole(position, step)))
-    else if (ty == Real.realType) Some(Model.Quantity(Discovery.coordinate(position, step)))
+    else if (ty == Real.realType) Model.Quantity.of(Discovery.coordinate(position, step))
     else if (ty == Type.Bool) Some(Model.Truth(Discovery.coordinate(position, step) > 0))
     else
       Type.destFun(ty) match {
