@@ -876,7 +876,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
   it should "leave the rest in the two buckets that mean different things" taggedAs Corpus in {
     // `Open` is a proposal no procedure here settles: it might be true and might be false and the
     // system says neither. `Unreadable` is a proposal about a shape no procedure can take, which is
-    // a different fact and is kept apart for the reason `Refutation` keeps seven outcomes apart.
+    // a different fact and is kept apart for the reason `Refutation` keeps its outcomes apart.
     //
     // The counts moved on 2026-09-11 and the direction is the finding: `Open` rose from 16 to 19 and
     // `Unreadable` fell from 6 to 3, by exactly three. `Prove` now asks its library before it asks a
@@ -1255,8 +1255,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // model rather than five: **nothing interprets `abs`**, so a claim about it is a claim the
     // sampler cannot evaluate at any point, and `Evaluate` answering nothing is not a refutation.
     // `abs x = x` with the sign dropped is **false**, and it is here rather than among the
-    // disproved for exactly that reason, which is the distinction `docs/adr/0005` keeps seven
-    // answers apart for.
+    // disproved for exactly that reason, which is the distinction `docs/adr/0005` keeps answers
+    // apart for.
     // 290 with the two residues `CONVERGES_MUL` produces, 2026-09-20; 292 with two of the three
     // the tail facts bring, 2026-09-21; 293 with the bounded monotone's one, the same day.
     //

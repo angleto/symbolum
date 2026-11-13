@@ -55,11 +55,12 @@ proof language reports it as the kind `premises-never-held`.
 - A `Survived` count from `counterexample` is now smaller wherever a premise fails at some points.
   Nothing pinned those counts. `RefutationSpec` asserts that the count lies strictly between zero
   and the number of points for `{0 < x * x * x}`, where the premise holds at about half of them.
-- The sentences that counted the outcomes as seven (`AGENTS.md`, `docs/proving.md`,
-  `docs/language.md`, `Abduce`, `Consistency`, `Elaborate`) now name them without a number. A count
-  written in prose next to a sealed trait the compiler already enumerates is a second copy that
-  nothing checks. `RemedySpec` keeps the list of every outcome and asserts its size, and that list
-  is where a ninth would have to be added.
+- The sentences that counted the outcomes as seven now name them without a number, outside the
+  decision records, which keep the count they had. The first pass reached six files and the
+  verification of the card found the rest on 2026-11-13: most were written across a line break,
+  which a search line by line does not see. A count written in prose next to a sealed trait the
+  compiler already enumerates is a second copy that nothing checks. `RemedySpec` keeps the list of
+  every outcome and asserts its size, and that list is where a ninth would have to be added.
 - `docs/adr/0005` keeps its text, as decision records here do. Its status line and its index row
   say that this record revises it.
 

@@ -76,8 +76,8 @@ import org.scalatest.matchers.should.Matchers
  * It does not detect unaccented prose in a language whose function words are not listed, and it
  * says nothing about user-facing text, which resolves from a catalogue by key and is a separate
  * obligation. A file that passes is not a file written in English. It is a file with no evidence of
- * being written in another one, and the distinction is the same one `Refutation` keeps seven
- * outcomes apart for.
+ * being written in another one, and the distinction is the same one `Refutation` keeps its outcomes
+ * apart for.
  */
 class SourceLanguageSpec extends AnyFlatSpec with Matchers {
 

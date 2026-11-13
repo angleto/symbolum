@@ -1750,7 +1750,7 @@ object Linarith {
    * exists at all. A goal settled by a square alone then reports an empty `hypotheses`, and empty
    * is already the honest answer for a goal that needed none of its premises; the two readings
    * are "nothing was needed" and "something was needed and it is not shown", and a diagnostic
-   * that cannot tell them apart is the failure `Refutation` keeps seven outcomes apart to avoid.
+   * that cannot tell them apart is the failure `Refutation` keeps its outcomes apart to avoid.
    *
    * `squares` carries the theorem's own statement, `0 <= (x + c) * (x + c)`, rather than the
    * atom it was completed over, because that is the proposition the certificate weighed and the

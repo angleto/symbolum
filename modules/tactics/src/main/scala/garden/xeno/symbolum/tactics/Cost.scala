@@ -31,7 +31,7 @@ import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, Order, Pr
  * Every field below is one of those answers with its own meaning kept. Nothing here merges two of
  * them into a verdict, and the outcome names which question was actually answered rather than
  * flattening "not proved" and "shown false" into one. That is the same discipline `Refutation`
- * keeps seven outcomes for, one level up: a report that said less than its parts would be worse
+ * keeps its outcomes apart for, one level up: a report that said less than its parts would be worse
  * than the parts.
  *
  * A field that is empty means the question did not arise, not that the answer was no.

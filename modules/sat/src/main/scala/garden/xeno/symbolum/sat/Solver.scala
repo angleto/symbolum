@@ -461,7 +461,8 @@ final class Solver private (problem: Problem, conflictLimit: Int) {
 object Solver {
 
   /**
-   * What a problem came out as, and the four are kept apart for the reason `Refutation` keeps seven.
+   * What a problem came out as, and the four are kept apart for the reason `Refutation` keeps its
+   * own.
    *
    * Collapsing [[Solver.Answer.Undecided]] into [[Solver.Answer.Satisfiable]] would turn "I could
    * not settle it" into "I settled it and it holds", which is the one way a solver can mislead a

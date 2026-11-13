@@ -190,9 +190,9 @@ final class Quantified private (val linarith: Linarith) {
    *
    * A wrong `Fails` is the worst answer this system can give. It is not an unsound theorem: nothing
    * is certified and `docs/adr/0005` says a verdict is not a proof. It is worse in use, because a
-   * reader deletes a true conjecture on the strength of it, and the whole argument for keeping
-   * seven answers in `Refutation` and five in `Cost` is that "I could not decide" and "I decided it
-   * is false" must never be the same output.
+   * reader deletes a true conjecture on the strength of it, and the whole argument for keeping the
+   * answers of `Refutation` and the outcomes of `Cost` apart is that "I could not decide" and "I
+   * decided it is false" must never be the same output.
    */
   private def atom(term: Term, bound: Set[Term]): Either[String, Dnf] =
     if (term == reals.logic.truth) Right(True)

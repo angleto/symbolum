@@ -92,7 +92,7 @@ final case class NotOfForm(expected: String, found: Term) extends LogicError {
  * is over the fragment that procedure decides, with everything the fragment cannot read standing in
  * as an unknown, so a true claim outside the fragment lands here: `0 < x /\ 0 < y ==> 0 <= x * x +
  * y * y - 2 * (x * y)` holds and is not a non-negative combination of those two premises. What
- * refutes a claim is `Refutation`, which keeps seven answers apart, and what files one as decided
+ * refutes a claim is `Refutation`, which keeps its answers apart, and what files one as decided
  * false is `Cost.Outcome.Fails`. This says a search finished and found nothing, which is a fact
  * about the question and never about the world.
  */
@@ -619,10 +619,11 @@ object LogicError {
   /**
    * What a refusal is about: the claim, the search, or the asking.
    *
-   * Three answers rather than one, for the reason `Refutation` keeps seven and `Cost.Outcome` keeps
-   * five: a caller that merges any two of them turns "I could not ask" into "I asked and the answer
-   * was no". This is that discipline at the layer where the procedures actually live, and it was
-   * the last one where the distinction was written in prose instead of in the type.
+   * Three answers rather than one, for the reason `Refutation` keeps its answers apart and
+   * `Cost.Outcome` keeps five: a caller that merges any two of them turns "I could not ask" into "I
+   * asked and the answer was no". This is that discipline at the layer where the procedures
+   * actually live, and it was the last one where the distinction was written in prose instead of in
+   * the type.
    *
    * Nested here rather than declared at the top of the package because `Novelty.Standing` already
    * exists one module up and a bare `Standing` in scope beside it would be a name a reader has to

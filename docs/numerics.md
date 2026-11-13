@@ -201,7 +201,7 @@ entry of `A v - lambda v` and is an observation about how well the numbers satis
 which is not the same act as proving that they do.
 
 **An absent answer is never reported as a negative one.** The outcomes are kept apart the way
-`Refutation` keeps its seven apart:
+`Refutation` keeps its own apart:
 
 | `Spectrum` | |
 |---|---|

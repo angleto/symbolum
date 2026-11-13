@@ -37,7 +37,7 @@ import garden.xeno.symbolum.theories.{Linarith, RealTheory}
  * a source for a premise the goal does not make. The second is the reason this is a
  * [[Provenance.Trail]] and not a map: a report that listed only what it could attribute would print
  * a tidy list of sources under a proof that also rests on something nobody said where they got.
- * That is the shape of mistake `Refutation` keeps seven outcomes apart to avoid, one level up, and
+ * That is the shape of mistake `Refutation` keeps its outcomes apart to avoid, one level up, and
  * it is the same mistake, an absent answer read as a negative one.
  *
  * **The last two were one list until 2026-09-10** and they call for opposite things. A citation for

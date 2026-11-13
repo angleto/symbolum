@@ -28,7 +28,7 @@ import garden.xeno.symbolum.theories.*
  * has no constant for: a square root, a factorial, a sum over a `Finset`. Neither is a proof that
  * was attempted and missed, and merging either into `Unsettled` would turn "I could not ask" into
  * "I asked and could not", which is the one way this measurement could mislead. It is the same
- * discipline `Refutation` keeps seven answers for.
+ * discipline `Refutation` keeps its answers apart for.
  *
  * `ForeignType` is the third of them and it is the interesting one, because it is the bucket that
  * should shrink. It did, on 2026-09-11: `Translate` gained a target type, so a statement whose

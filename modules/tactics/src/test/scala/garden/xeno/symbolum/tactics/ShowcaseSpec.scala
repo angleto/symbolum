@@ -87,7 +87,7 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
     // not read would print `unreadable` where the page promised a proof. This has never failed and
     // is the cheaper half of the pair below; it is here because the expensive half cannot
     // distinguish "the prover could not read it" from "the prover could not settle it", and those
-    // are the two answers this repository spends `Refutation`'s seven cases keeping apart.
+    // are the two answers this repository spends `Refutation`'s cases keeping apart.
     val unreadable = published.flatMap { case (name, claim) =>
       claim.filter(text => verdictOf(text).startsWith("unreadable")).map(_ => name)
     }

@@ -555,9 +555,9 @@ object Remedy {
   /**
    * What to do about a model search's outcome.
    *
-   * Seven outcomes and seven is the point: `Refutation` keeps them apart because collapsing any two
+   * The point is the distinction: `Refutation` keeps its outcomes apart because collapsing any two
    * turns "I could not ask" into "I asked and it was fine". They do not collapse here either, and
-   * the three that are not answers get three different next steps.
+   * each outcome that is not an answer about the claim gets a next step of its own.
    */
   def of(outcome: Refutation.Outcome): Remedy = outcome match {
     // Each value through `Model.show`, as the finite half below already was: a bare `toString`

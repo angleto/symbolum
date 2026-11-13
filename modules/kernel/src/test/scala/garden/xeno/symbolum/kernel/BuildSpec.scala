@@ -68,7 +68,7 @@ class BuildSpec extends AnyFlatSpec with Matchers {
 
   it should "be refused where the tree had no commit, rather than read as clean" in {
     // An absent commit is an absent answer: reading `unrecorded` as a commit nobody disagrees with
-    // is the collapse `Refutation` keeps its seven answers apart to avoid.
+    // is the collapse `Refutation` keeps its answers apart to avoid.
     Build.reproducibleCommit(classpath(record("kernel", "unrecorded"))) shouldBe
       Left(Vector("kernel: built from a tree with no commit to name"))
   }

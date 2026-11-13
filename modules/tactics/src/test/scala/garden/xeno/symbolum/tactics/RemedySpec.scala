@@ -257,7 +257,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     // screened against and where: at one step it disagrees with iteration, at none it agrees, past
     // `CollatzScreen.Exact` the comparison is one a double cannot make, and a candidate written in
     // a variable the screen does not substitute has no value at all. The last two are absences and
-    // neither is a disagreement, which is the distinction `Refutation` keeps seven outcomes for.
+    // neither is a disagreement, the distinction `Refutation` keeps its outcomes apart for.
     val n = Var("n")
 
     val disagrees = Remedy.of(CollatzScreen.screen(n, 1, Vector(BigInt(3))))

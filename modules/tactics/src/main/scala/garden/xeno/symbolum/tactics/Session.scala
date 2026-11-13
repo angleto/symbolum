@@ -522,7 +522,7 @@ object Session {
      * came back as `no lemma named AT_TWO` three lines under the cell that produced it. The message
      * was true of `Library.of(chain)` and false of the session, and the reader it was written for
      * is the one who had watched the theorem appear: that collapse, of "I did not look there" into
-     * "it does not exist", is the one `Refutation` keeps seven answers apart to avoid, made here in
+     * "it does not exist", is the one `Refutation` keeps its answers apart to avoid, made here in
      * the one command whose whole purpose is to be read.
      *
      * A session fact gets the **same** page a library lemma gets, from the same `Essay.of`, and the

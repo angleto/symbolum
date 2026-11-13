@@ -9,11 +9,11 @@ import org.scalatest.matchers.should.Matchers
  * The series procedure answers inside its fragment in both directions, and outside it refuses in
  * the one of five ways that says what was learned.
  *
- * The five refusals are the file's subject as much as the answers are, for the reason
- * `Refutation` keeps seven apart: a caller that reads "not in the fragment" as "decided against"
- * publishes a divergence nobody proved, and one that reads a refutation as "not in the fragment"
- * throws a theorem away. Each is asserted by its **standing**, which is what a caller branches on,
- * and not only by its sentence.
+ * The five refusals are the file's subject as much as the answers are, for the reason `Refutation`
+ * keeps its answers apart: a caller that reads "not in the fragment" as "decided against" publishes
+ * a divergence nobody proved, and one that reads a refutation as "not in the fragment" throws a
+ * theorem away. Each is asserted by its **standing**, which is what a caller branches on, and not
+ * only by its sentence.
  */
 class ConvergenceSpec extends AnyFlatSpec with Matchers {
 
