@@ -407,6 +407,16 @@ class ProveSpec extends AnyFlatSpec with Matchers {
         val message = Remedy.of(wider.reals, error).message
         message should include("NUM_DIV 17 5 = 3")
         message should include("what this evaluates to")
+        // And the value is a theorem a caller can read, not only a sentence: until 2026-11-12 it
+        // was the text of a `NotOfForm` and nothing else.
+        error match {
+          case EvaluatesOtherwise(_, evaluated) =>
+            wider.reals.show(evaluated.conclusion) shouldBe "NUM_DIV 17 5 = 3"
+            evaluated.hypotheses shouldBe empty
+            // Unread, as the `NotOfForm` it replaced was: Prove's answer about the goal does not move.
+            TacticError.standing(error) shouldBe Some(garden.xeno.symbolum.logic.LogicError.Standing.Unread)
+          case other => fail(s"expected the evaluated theorem, got $other")
+        }
     }
   }
 

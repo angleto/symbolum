@@ -162,8 +162,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Bounded.scala", "position") -> (Verdict.Number, "which instance of the walk"),
     ("Classical.scala", "variable.name") -> (Verdict.Name, "the variable's name"),
     ("Coding.scala", "name") -> (Verdict.Name, "the lemma's published name"),
-    ("Coefficient.scala", "reals.show(rule.lhs)") ->
-      (Verdict.Crossing, "a rewrite rule's left side, in the raiser's notation and not the reader's"),
     ("Collatz.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "MarkedClosed") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "statement") -> (Verdict.Name, "the lemma's published name"),
@@ -260,13 +258,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Fractran.scala", "q") -> (Verdict.Number, "its denominator"),
     ("Fractran.scala", "n * p / q") -> (Verdict.Number, "where that fraction actually sends the state"),
     ("Fractran.scala", "name") -> (Verdict.Name, "the fact's published name"),
-    ("Prove.scala", "reals.show(computed.conclusion)") ->
-      (Verdict.Crossing,
-        "the equation the constant actually evaluates to, rendered where the refusal is raised; " +
-          "this prover's signature IS the one the goal was read in, so the notation is right, and " +
-          "it is on this list because the repair every crossing gets applies here too -- a refusal " +
-          "that carried the theorem would let the surface render it and would let a caller read the " +
-          "value as a term rather than out of a sentence"),
     ("Value.scala", "constant") ->
       (Verdict.Name, "the constant a caller asked for a value of"),
     ("Value.scala", "reachable.mkString(\", \")") ->
@@ -298,12 +289,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Number, "the numerator of the rational a floor was asked about"),
     ("Value.scala", "denominator") ->
       (Verdict.Number, "its denominator, which has to be positive"),
-    ("Divisibility.scala", "parts._1") ->
-      (Verdict.Crossing, "the antecedent of an implication an assembly had to match"),
     ("Field.scala", "reals.show(denominator)") ->
       (Verdict.Crossing, "a denominator, in the raiser's notation"),
-    ("Forward.scala", "target") ->
-      (Verdict.Crossing, "the operator's own clause, in the building notation and not a reader's"),
     ("Language.scala", "Axioms(which)._1") -> (Verdict.Name, "an axiom's published name"),
     ("Language.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Truth.scala", "name") -> (Verdict.Name, "the lemma's published name"),
@@ -344,15 +331,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Text, "the statement's own source, which is what the caller wrote and not a rendering"),
     ("Inclusion.scala", "error.message") ->
       (Verdict.Text, "the inner refusal's own sentence, put behind the fact's name"),
-    ("Limit.scala", "Show.show(notation, target)") ->
-      (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
-    ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
-    ("Criteria.scala", "Show.show(notation, target)") ->
-      (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
-    ("Freshman.scala", "Show.show(notation, target)") ->
-      (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
-    ("Convergence.scala", "Show.show(notation, goal)") ->
-      (Verdict.Crossing, "the goal, rendered at the raiser against the widest notation it reads in"),
     ("Linarith.scala", "LinearForm.factorsOf(atom).length") ->
       (Verdict.Number, "how many unknowns a product has"),
     ("Linarith.scala", "degree") ->
@@ -375,8 +353,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Matrix.scala", "other.size") -> (Verdict.Number, "how many component equations arrived"),
     ("Modular.scala", "fallback") -> (Verdict.Crossing, "the disjunct an assembly was to reach"),
     ("Modular.scala", "name") -> (Verdict.Name, "the lemma's published name"),
-    ("Modular.scala", "parts._1") -> (Verdict.Crossing, "the antecedent of an implication"),
-    ("Modular.scala", "wanted") -> (Verdict.Crossing, "the equation an assembly was to reach"),
     ("Numbering.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Numeral.scala", "value") -> (Verdict.Number, "the numeral asked for, as a BigInt"),
     ("Order.scala", "left") ->
@@ -403,8 +379,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Parser.scala", "value") -> (Verdict.Number, "the numeral whose type is undetermined"),
     ("Peano.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Peano.scala", "AddMonotoneBoth") -> (Verdict.Name, "the lemma's published name"),
-    ("Polynomial.scala", "reals.show(rule.lhs)") ->
-      (Verdict.Crossing, "a rewrite rule's left side, in the raiser's notation"),
     ("Primes.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Product.scala", "chosenType") -> (Verdict.TypeOnly, "the type a choice was made at"),
     ("Product.scala", "name") -> (Verdict.Name, "the lemma's published name"),
@@ -416,17 +390,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Provenance.scala", "text") -> (Verdict.Text, "an assumption's own text, cited twice"),
     ("Quotient.scala", "what") ->
       (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
-    ("Rules.scala", "body") -> (Verdict.Crossing, "the pattern a target failed to match"),
     ("Rules.scala", "domain") -> (Verdict.TypeOnly, "the type an existential ranges over"),
-    ("Rules.scala", "leftCase.conclusion") ->
-      (Verdict.Crossing, "the conclusion the other case of a split reached"),
-    ("Rules.scala", "proposition") -> (Verdict.Crossing, "what a negation negates"),
-    ("Rules.scala", "reduced") ->
-      (Verdict.Crossing, "a beta-reduced application the caller's theorem had to match"),
     ("Semiring.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Successor.scala", "Natural.TypeName") -> (Verdict.Name, "the name of the type num"),
     ("Successor.scala", "leftValue") -> (Verdict.Number, "a numeral's value, as a BigInt"),
-    ("Transcendental.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
     ("Word.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     // The same site as the line above, in the development that joined the chain on 2026-09-16:
     // every published fact is compared against its written text before the development is handed

@@ -287,7 +287,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     val negative = force(LogicError.lift(Kernel.assume(notP)))
 
     classical.cases(p, positive, negative) match {
-      case Left(NotOfForm(_, _)) => succeed
+      case Left(ProvesOther(_, _)) => succeed
       case other => fail(s"expected a refusal about the two conclusions, got $other")
     }
   }

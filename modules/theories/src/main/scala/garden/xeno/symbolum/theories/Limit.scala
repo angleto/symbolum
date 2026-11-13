@@ -4674,7 +4674,7 @@ object Limit {
           // A replacement that found nothing would make the congruence below a no-op and hand back
           // the theorem it was given, which is what a rewrite that missed looks like from outside.
           _ <- if (replaced != theorem.conclusion) Right(())
-               else Left(NotOfForm(s"a proposition mentioning ${left}", theorem.conclusion))
+               else Left(NotMentioned(left, theorem.conclusion))
 
           template <- LogicError.lift(Term.abs(placeholder, replaced))
           congruence <- Conv.apTerm(template, equation)
@@ -4706,8 +4706,7 @@ object Limit {
     theorem: Kernel.Thm,
     target: Term
   ): Either[LogicError, Unit] =
-    if (theorem.conclusion == target) Right(())
-    else Left(NotOfForm(s"a proof of ${Show.show(notation, target)}", theorem.conclusion))
+    ProvesOther.unless(target, theorem).map(_ => ())
 
   /**
    * `|- !s. (!n. s n <= s (SUC n)) ==> !m n. NUM_LE m n ==> s m <= s n`

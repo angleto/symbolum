@@ -126,8 +126,7 @@ private[theories] object Criteria {
 
     /** Refuse naming both statements where a derivation and its target have drifted apart. */
     def landsOn(theorem: Kernel.Thm, target: Term): Either[LogicError, Kernel.Thm] =
-      if (theorem.conclusion == target) Right(theorem)
-      else Left(NotOfForm(s"a proof of ${Show.show(notation, target)}", theorem.conclusion))
+      ProvesOther.unless(target, theorem)
   }
 
   /**

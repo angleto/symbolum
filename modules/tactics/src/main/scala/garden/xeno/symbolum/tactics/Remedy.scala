@@ -302,6 +302,9 @@ object Remedy {
           "either the proposal is wrong or this prover cannot see that it is right"
       )
 
+    case EvaluatesOtherwise(_, evaluated) =>
+      RestateTheProblem(s"${write(evaluated.conclusion, reals)}, which is what this evaluates to")
+
     case ProvableOnlyUnder(_, conditions) =>
       AcceptTheConditions(conditions.map(write(_, reals)))
 
@@ -322,6 +325,18 @@ object Remedy {
     case FromKernel(error) => of(error, reals)
 
     case NotOfForm(expected, _) => RestateTheProblem(expected)
+
+    // The lemma is written here, against the reader's theory, which is the repair this case arrived
+    // with: as a `NotOfForm` the lemma had already been printed into `expected` by the kernel's
+    // printer, and the restatement asked for repeated that encoding.
+    case NoInstantiation(pattern, _) => RestateTheProblem(s"an instance of ${write(pattern, reals)}")
+
+    // The same repair for a rule handed a theorem of the wrong proposition: the one it wanted is
+    // written here, against the reader's theory, rather than frozen where the rule refused.
+    case ProvesOther(wanted, _) => RestateTheProblem(s"a proof of ${write(wanted, reals)}")
+
+    // A rewrite whose left side the proposition does not hold: restate it so that it does.
+    case NotMentioned(term, _) => RestateTheProblem(s"a proposition mentioning ${write(term, reals)}")
 
     // The atoms are written here and nowhere else, which is the whole of the repair this case
     // arrived with. `Propositional` is in `modules/logic` and knows no notation, so while it wrote

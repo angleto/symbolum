@@ -1626,8 +1626,7 @@ object Modular {
           .destImp(instance.conclusion)
           .toRight(NotOfForm("an implication", instance.conclusion))
         _ <-
-          if (parts._1 == equation.conclusion) Right(())
-          else Left(NotOfForm(s"a proof of ${parts._1}", equation.conclusion))
+          ProvesOther.unless(parts._1, equation)
         related <- rules.mp(instance, equation)
       } yield related
 
@@ -1650,8 +1649,7 @@ object Modular {
           .destImp(instance.conclusion)
           .toRight(NotOfForm("an implication", instance.conclusion))
         _ <-
-          if (parts._1 == equation.conclusion) Right(())
-          else Left(NotOfForm(s"a proof of ${parts._1}", equation.conclusion))
+          ProvesOther.unless(parts._1, equation)
         related <- rules.mp(instance, equation)
       } yield related
 
@@ -4883,8 +4881,7 @@ object Modular {
       closing <- vocabulary.rightOf(combined).flatMap(vocabulary.identity(_, target))
       equation <- Conv.trans(combined, closing)
       _ <-
-        if (equation.conclusion == wanted) Right(())
-        else Left(NotOfForm(s"a proof of $wanted", equation.conclusion))
+        ProvesOther.unless(wanted, equation)
 
       injected <- rules.disjIntro2(unused, equation)
       tail <- rules.conjIntro(dividesRight, injected)
@@ -4937,8 +4934,7 @@ object Modular {
       lifted <- Conv.apTerm(vocabulary.plus, backwards).flatMap(Conv.apThm(_, divisor))
       equation <- Conv.trans(toMiddle, lifted)
       _ <-
-        if (equation.conclusion == wanted) Right(())
-        else Left(NotOfForm(s"a proof of $wanted", equation.conclusion))
+        ProvesOther.unless(wanted, equation)
 
       injected <- rules.disjIntro1(unused, equation)
       tail <- rules.conjIntro(dividesRight, injected)

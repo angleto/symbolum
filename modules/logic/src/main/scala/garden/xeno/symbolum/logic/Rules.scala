@@ -406,7 +406,7 @@ final class Rules(val logic: Logic) {
     logic.destNot(negation.conclusion) match {
       case None => Left(NotOfForm("a negation", negation.conclusion))
       case Some(proposition) if positive.conclusion != proposition =>
-        Left(NotOfForm(s"a proof of ${proposition}", positive.conclusion))
+        Left(ProvesOther(proposition, positive.conclusion))
       case Some(proposition) =>
         for {
           schema <- notElimSchema
@@ -580,7 +580,7 @@ final class Rules(val logic: Logic) {
    *
    * == The refusals, and the guard after them ==
    *
-   *  - [[NotOfForm]] when no instantiation of the leading quantifiers gives `target` at all.
+   *  - [[NoInstantiation]] when no instantiation of the leading quantifiers gives `target` at all.
    *  - [[BeyondMatching]] when finding one is a higher-order question outside the fragment
    *    `Matching` decides, naming the variable to supply. The target may be an instance there.
    *  - [[Undetermined]] when the match succeeded but left a quantifier open, which happens when
@@ -678,7 +678,7 @@ final class Rules(val logic: Logic) {
   /**
    * Why no instantiation was found, told apart into the two things it can be.
    *
-   * An ordinary miss, where the target is not an instance, is [[NotOfForm]]. A question the
+   * An ordinary miss, where the target is not an instance, is [[NoInstantiation]]. A question the
    * matcher's fragment turned down is [[BeyondMatching]], and the difference is not wording: the
    * first tells the caller to restate, the second to supply the variable it names, and a target in
    * the second case may be an instance. `Matching.why` is asked only here, after the match has
@@ -687,7 +687,7 @@ final class Rules(val logic: Logic) {
   private def unmatched(variables: Set[FVar], body: Term, target: Term): LogicError =
     Matching.why(variables, body, target).filter(_.isTheFragmentsBoundary) match {
       case Some(refusal) => BeyondMatching(body, target, refusal)
-      case None => NotOfForm(s"an instance of $body", target)
+      case None => NoInstantiation(body, target)
     }
 
   /** The guard both of them end with: what comes back is the term that was asked for, or nothing. */
@@ -818,7 +818,7 @@ final class Rules(val logic: Logic) {
       case None => Left(NotOfForm("a disjunction", disjunction.conclusion))
       case Some((p, q)) =>
         if (leftCase.conclusion != rightCase.conclusion)
-          Left(NotOfForm(s"a case proving ${leftCase.conclusion}", rightCase.conclusion))
+          Left(ProvesOther(leftCase.conclusion, rightCase.conclusion))
         else
           for {
             leftImplies <- disch(p, leftCase)
@@ -890,7 +890,7 @@ final class Rules(val logic: Logic) {
           contraction <- Conv.betaRoot(applied)
           reduced <- rightOfConclusion(contraction)
           _ <- if (reduced == theorem.conclusion) Right(())
-               else Left(NotOfForm(s"a proof of $reduced", theorem.conclusion))
+               else Left(ProvesOther(reduced, theorem.conclusion))
 
           // The caller's theorem, restated over the unreduced application the definition uses.
           // Across the contraction rather than through a fresh assumption, so the hypotheses that

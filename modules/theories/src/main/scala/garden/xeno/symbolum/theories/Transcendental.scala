@@ -855,9 +855,9 @@ object Transcendental {
       cancels <- ring.prove("(0:real) - 0 = 0")
       sameAtom <- Conv.apTerm(exponential, cancels)
 
-      atZeroSine <- Conv.unfold(sineDefinition, List(zero)).flatMap(rewriteInProposition(sameAtom, _))
+      atZeroSine <- Conv.unfold(sineDefinition, List(zero)).flatMap(Limit.rewriteInProposition(sameAtom, _))
       atZeroCosine <-
-        Conv.unfold(cosineDefinition, List(zero)).flatMap(rewriteInProposition(sameAtom, _))
+        Conv.unfold(cosineDefinition, List(zero)).flatMap(Limit.rewriteInProposition(sameAtom, _))
 
       exponentialAtZeroTerm <- Parser.term(theory, notation, "exp (0:real)", values)
 
@@ -884,15 +884,15 @@ object Transcendental {
       sum <- linarith
         .prove("!a:real. !b:real. (a + b) / 2 + (a - b) / 2 = a")
         .flatMap(rules.specAll(_, List(positive, negative)))
-        .flatMap(rewriteInProposition(foldedCosine, _))
-        .flatMap(rewriteInProposition(foldedSine, _))
+        .flatMap(Limit.rewriteInProposition(foldedCosine, _))
+        .flatMap(Limit.rewriteInProposition(foldedSine, _))
         .flatMap(rules.gen(x, _))
 
       difference <- linarith
         .prove("!a:real. !b:real. (a + b) / 2 - (a - b) / 2 = b")
         .flatMap(rules.specAll(_, List(positive, negative)))
-        .flatMap(rewriteInProposition(foldedCosine, _))
-        .flatMap(rewriteInProposition(foldedSine, _))
+        .flatMap(Limit.rewriteInProposition(foldedCosine, _))
+        .flatMap(Limit.rewriteInProposition(foldedSine, _))
         .flatMap(rules.gen(x, _))
     } yield Map(
       HyperbolicSineAtZero -> sineIsZero,
@@ -1021,7 +1021,7 @@ object Transcendental {
       isZero <- Parser.proposition(theory, notation, "n:num = 0")
       fromZero <- for {
         assumed <- LogicError.lift(Kernel.assume(isZero))
-        carried <- rewriteInProposition(assumed, assumedGuard)
+        carried <- Limit.rewriteInProposition(assumed, assumedGuard)
         successorZero <- Parser.term(theory, notation, "SUC (0:num)", numbers)
         collapsed <- rules.spec(successorZero, atMostZero).flatMap(rules.mp(_, carried))
         zero <- Parser.term(theory, notation, "0:num", numbers)
@@ -3198,51 +3198,6 @@ object Transcendental {
       case Some(App(operator, _)) => Right(operator)
       case _ => Left(NotOfForm("an equation whose left side is an application", theorem.conclusion))
     }
-
-  /**
-   * Rewrite one subterm of a proposition with an equation, wherever in it that subterm occurs.
-   *
-   * The same helper `Limit` carries and for the same reason; it is duplicated rather than shared
-   * because the two developments are separate links and a shared private helper would have to
-   * become public surface on one of them for the other to reach it.
-   */
-  private def rewriteInProposition(
-    equation: Kernel.Thm,
-    theorem: Kernel.Thm
-  ): Either[LogicError, Kernel.Thm] =
-    Term.destEq(equation.conclusion) match {
-      case None => Left(NotOfForm("an equation", equation.conclusion))
-      case Some((left, _)) =>
-        val placeholder = Conv.freshVariable(
-          "u",
-          Term.typeOf(left),
-          Term.freeVariables(theorem.conclusion) ++ Term.freeVariables(equation.conclusion)
-        )
-
-        for {
-          replaced <- LogicError.lift(replace(theorem.conclusion, left, placeholder))
-          _ <- if (replaced != theorem.conclusion) Right(())
-               else Left(NotOfForm(s"a proposition mentioning $left", theorem.conclusion))
-          template <- LogicError.lift(Term.abs(placeholder, replaced))
-          congruence <- Conv.apTerm(template, equation)
-          reduced <- Conv.betaSides(congruence)
-          moved <- LogicError.lift(Kernel.eqMp(reduced, theorem))
-        } yield moved
-    }
-
-  /** Every occurrence of `target` inside `term`, replaced, without descending under a binder. */
-  private def replace(term: Term, target: Term, replacement: Term): Either[KernelError, Term] =
-    if (term == target) Right(replacement)
-    else
-      term match {
-        case App(fn, argument) =>
-          for {
-            left <- replace(fn, target, replacement)
-            right <- replace(argument, target, replacement)
-            joined <- Term.app(left, right)
-          } yield joined
-        case other => Right(other)
-      }
 
   private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
     Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))

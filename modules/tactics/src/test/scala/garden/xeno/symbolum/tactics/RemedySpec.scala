@@ -642,6 +642,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       EscapingVariable(Term.variable("w", realType), "the conclusion"),
       MissingHypothesis(x, "eliminating an existential"),
       Undetermined(Term.variable("y", realType)),
+      NoInstantiation(x, Term.variable("y", realType)),
+      ProvesOther(x, Term.variable("y", realType)),
+      NotMentioned(x, Term.variable("y", realType)),
       BeyondMatching(x, x, Matching.Refusal.ArgumentIsNotABinder(Term.variable("P", Type.fun(realType, Type.Bool)))),
       PartialInstance(5, 4, x),
       // The driver below the reals, which holds no closer and says so. It is in the census as a
@@ -675,7 +678,8 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       BeyondBudget("2 * 2", BigInt(2)),
       NotLegible(x, None),
       NotLegible(x, Some(x)),
-      ProvableOnlyUnder(x, Vector(x))
+      ProvableOnlyUnder(x, Vector(x)),
+      EvaluatesOtherwise(x, Kernel.refl(x))
     )
 
   "Every refusal in the census" should "produce a next step that says something" in {
@@ -702,6 +706,35 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     remedies.count(_.isInstanceOf[ExtendTheTheory]) shouldBe 2
     remedies.count(_.isInstanceOf[ReportADefect]) shouldBe 7
     remedies.count(_.isInstanceOf[RestateTheProblem]) shouldBe 8
+  }
+
+  "A lemma the target is no instance of" should "be restated with the lemma in the reader's notation" in {
+    // The lemma arrives as a term and is written here against the reader's theory, so a numeral in
+    // it reads as a numeral. As a `NotOfForm` it arrived already printed by the kernel's printer,
+    // and the `2` below came back as its binary encoding.
+    val pattern = force(reals.term("x:real + 2 = 2 + x"))
+    val target = force(reals.term("x:real = x"))
+
+    Remedy.of(reals, NoInstantiation(pattern, target)) shouldBe
+      RestateTheProblem("an instance of x + 2 = 2 + x")
+    Remedy.of(reals, NoInstantiation(pattern, target)).message should not include "BIT0"
+  }
+
+  "A rule handed a theorem of the wrong proposition" should "be restated with the one it wanted, in the reader's notation" in {
+    val wanted = force(reals.term("x:real + 2 = 2 + x"))
+    val found = force(reals.term("x:real = x"))
+
+    Remedy.of(reals, ProvesOther(wanted, found)) shouldBe RestateTheProblem("a proof of x + 2 = 2 + x")
+    Remedy.of(reals, ProvesOther(wanted, found)).message should not include "BIT0"
+  }
+
+  "A rewrite whose left side the proposition does not hold" should "name that side in the reader's notation" in {
+    val term = force(reals.term("x:real + 2"))
+    val proposition = force(reals.term("x:real = x"))
+
+    Remedy.of(reals, NotMentioned(term, proposition)) shouldBe
+      RestateTheProblem("a proposition mentioning x + 2")
+    NotMentioned(term, proposition).render(_ => "T") shouldBe "expected a proposition mentioning T, found T"
   }
 
   "A lemma the matcher could not specialise" should "ask for the variable it could not decide, by name" in {

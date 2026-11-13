@@ -675,10 +675,7 @@ final class Polynomial private (
 
   /** Instantiate a lemma at the root of a term, refusing when it does not apply. */
   private def at(rule: Rewrite.Rule, term: Term): Either[LogicError, Kernel.Thm] =
-    Matching.matchTerm(rule.variables, rule.lhs, term) match {
-      case None => Left(NotOfForm(s"a term ${reals.show(rule.lhs)} matches", term))
-      case Some(found) => LogicError.lift(found.instance(rule.theorem))
-    }
+    Rewrite.instanceAt(rule, term)
 
   private def sum(left: Term, right: Term): Either[LogicError, Term] =
     apply2(syntax.plus, left, right)

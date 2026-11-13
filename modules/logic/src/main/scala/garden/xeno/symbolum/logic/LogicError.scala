@@ -1,6 +1,6 @@
 package garden.xeno.symbolum.logic
 
-import garden.xeno.symbolum.kernel.{FVar, KernelError, Term}
+import garden.xeno.symbolum.kernel.{FVar, Kernel, KernelError, Term}
 
 /**
  * Why a derived rule refused.
@@ -506,11 +506,95 @@ final case class Undetermined(variable: FVar) extends LogicError {
 }
 
 /**
+ * No instantiation of a lemma's leading quantifiers gives the target: the matcher decided the
+ * question and the answer is no.
+ *
+ * Its own case rather than a [[NotOfForm]] whose description interpolates the lemma, which is what
+ * it was until 2026-11-12. A description is a `String`, so the lemma was frozen into it where the
+ * refusal was raised, by the kernel's printer, and a proof document writing `by exact NUM_ADD_SYM`
+ * at `x + y = y + x` read `expected an instance of (((NUM_ADD n) m) = ((NUM_ADD m) n)), found
+ * x + y = y + x`: the half carried as a term went through the reader's notation and the half
+ * carried as text could not. Carried as a term, both halves are rendered by the same `show`.
+ *
+ * `pattern` is the lemma's body with the quantifiers taken off, which is what was matched, rather
+ * than the theorem: the variables in it are the ones the reader would have to choose. `Coefficient`
+ * and `Polynomial` raise it too, where a rewrite rule's left side does not match a term at its root,
+ * and there `pattern` is that left side.
+ *
+ * `Unread`, as [[NotOfForm]] is: the lemma does not reach the target, and nothing about whether
+ * the target holds was learned.
+ */
+final case class NoInstantiation(pattern: Term, target: Term) extends LogicError {
+  def render(show: Term => String): String =
+    s"expected an instance of ${show(pattern)}, found ${show(target)}"
+
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+/**
+ * A rule needed a theorem of one proposition and was handed a theorem of another.
+ *
+ * Raised where the rule already knows the proposition it needs: [[Rules.notElim]] wants the
+ * proposition the negation negates, [[Rules.disjElim]] wants the right case to conclude what the
+ * left case concluded, and [[Rules.existsIntro]] wants the predicate at the witness; above this
+ * module, `Modular` and `Divisibility` raise it where an assembly reached another equation, and
+ * `Forward` where an operator's clause came back in another spelling. Until 2026-11-12 each was a
+ * [[NotOfForm]] whose description interpolated `wanted`, so the proposition the reader had to
+ * supply was printed by the kernel and only the one they had supplied went through their notation.
+ * [[NoInstantiation]] is the same repair at `specTo`.
+ *
+ * `Unread`, as [[NotOfForm]] is: the call was assembled wrongly, and nothing about either
+ * proposition was learned.
+ */
+final case class ProvesOther(wanted: Term, found: Term) extends LogicError {
+  def render(show: Term => String): String =
+    s"expected a proof of ${show(wanted)}, found a proof of ${show(found)}"
+
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+object ProvesOther {
+
+  /**
+   * The theorem when it concludes exactly `wanted`, and this refusal naming both when it does not.
+   *
+   * The check every assembly ends on before it hands a theorem back as the one it was asked for:
+   * a derivation that drifted, through a rewrite in another direction or a lemma at another
+   * instance, still produces a true theorem, and only a comparison with the statement it was
+   * meant to reach tells the two apart. Until 2026-11-13 the developments above this module each
+   * wrote that comparison out as a two-line branch whose refusing half no test reached, since it
+   * fires only when the code around it is wrong; one definition, tested from both sides, is what
+   * makes the refusing half something a suite has executed.
+   */
+  def unless(wanted: Term, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    if (theorem.conclusion == wanted) Right(theorem)
+    else Left(ProvesOther(wanted, theorem.conclusion))
+}
+
+/**
+ * A rewrite by an equation was asked of a proposition in which the equation's left side does not
+ * occur, so replacing it would change nothing.
+ *
+ * `Limit` and `Transcendental` raise it before building the congruence, because a replacement that
+ * found nothing hands back the theorem it was given, which from outside looks like a rewrite that
+ * succeeded. Until 2026-11-12 it was a [[NotOfForm]] reading "a proposition mentioning" and the
+ * term as the kernel prints it; carried as two terms, both reach the reader's notation.
+ *
+ * `Unread`: nothing about the proposition was learned, only that this rewrite does not apply.
+ */
+final case class NotMentioned(term: Term, proposition: Term) extends LogicError {
+  def render(show: Term => String): String =
+    s"expected a proposition mentioning ${show(term)}, found ${show(proposition)}"
+
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+/**
  * A lemma was not specialised at a target because deciding whether the target is an instance of it
  * is higher-order matching outside the fragment `Matching` decides.
  *
- * Its own refusal rather than a [[NotOfForm]], and the difference is what the caller is told.
- * `NotOfForm("an instance of ...")` says the target is not an instance, and here nothing was
+ * Its own refusal rather than a [[NoInstantiation]], and the difference is what the caller is told.
+ * [[NoInstantiation]] says the target is not an instance, and here nothing was
  * decided about that: the target may be one. `P (SUC n)` under a binder for `n`, against
  * `SUC n < 3`, **is** an instance, at `P := \m. m < 3`, and the matcher turns it down, because `P`
  * is applied to `SUC n` with nothing earlier to decide it, and a variable applied to a term that

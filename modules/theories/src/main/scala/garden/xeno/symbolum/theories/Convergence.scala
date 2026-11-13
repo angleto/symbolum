@@ -475,8 +475,7 @@ final class Convergence private (
     }
 
   private def sameAs(goal: Term, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
-    if (theorem.conclusion == goal) Right(theorem)
-    else Left(NotOfForm(s"a proof of ${Show.show(notation, goal)}", theorem.conclusion))
+    ProvesOther.unless(goal, theorem)
 
   private val zero: Term = Parser.term(theory, notation, "0:real", values).fold(
     error => throw new IllegalStateException(s"the reals do not read zero: ${error.message}"),

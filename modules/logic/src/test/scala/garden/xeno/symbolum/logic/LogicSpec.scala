@@ -367,7 +367,7 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     val unreachable = force(Term.eq(a, b))
 
     rules.specTo(firstThenSecond, unreachable) should matchPattern {
-      case Left(NotOfForm(_, _)) =>
+      case Left(NoInstantiation(_, `unreachable`)) =>
     }
   }
 
@@ -429,7 +429,7 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     // `!P. a = a ==> !x. P (s x)` against `a = a ==> !x. s x = a`, which IS an instance at
     // `P := \y. y = a`. Here `P` has no earlier occurrence to be decided by, so this is the
     // fragment's question: a variable applied to a term that is not a binder, which has several
-    // answers in general. `NotOfForm("an instance of ...")` would say the opposite of what is
+    // answers in general. `NoInstantiation` would say the opposite of what is
     // true; the refusal names the variable instead, which is what the caller has to supply.
     val principle = force(
       Kernel.assume(
@@ -484,6 +484,25 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     instance.conclusion shouldBe wanted
     instance.hypotheses shouldBe quantified.hypotheses
     instance.hypotheses shouldBe List(p)
+  }
+
+  it should "refuse a target that is no instance by carrying the lemma as a term, not as text" in {
+    // Until 2026-11-12 this was a `NotOfForm` whose description interpolated the lemma, so the
+    // lemma was printed by the kernel where the refusal was raised and only the target reached the
+    // caller's `show`. Rendered through a `show` that writes every term the same way, a sentence
+    // still holding the kernel's printing of either half would not come out as the one below.
+    val over = Term.variable("x", alpha)
+    val also = Term.variable("y", alpha)
+    val lemma = force(rules.genAll(Kernel.refl(applied(over, also)), List(over, also)))
+    val pattern = force(Logic.stripForall(lemma.conclusion))._2
+
+    rules.specTo(lemma, p) match {
+      case Left(refusal @ NoInstantiation(written, target)) =>
+        written shouldBe pattern
+        target shouldBe p
+        refusal.render(_ => "T") shouldBe "expected an instance of T, found T"
+      case other => fail(s"expected the lemma and the target as terms, got $other")
+    }
   }
 
   it should "give the target and not something else, even where two instantiations reach it" in {
@@ -684,9 +703,14 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     val assumed = force(Kernel.assume(force(logic.mkDisj(p, q))))
 
     rules
-      .disjElim(assumed, force(Kernel.assume(p)), force(Kernel.assume(q)))
-      .left
-      .map(_.getClass) shouldBe Left(classOf[NotOfForm])
+      .disjElim(assumed, force(Kernel.assume(p)), force(Kernel.assume(q))) match {
+      // Both propositions as terms, so a caller with a theory renders both: until 2026-11-12 the
+      // left case's conclusion was written into a description by the kernel's printer.
+      case Left(refusal @ ProvesOther(wanted, found)) =>
+        (wanted, found) shouldBe (p, q)
+        refusal.render(_ => "T") shouldBe "expected a proof of T, found a proof of T"
+      case other => fail(s"expected the two conclusions as terms, got $other")
+    }
   }
 
   it should "refuse to eliminate something that is not a disjunction" in {
@@ -730,8 +754,13 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     val y = Term.variable("y", TyVar("A"))
     val predicate = lam(x, force(Term.eq(x, y)))
 
-    rules.existsIntro(predicate, y, force(Kernel.assume(p))).left.map(_.getClass) shouldBe
-      Left(classOf[NotOfForm])
+    rules.existsIntro(predicate, y, force(Kernel.assume(p))) match {
+      case Left(refusal @ ProvesOther(wanted, found)) =>
+        wanted shouldBe force(Term.eq(y, y))
+        found shouldBe p
+        refusal.render(_ => "T") shouldBe "expected a proof of T, found a proof of T"
+      case other => fail(s"expected the predicate at the witness as a term, got $other")
+    }
   }
 
   it should "be eliminated over a witness that appears nowhere else" in {

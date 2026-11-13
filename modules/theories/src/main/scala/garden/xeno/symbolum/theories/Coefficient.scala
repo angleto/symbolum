@@ -660,12 +660,7 @@ final class Coefficient private (
 
   /** Instantiate a rewrite rule at the root of a term, refusing when it does not apply. */
   private def at(name: String, term: Term): Either[LogicError, Kernel.Thm] =
-    rules.get(name).toRight(MissingDefinition(name)).flatMap { rule =>
-      Matching.matchTerm(rule.variables, rule.lhs, term) match {
-        case None => Left(NotOfForm(s"a term ${reals.show(rule.lhs)} matches", term))
-        case Some(found) => LogicError.lift(found.instance(rule.theorem))
-      }
-    }
+    rules.get(name).toRight(MissingDefinition(name)).flatMap(Rewrite.instanceAt(_, term))
 
   private def sum(left: Term, right: Term): Either[LogicError, Term] =
     apply2(syntax.plus, left, right)

@@ -412,6 +412,21 @@ object Rewrite {
     }
 
   /**
+   * The rule's instance at the root of the term, refused where the rule does not apply there.
+   *
+   * [[rewriteConv]] answers a term the rule does not match with its reflexivity, which is what a
+   * pass over a whole term wants and what a caller who chose the rule for this term does not: to
+   * it a miss means the term is not the shape it assumed, and a reflexivity handed back would be
+   * a step that silently did nothing. The refusal carries the rule's left side and the term, so
+   * both are printed through the reader's notation.
+   */
+  def instanceAt(rule: Rule, term: Term): Either[LogicError, Kernel.Thm] =
+    Matching.matchTerm(rule.variables, rule.lhs, term) match {
+      case None => Left(NoInstantiation(rule.lhs, term))
+      case Some(found) => LogicError.lift(found.instance(rule.theorem))
+    }
+
+  /**
    * Rewrite at the root, but only when the result is smaller in the given order.
    *
    * This is how a rule that holds in both directions becomes usable. `x + y = y + x` applies to

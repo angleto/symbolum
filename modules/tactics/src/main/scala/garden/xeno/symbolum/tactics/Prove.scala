@@ -521,14 +521,7 @@ final class Prove private (
             TacticError.lift(table.at(left)).flatMap { computed =>
               if (computed.conclusion == goal) Right(computed)
               else
-                Left(
-                  FromLogic(
-                    NotOfForm(
-                      s"${reals.show(computed.conclusion)}, which is what this evaluates to",
-                      goal
-                    )
-                  )
-                )
+                Left(EvaluatesOtherwise(goal, computed))
             }
         }
     }

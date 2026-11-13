@@ -63,6 +63,14 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     Rewrite.changed(theorem) shouldBe false
   }
 
+  "An instance at the root" should "be the rule's instance where it matches and a refusal naming both where not" in {
+    val rule = assumedRule(u, w)
+    force(Rewrite.instanceAt(rule, u)).conclusion shouldBe force(Term.eq(u, w))
+    // Where `rewriteConv` hands back a reflexivity, this refuses: a caller who chose the rule for
+    // this term reads a miss as the term not being the shape it assumed.
+    Rewrite.instanceAt(rule, w) shouldBe Left(NoInstantiation(u, w))
+  }
+
   /* ------------------------------------------------- what a pass over nothing costs */
 
   "A pass that changes nothing" should "build no proof of it" in {

@@ -48,7 +48,14 @@ class NotElimSpec extends AnyFlatSpec with Matchers {
       force(LogicError.lift(Kernel.assume(q)))
     )
 
-    outcome.isLeft shouldBe true
+    // And the refusal carries both propositions as terms, so the one the caller should have
+    // supplied reaches them in their own notation rather than in the kernel's printing.
+    outcome match {
+      case Left(refusal @ ProvesOther(wanted, found)) =>
+        (wanted, found) shouldBe (p, q)
+        refusal.render(_ => "T") shouldBe "expected a proof of T, found a proof of T"
+      case other => fail(s"expected the negated proposition and the one proved, got $other")
+    }
   }
 
   it should "still refuse a first argument that is not a negation at all" in {

@@ -82,9 +82,9 @@ class ElaborateRoutesSpec extends AnyFlatSpec with Matchers {
       ("first where nothing settles", theorem("!x:real. x = x + 1", "  fix x\n  by first ring | linarith"), Status.Incomplete, 4,
         "none of the alternatives settled the goal: "),
       ("a method proving something else", theorem("!x:real. !y:real. x + y = y + x", "  fix x y\n  by exact NUM_ADD_SYM"), Status.Incomplete, 4,
-        // Only the half of the message that is printed through the notation: the lemma's half is
-        // printed as a raw term by `Rules.specTo`, which is a defect of that message and not pinned here.
-        "found x + y = y + x")
+        // Both halves through the notation: `Rules.specTo` carries the lemma's body as a term, so the
+        // report prints it the way it prints the goal rather than as the raw term it once was.
+        "expected an instance of n + m = m + n, found x + y = y + x")
     )
     val wrong = cases.flatMap { case (what, text, status, line, message) =>
       val report = elaborate.check(text)

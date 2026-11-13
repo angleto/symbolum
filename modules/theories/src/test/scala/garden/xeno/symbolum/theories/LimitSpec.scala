@@ -1105,4 +1105,14 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     Real.spent(force(limit.sumOfMagnitudes)) should not contain completeness
     Real.spent(force(limit.stretchOfMagnitudes)) should not contain completeness
   }
+
+  "Rewriting inside a proposition" should "refuse an equation whose left side the proposition never mentions" in {
+    // A replacement that found nothing makes the congruence a no-op and hands back the theorem it
+    // was given, which from outside looks like a rewrite that worked. The refusal carries both terms.
+    val equation = force(LogicError.lift(Kernel.assume(proposition("(x:real) = y"))))
+    val elsewhere = proposition("(0:real) < z")
+    val left = Term.destEq(equation.conclusion).map(_._1).getOrElse(fail("the assumption is no equation"))
+    Limit.rewriteInProposition(equation, force(LogicError.lift(Kernel.assume(elsewhere)))) shouldBe
+      Left(NotMentioned(left, elsewhere))
+  }
 }

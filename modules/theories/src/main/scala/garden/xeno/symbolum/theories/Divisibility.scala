@@ -443,8 +443,7 @@ object Divisibility {
         parts <- logic
           .destImp(instance.conclusion)
           .toRight(NotOfForm("an implication", instance.conclusion))
-        _ <- if (parts._1 == equation.conclusion) Right(())
-             else Left(NotOfForm(s"a proof of ${parts._1}", equation.conclusion))
+        _ <- ProvesOther.unless(parts._1, equation)
         related <- rules.mp(instance, equation)
       } yield related
 

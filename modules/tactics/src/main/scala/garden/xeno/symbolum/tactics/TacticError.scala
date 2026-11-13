@@ -1,7 +1,7 @@
 package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.Expr
-import garden.xeno.symbolum.kernel.Term
+import garden.xeno.symbolum.kernel.{Kernel, Term}
 import garden.xeno.symbolum.logic.LogicError
 
 /**
@@ -105,6 +105,26 @@ final case class ProvableOnlyUnder(goal: Term, conditions: Vector[Term]) extends
       conditions.map(show).mkString(" and ")
 }
 
+/**
+ * A defined constant, evaluated at the goal's arguments, has another value than the goal says:
+ * `evaluated` is the theorem the table proved, `NUM_DIV 17 5 = 3`, against the goal
+ * `NUM_DIV 17 5 = 4`.
+ *
+ * Carried as the theorem rather than as a sentence. Until 2026-11-12 `Prove` wrote the evaluated
+ * equation into a `NotOfForm` description with its own signature's `show`, which was the right
+ * notation and still the wrong place: the value was then text, so a caller could not read it as a
+ * term, and the surface could not render it at all. The message and the remedy are unchanged word
+ * for word.
+ *
+ * Its standing stays `Unread`, which is what the `NotOfForm` it replaces reported. That the goal
+ * is false is a fact about the claim, but nothing here proves `3` differs from `4`, and reporting
+ * it decided would move what `Prove` answers, which is a decision of its own and not this repair.
+ */
+final case class EvaluatesOtherwise(goal: Term, evaluated: Kernel.Thm) extends TacticError {
+  def render(show: Term => String): String =
+    s"expected ${show(evaluated.conclusion)}, which is what this evaluates to, found ${show(goal)}"
+}
+
 /** A failure from the layer below. */
 final case class FromLogic(error: LogicError) extends TacticError {
   def render(show: Term => String): String = error.render(show)
@@ -134,6 +154,7 @@ object TacticError {
   def standing(error: TacticError): Option[LogicError.Standing] = error match {
     case FromLogic(reason) => Some(reason.standing)
     case NotCertified(_, reason) => Some(reason.standing)
+    case EvaluatesOtherwise(_, _) => Some(LogicError.Standing.Unread)
     case OutsideFragment(_, _) | BeyondBudget(_, _) | NotLegible(_, _) | ProvableOnlyUnder(_, _) =>
       None
   }

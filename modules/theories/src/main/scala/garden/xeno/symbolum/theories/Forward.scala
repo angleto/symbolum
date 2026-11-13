@@ -469,8 +469,7 @@ object Forward {
    * not reach. Patching it with a second conversion would hide which.
    */
   private def reshape(target: Term, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
-    if (theorem.conclusion == target) Right(theorem)
-    else Left(NotOfForm(s"the clause as the operator writes it, $target", theorem.conclusion))
+    ProvesOther.unless(target, theorem)
 
   /** [[Inside]]: a step of `R` anywhere in a member lands in the closure. */
   private def insideRule(

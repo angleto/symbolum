@@ -239,4 +239,23 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
     message(1, 0) should not include "1 nodes"
     message(2, 1) should not include "1 are allowed"
   }
+
+  "The refusals that carry both terms" should "be unread, since a call assembled wrongly learned nothing" in {
+    // Each says a rule was handed the wrong thing, which is NotOfForm's standing and for its reason:
+    // neither proposition was asked about. One of them read as decided would make `Prove` report a
+    // mis-assembled call as an answer about the goal.
+    val p = Term.variable("p", Type.Bool)
+    val q = Term.variable("q", Type.Bool)
+    Vector[LogicError](NoInstantiation(p, q), ProvesOther(p, q), NotMentioned(p, q))
+      .map(_.standing).toSet shouldBe Set(Standing.Unread)
+  }
+
+  "ProvesOther.unless" should "hand back a theorem of the statement wanted and refuse one of another" in {
+    val p = Term.variable("p", Type.Bool)
+    val q = Term.variable("q", Type.Bool)
+    val ofP = Kernel.assume(p).fold(e => fail(e.toString), identity)
+    ProvesOther.unless(p, ofP) shouldBe Right(ofP)
+    // Both terms carried, in the order the message reads them: the one wanted, then the one found.
+    ProvesOther.unless(q, ofP) shouldBe Left(ProvesOther(q, p))
+  }
 }

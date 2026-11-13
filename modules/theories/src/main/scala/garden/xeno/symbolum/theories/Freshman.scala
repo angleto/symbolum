@@ -71,8 +71,7 @@ private[theories] object Freshman {
     def applyTo(theorem: Kernel.Thm, args: List[Term], premises: Kernel.Thm*): Either[LogicError, Kernel.Thm] =
       premises.foldLeft(rules.specAll(theorem, args).flatMap(Limit.normalised))((acc, p) => acc.flatMap(rules.mp(_, p)))
     def landsOn(theorem: Kernel.Thm, target: Term): Either[LogicError, Kernel.Thm] =
-      if (theorem.conclusion == target) Right(theorem)
-      else Left(NotOfForm(s"a proof of ${Show.show(notation, target)}", theorem.conclusion))
+      ProvesOther.unless(target, theorem)
     /** An equation `f x = f y` from `x = y`, for `f` a lambda written as text. */
     def congruence(template: String, equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
       Parser.term(theory, notation, template).flatMap(Conv.apTerm(_, equation)).flatMap(Conv.betaSides)
