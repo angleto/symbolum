@@ -369,6 +369,15 @@ session named would be a different tool with the same name.
   `tools/sbt "mark/runMain garden.xeno.symbolum.mark.Mark 33"`. Not every size holds, and the ones nobody
   has measured are a question rather than a gap: twenty, twenty-three and thirty-three hold,
   twenty-six leaks its counter and forty-six seals a pocket, and `MarkSpec` asserts all five.
+- **Drawing a cellular automaton or a table of differences:**
+  `tools/sbt "draw/runMain garden.xeno.symbolum.draw.Draw out.svg gilbreath-vs-rule30"`, which is
+  the figure of Mycelium note `917b3939`, or panels written out:
+  `tools/sbt "draw/runMain garden.xeno.symbolum.draw.Draw out.svg rule=30 start=cell steps=100 | rule=xor start=cell steps=100"`.
+  The keys and what each start means are in `Draw`'s docstring. Positions are true coordinates,
+  so a rule that grows to the left is drawn growing to the left. `DrawSpec` checks every cell drawn
+  against references written independently: Rule 30 as a formula, the XOR rule as Pascal's triangle
+  modulo 2, Gilbreath's table as differences of a sieve. A drawing proves nothing, which is why
+  the module depends on nothing.
 - **Regenerating `docs/reading-register.md`:**
   `tools/sbt "theories/runMain garden.xeno.symbolum.theories.Register"`. The same arrangement as the lemmas, for the
   four things nothing but a reader checks: every axiom, every law of the reals, every defined
@@ -396,6 +405,7 @@ published -> tactics        the proof documents this repository publishes, the c
 lsp       -> published      the language server, the elaborator's third front end, not published
 examples  -> tactics        runnable demonstrations of either half, not published
 mark      -> (nothing)      the figure, the art and the drawing written from it, and its checks
+draw      -> (nothing)      cellular automata and tables of differences drawn as SVG
 scan      -> (nothing)      what in a source of this repository is a comment, for the gates that ask
 ```
 
@@ -407,7 +417,7 @@ and a convention: `tactics.Consistency` makes the same promise about itself with
 its own source for the name of an inference rule, and its comment says why a runtime check was not
 available to it.
 
-`mark` is beside that graph rather than in it: nothing depends on it and it depends on nothing. It
+`mark` and `draw` are beside that graph rather than in it: nothing depends on them and they depend on nothing. It
 is a module and not a file in `examples` for one reason, which is that `examples` depends on
 `tactics`, and a check over two files under `docs/` that could only run after the prover compiled
 would stop running on exactly the days the prover is broken.

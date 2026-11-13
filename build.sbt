@@ -697,7 +697,7 @@ lazy val root = (project in file("."))
   // the failure "a suite that is configured but not executed does not exist" names exactly.
   // `DocumentationSpec` asserts the list against the directories now, so the next module is a
   // decision rather than an omission.
-  .aggregate(core, kernel, checker, logic, theories, tactics, published, lsp, examples, mark, sat, scan, symbolum, dist)
+  .aggregate(core, kernel, checker, logic, theories, tactics, published, lsp, examples, mark, draw, sat, scan, symbolum, dist)
   .settings(
     name := "symbolum-root",
     publish / skip := true
@@ -1202,6 +1202,24 @@ lazy val mark = (project in file("modules/mark"))
     // everything here is exercised by `MarkSpec` against the committed files, so the number this
     // would gate is a property of two documents rather than of the code.
     coverageFailOnMinimum := false
+  )
+
+// Drawings of cellular automata and tables of differences, as SVG. Depends on nothing and is
+// depended on by nothing, for the reason `mark` gives: a figure proves nothing, so it sits outside
+// the graph whose direction is the correctness argument, and it must not stop drawing on the days
+// the prover does not compile. Not published: it is a tool for the notes and documents written
+// about this repository, as `mark` is for its logo.
+lazy val draw = (project in file("modules/draw"))
+  .settings(commonSettings)
+  .settings(coverageSettings)
+  .settings(
+    name := "symbolum-draw",
+    publish / skip := true,
+    // Measured 2026-11-13 by `clean coverage draw/test draw/coverageReport`: 493 of 503
+    // statements, 98.01%. The ten missed are all in `main`, which prints the answer of `run` and
+    // exits; every refusal `run` can return is asserted in `DrawSpec`. One statement is 0.2%, so
+    // the floor leaves two.
+    coverageMinimumStmtTotal := 97.6
   )
 
 // One coordinate for every library module, for a consumer who wants the system rather than a

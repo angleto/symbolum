@@ -676,8 +676,8 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
       .codeLines(build)
       .count(_.code.contains("publish / skip := true"))
     withClue(
-      "`root`, `examples`, `mark`, `dist`, `scan`, `lsp` and the two fatal-warnings probes are the " +
-        "eight that do not publish: "
+      "`root`, `examples`, `mark`, `draw`, `dist`, `scan`, `lsp` and the two fatal-warnings probes are the " +
+        "nine that do not publish: "
     ) {
       // Seven since 2026-09-18, when the two probe projects landed: a source that must not compile
       // and the control that compiles the same source without `-Xfatal-warnings`. Neither is a
@@ -685,7 +685,9 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
       // compilation is expected to fail would be publishing a build error under a coordinate.
       // Eight since 2026-11-12, when `lsp` landed: the language server is a program an editor
       // starts, shipped in the distribution, and its lsp4j has no business in a consumer's build.
-      skipped shouldBe 8
+      // Nine since `draw` landed, for the reason `mark` does not publish: it draws figures, proves
+      // nothing, and nothing a consumer resolves depends on it.
+      skipped shouldBe 9
     }
   }
 
