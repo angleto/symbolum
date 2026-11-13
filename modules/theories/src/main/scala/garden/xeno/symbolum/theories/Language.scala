@@ -179,7 +179,8 @@ final class Language private (
         carried.flatMap(found => fact(name).map(found :+ _))
       }
 
-      ruleSet <- Rewrite.Rule.all(logic, clauses ++ conditionals ++ decisions)
+      numerals <- numeralRules
+      ruleSet <- Rewrite.Rule.all(logic, clauses ++ conditionals ++ decisions ++ numerals)
       substituting <- LogicError.lift(theory.constant(
         Language.FormulaSubstituteName,
         Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers)))))
@@ -194,6 +195,287 @@ final class Language private (
         if (residue(answer)) Left(NotOfForm("a code with the substitution carried out", answer))
         else Right(())
     } yield equation
+  }
+
+  /**
+   * `|- NUM_FREE_FOR i t c` or `|- ~(NUM_FREE_FOR i t c)` for a concrete index, term and formula,
+   * by computing it.
+   *
+   * What a caller instantiating `NUM_LOGIC_SPECIALISE` or `NUM_LOGIC_REPLACE` at an open term has
+   * to discharge, and where a closed term does not need it: [[Language.FreeForClosed]] answers that
+   * case without looking at the code. It is also what `LanguageSpec` attacks the definition with,
+   * since it answers BOTH ways and a definition that forgot the binder would answer the wrong one.
+   *
+   * The same arrangement as [[substituteIn]]: the clauses of the three recursions it reads
+   * (substitutability, and freeness in formulas and in terms), the conditional at `T` and `F`, and
+   * one decision per pair of indices the code and the term mention. What is left is a proposition
+   * built from `T` and `F` alone, which [[Propositional]] proves or refutes. A residue, which is an
+   * index that is not a numeral, is refused by name.
+   */
+  def substitutableIn(
+    index: Term,
+    replacement: Term,
+    code: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    for {
+      head <- LogicError.lift(theory.constant(
+        Language.FreeForName,
+        Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, Type.Bool)))))
+      subject <- LogicError.lift(Term.appAll(head, List(index, replacement, code)))
+      decided <- decideSyntax(subject)
+    } yield decided
+  }
+
+  /**
+   * `|- NUM_FREE_TERM i s` or `|- ~(NUM_FREE_TERM i s)` for a concrete index and term code.
+   *
+   * What a caller of `Deduction`'s rules at open terms discharges: every one of them asks that
+   * some index not occur in a term that has to come back from a substitution untouched. The same
+   * decision as [[substitutableIn]], over the five freeness clauses for terms.
+   */
+  def freeInTerm(index: Term, code: Term): Either[LogicError, Kernel.Thm] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    for {
+      head <- LogicError.lift(theory.constant(
+        Language.FreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))))
+      subject <- LogicError.lift(Term.appAll(head, List(index, code)))
+      decided <- decideSyntax(subject)
+    } yield decided
+  }
+
+  /**
+   * `|- NUM_TERM c` for a concrete term code, or `|- NUM_FORM c` for a concrete formula code, by
+   * walking it with the introduction rules.
+   *
+   * The third thing a caller at open terms has to discharge beside the two above, and the walk is
+   * the grammar read once: tags `0` to `4` are terms, `5` to `8` formulas. A code with a shape the
+   * grammar does not have is refused naming it, and so is a code with a variable standing where a
+   * tag or a pair should be, since that is not something a walk can settle.
+   */
+  def wellFormedIn(code: Term): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
+
+    def tagged(name: String): Either[LogicError, Term] = Parser.term(theory, notation, name, numbers)
+
+    for {
+      coding <- LogicError.lift(theory.constant(Numbering.CodeName, arithmetic))
+      pairing <- LogicError.lift(theory.constant(Numbering.PairName, arithmetic))
+      tags <- (0 to 8).toVector
+        .foldLeft[Either[LogicError, Vector[Term]]](Right(Vector.empty)) { (carried, at) =>
+          carried.flatMap(found => tagged(at.toString).map(found :+ _))
+        }
+      result <- {
+        def pair(payload: Term): Either[LogicError, (Term, Term)] = payload match {
+          case App(App(head, left), right) if head == pairing => Right((left, right))
+          case other => Left(NotOfForm("a pair", other))
+        }
+        def walk(subject: Term): Either[LogicError, Kernel.Thm] = subject match {
+          case App(App(head, tag), payload) if head == coding && tags.contains(tag) =>
+            tags.indexOf(tag) match {
+              case 0 => fact(Language.TermVariable).flatMap(rules.spec(payload, _))
+              case 1 =>
+                if (payload == tags(0)) fact(Language.TermZero)
+                else Left(NotOfForm("zero's code, whose payload is 0", subject))
+              case 2 =>
+                walk(payload).flatMap(inner =>
+                  fact(Language.TermSuccessor)
+                    .flatMap(rules.spec(payload, _))
+                    .flatMap(rules.mp(_, inner)))
+              case 6 =>
+                walk(payload).flatMap(inner =>
+                  fact(Language.FormulaNegation)
+                    .flatMap(rules.spec(payload, _))
+                    .flatMap(rules.mp(_, inner)))
+              case 8 =>
+                pair(payload).flatMap { case (bound, body) =>
+                  walk(body).flatMap(inner =>
+                    fact(Language.FormulaUniversal)
+                      .flatMap(rules.specAll(_, List(bound, body)))
+                      .flatMap(rules.mp(_, inner)))
+                }
+              case at =>
+                val rule = at match {
+                  case 3 => Language.TermSum
+                  case 4 => Language.TermProduct
+                  case 5 => Language.FormulaEquality
+                  case _ => Language.FormulaImplication
+                }
+                pair(payload).flatMap { case (left, right) =>
+                  for {
+                    leftDone <- walk(left)
+                    rightDone <- walk(right)
+                    built <- fact(rule)
+                      .flatMap(rules.specAll(_, List(left, right)))
+                      .flatMap(rules.mp(_, leftDone))
+                      .flatMap(rules.mp(_, rightDone))
+                  } yield built
+                }
+            }
+          case App(Const(name, _), argument) if name == Language.NumeralName =>
+            fact(Language.NumeralIsTerm).flatMap(rules.spec(argument, _))
+          case other => Left(NotOfForm("a code of the object language with a literal tag", other))
+        }
+        walk(code).flatMap(proved =>
+          proved.conclusion match {
+            case App(_, argument) if argument == code => Right(proved)
+            case other => Left(NotOfForm("a well-formedness claim about the code walked", other))
+          })
+      }
+    } yield result
+  }
+
+  /**
+   * A proposition about concrete codes built from the three syntactic predicates, proved or
+   * refuted: the shared body of [[substitutableIn]] and [[freeInTerm]].
+   */
+  private def decideSyntax(subject: Term): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
+    val classical = numbering.peano.naturals.classical
+
+    for {
+      coding <- LogicError.lift(theory.constant(Numbering.CodeName, arithmetic))
+      pairing <- LogicError.lift(theory.constant(Numbering.PairName, arithmetic))
+      variableTag <- Parser.term(theory, notation, "0", numbers)
+      quantifierTag <- Parser.term(theory, notation, "8", numbers)
+
+      indices = {
+        def collect(subject: Term): Vector[Term] = subject match {
+          case App(App(head, tag), payload) if head == coding && tag == variableTag =>
+            Vector(payload)
+          case App(App(head, tag), App(App(join, left), right))
+              if head == coding && tag == quantifierTag && join == pairing =>
+            left +: collect(right)
+          // The index a predicate is asked about is an index too, and it is where no code holds it.
+          case App(App(App(Const(name, _), asked), replacement), code)
+              if name == Language.FreeForName =>
+            asked +: (collect(replacement) ++ collect(code))
+          case App(App(Const(name, _), asked), code)
+              if name == Language.FreeName || name == Language.FormulaFreeName =>
+            asked +: collect(code)
+          case App(left, right) => collect(left) ++ collect(right)
+          case _ => Vector.empty
+        }
+        collect(subject).distinct
+      }
+
+      decisions <- (for { one <- indices; other <- indices } yield (one, other))
+        .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+          case (carried, (one, other)) =>
+            for {
+              found <- carried
+              guard <- LogicError.lift(Term.eq(one, other))
+              decided <-
+                if (one == other) rules.eqTruthIntro(Kernel.refl(one))
+                else
+                  for {
+                    apart <- successor.distinct(one, other)
+                    assumed <- LogicError.lift(Kernel.assume(guard))
+                    toFalsity <- rules.notElim(apart, assumed)
+                    fromFalsity <- LogicError
+                      .lift(Kernel.assume(logic.falsity))
+                      .flatMap(rules.falsityElim(guard, _))
+                    equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
+                  } yield equated
+            } yield found :+ decided
+        }
+
+      conditionals <- Language.conditionalRules(logic, classical, Type.Bool)
+      clauses <- Vector(
+        Language.FreeForEquality, Language.FreeForNegation, Language.FreeForImplication,
+        Language.FreeForUniversal,
+        Language.FormulaFreeEquality, Language.FormulaFreeNegation,
+        Language.FormulaFreeImplication, Language.FormulaFreeUniversal,
+        Language.FreeVariable, Language.FreeZero, Language.FreeSuccessor, Language.FreeSum,
+        Language.FreeProduct
+      ).foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
+        carried.flatMap(found => fact(name).map(found :+ _))
+      }
+
+      numerals <- numeralRules
+      ruleSet <- Rewrite.Rule.all(logic, clauses ++ conditionals ++ decisions ++ numerals)
+      equation <- Rewrite.rewrite(ruleSet, subject)
+      answer <- Term
+        .destEq(equation.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", equation.conclusion))
+      _ <-
+        if (undecided(answer)) Left(NotOfForm("an answer made of T and F alone", answer))
+        else Right(())
+
+      decider = Propositional(classical)
+      result <- decider.prove(answer) match {
+        case Right(held) =>
+          Conv.sym(equation).flatMap(back => LogicError.lift(Kernel.eqMp(back, held)))
+        case Left(_) =>
+          for {
+            denied <- logic.mkNot(answer)
+            refuted <- decider.prove(denied)
+            negation <- LogicError.lift(
+              theory.constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)))
+            lifted <- Conv.apTerm(negation, equation).flatMap(Conv.sym)
+            moved <- LogicError.lift(Kernel.eqMp(lifted, refuted))
+          } yield moved
+      }
+    } yield result
+  }
+
+  /**
+   * The two rewrite rules that let a computation over codes pass a numeral standing for any
+   * number: `NUM_SUBST_TERM i t (NUM_NUMERAL n) = NUM_NUMERAL n` and
+   * `NUM_FREE_TERM i (NUM_NUMERAL n) = F`.
+   *
+   * A numeral `NUM_NUMERAL n` with `n` a variable is not a literal code, so no clause matches it,
+   * and a derivation about `numeral m < numeral n` for every `m` and `n` is made of such codes.
+   * Both rules are what closedness says, read for a rewriter: [[Language.SubstituteIdle]] at a
+   * numeral, and [[Language.ClosedCases]] at one. They are derived here rather than published
+   * because they are those facts restated, and a library entry that restates two others is a copy.
+   */
+  private def numeralRules: Either[LogicError, Vector[Kernel.Thm]] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val i = Term.variable("i", numbers)
+    val t = Term.variable("t", numbers)
+    val n = Term.variable("n", numbers)
+    for {
+      numeralHead <- LogicError.lift(theory.constant(Language.NumeralName, Type.fun(numbers, numbers)))
+      numeral <- LogicError.lift(Term.app(numeralHead, n))
+      isTerm <- fact(Language.NumeralIsTerm).flatMap(rules.spec(n, _))
+      absent <- fact(Language.ClosedCases)
+        .flatMap(rules.spec(numeral, _))
+        .flatMap(equation =>
+          fact(Language.NumeralIsClosed)
+            .flatMap(rules.spec(n, _))
+            .flatMap(closed => LogicError.lift(Kernel.eqMp(equation, closed))))
+        .flatMap(rules.spec(i, _))
+      idle <- fact(Language.SubstituteIdle)
+        .flatMap(rules.specAll(_, List(i, t, numeral)))
+        .flatMap(rules.mp(_, isTerm))
+        .flatMap(rules.mp(_, absent))
+        .flatMap(rules.genAll(_, List(i, t, n)))
+      free <- logic.destNot(absent.conclusion).toRight(NotOfForm("a negation", absent.conclusion))
+      toFalsity <- LogicError.lift(Kernel.assume(free)).flatMap(rules.notElim(absent, _))
+      fromFalsity <- LogicError
+        .lift(Kernel.assume(logic.falsity))
+        .flatMap(rules.falsityElim(free, _))
+      nowhere <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
+        .flatMap(rules.genAll(_, List(i, n)))
+    } yield Vector(idle, nowhere)
+  }
+
+  /** Whether a proposition still mentions anything but the connectives, `T` and `F`. */
+  private def undecided(subject: Term): Boolean = subject match {
+    case Const(name, _) =>
+      Set(Language.FreeForName, Language.FormulaFreeName, Language.FreeName, Classical.Conditional)
+        .contains(name)
+    case App(left, right) => undecided(left) || undecided(right)
+    case Abs(_, body) => undecided(body)
+    case _: FVar => true
+    case _ => false
   }
 
   /** Whether a term still carries a substitution or an undecided conditional. */
@@ -474,10 +756,13 @@ object Language {
   val NumeralIsTerm: String = "NUM_NUMERAL_TERM"
 
   /**
-   * `|- !n. NUM_CLOSED (NUM_NUMERAL n)`. Being a term is not enough: three schemes want this one.
+   * `|- !n. NUM_CLOSED (NUM_NUMERAL n)`. Being a term is not enough: a numeral put into a scheme
+   * is shown substitutable through this and [[FreeForClosed]].
    *
-   * [[ClosedName]] is the condition `NUM_LOGIC_SPECIALISE` and `NUM_LOGIC_REPLACE` carry, and the
-   * library stated no closure at all until this landed. What that cost is easy to miss, because
+   * [[ClosedName]] was the condition `NUM_LOGIC_SPECIALISE` and `NUM_LOGIC_REPLACE` carried until
+   * `docs/adr/0078` made it substitutability, and it is still how every caller with a numeral
+   * discharges that, through [[FreeForClosed]]. The library stated no closure at all until this
+   * landed. What that cost is easy to miss, because
    * the two are theorems either way: a scheme whose side condition nothing can discharge is
    * provable and unusable, and those two were in exactly that position at every term but one.
    * `LanguageSpec` had discharged it once, at the object language's zero, by walking the freeness
@@ -526,8 +811,9 @@ object Language {
    *
    * **It is blind to capture and that is sound here.** Nothing checks whether `t`'s variables are
    * bound where they land, and for the substitution Goedel's argument performs they cannot be: what
-   * is substituted is a **numeral**, which is closed. Substitution of an open term would need a
-   * freshness condition this development has not got, and no consumer here wants one.
+   * is substituted is a **numeral**, which is closed. Where an open term is substituted, the scheme
+   * doing it asks [[FreeForName]] of it, which is the freshness condition `docs/adr/0078` added; the
+   * substitution itself stays blind.
    */
   val SubstituteName: String = "NUM_SUBST_TERM"
 
@@ -704,21 +990,21 @@ object Language {
    * says `p` is a formula" by matching on the string holds until somebody writes the same condition
    * with different spacing.
    *
-   * [[Condition.Closed]] and [[Condition.NotFree]] discharge no hole. They are what the
-   * substitution's blindness to capture costs: `NUM_SUBST_TERM` is sound where the replacement is
-   * closed, so the schemes that substitute say so, and the scheme that generalises says the index
-   * does not occur.
+   * [[Condition.FreeFor]] and [[Condition.NotFree]] discharge no hole. They are what the
+   * substitution's blindness to capture costs: `NUM_SUBST_FORM` is sound where the replacement is
+   * substitutable, so the schemes that substitute say so, and the scheme that generalises says the
+   * index does not occur.
    */
   private enum Condition {
     case IsFormula(hole: String)
     case IsTerm(hole: String)
-    case Closed(hole: String)
+    case FreeFor(index: String, term: String, hole: String)
     case NotFree(index: String, hole: String)
 
     def text: String = this match {
       case Condition.IsFormula(hole)      => s"$FormulaName $hole"
       case Condition.IsTerm(hole)         => s"$TermName $hole"
-      case Condition.Closed(hole)         => s"$ClosedName $hole"
+      case Condition.FreeFor(index, term, hole) => s"$FreeForName $index $term $hole"
       case Condition.NotFree(index, hole) => s"~($FormulaFreeName $index $hole)"
     }
   }
@@ -888,28 +1174,24 @@ object Language {
   val FormulaFreeUniversal: String = "NUM_FREE_FORM_ALL"
 
   /**
-   * `NUM_CLOSED t` says no index occurs in the term `t`, which is what the substitution needs.
+   * `NUM_CLOSED t` says no index occurs in the term `t`.
    *
    * `NUM_SUBST_TERM` is blind to capture and is therefore sound where what it puts in has nothing
-   * to capture. **Two** of the logical schemes carry it, `NUM_LOGIC_SPECIALISE` once and
-   * `NUM_LOGIC_REPLACE` twice, and it is a constant rather than a written-out quantifier because
-   * of those three occurrences and because a reader meeting it in the register should meet it
-   * under a name. This sentence said three schemes until 2026-09-15, which is an occurrence count
-   * read as a scheme count, and `AGENTS.md` carried the same mistake in the same words.
+   * to capture. Until 2026-11-12 two of the logical schemes asked this of what they substituted,
+   * `NUM_LOGIC_SPECIALISE` once and `NUM_LOGIC_REPLACE` twice; since `docs/adr/0078` they ask
+   * [[FreeForName]], which a closed term satisfies everywhere ([[FreeForClosed]]). It stays a
+   * constant because every derivation that substitutes a numeral discharges the new condition
+   * through it.
    *
    * **A third scheme substitutes and does not need the condition**, which is worth knowing before
    * a reader concludes one was forgotten: PA's induction scheme puts `0` and `S i` where `i`
    * stood. The first is closed, and the second can capture nothing, because the only index it
    * mentions is the one being replaced and the substitution stops at a quantifier binding that.
    *
-   * **It is stronger than the usual condition and the difference is a real cost.** The textbook
-   * scheme asks that `t` be *substitutable* for the index in the formula, which permits a `t` with
-   * free variables as long as none is captured; that is a recursion over the formula this
-   * development has not got. What is lost is instantiating a universal at a variable, so the object
-   * system is weaker than first-order logic here. Goedel's argument substitutes numerals, and a
-   * numeral is closed, but completeness for bounded formulas is a claim about a variable below a
-   * numeral, and on 2026-11-10 every derivation tried for it needed an axiom at an open term:
-   * `docs/adr/0040` has the measurement and what it leaves undecided.
+   * **Closedness was stronger than the usual condition, and that was a real cost.** It lost
+   * instantiation at a variable, and on 2026-11-10 completeness for bounded formulas was found to
+   * need exactly that: every derivation tried needed an axiom of PA at an open term, which
+   * `docs/adr/0040` measured. `docs/adr/0078` replaced it with the textbook condition.
    */
   val ClosedName: String = "NUM_CLOSED"
 
@@ -940,6 +1222,66 @@ object Language {
 
   /** `|- !a b. NUM_CLOSED a ==> NUM_CLOSED b ==> NUM_CLOSED (NUM_CODE 4 (NUM_PAIR a b))`. */
   val ClosedProduct: String = "NUM_CLOSED_MUL"
+
+  /* ------------------------------------------------------- where a term may be substituted */
+
+  /**
+   * `NUM_FREE_FOR i t p` says the term `t` is **substitutable** for the index `i` in the formula
+   * `p`: putting `t` where `i` is free captures none of `t`'s variables.
+   *
+   * It is the condition the textbook puts on specialisation and on replacement, and until
+   * 2026-11-12 this development put [[ClosedName]] there instead. Closedness implies it, which is
+   * [[FreeForClosed]], so nothing that could be derived before stops being derivable; what it adds
+   * is the instances at OPEN terms, and completeness for bounded formulas cannot do without them:
+   * `x < S n ==> x < n \/ x = n` is a claim about a variable, and every derivation of it needs an
+   * axiom of PA at a term with a variable in it. `docs/adr/0078` is the decision and `docs/adr/0040`
+   * has the measurement that asked for it.
+   *
+   * The clauses are the usual ones and the quantifier is the only one with content. An equality
+   * has no binder, so any term may go into it. Negation and implication ask it of their parts. At
+   * `!v_j. q` either nothing is substituted, because `j` is `i` or `i` is not free in `q`, or `j`
+   * must not occur in `t` and `t` must be substitutable for `i` in `q`.
+   *
+   * **What a wrong clause would cost is a proof of falsity in PA**, which is why this is the one
+   * definition in the file `LanguageSpec` attacks at the case that matters: `v_1` is NOT
+   * substitutable for `v_0` in `!v_1. v_0 = v_1`, since putting it there turns a formula true of
+   * some `v_0` into one true of none, and a clause that forgot the binder would say it is.
+   *
+   * A number that codes no formula answers `T`, as the substitution leaves such a number alone.
+   * Every consumer asks `NUM_FORM p` beside it, so that answer is never read.
+   */
+  val FreeForName: String = "NUM_FREE_FOR"
+
+  /** `|- !i t a b. NUM_FREE_FOR i t (NUM_CODE 5 (NUM_PAIR a b)) = T`. */
+  val FreeForEquality: String = "NUM_FREE_FOR_EQ"
+
+  /** `|- !i t p. NUM_FREE_FOR i t (NUM_CODE 6 p) = NUM_FREE_FOR i t p`. */
+  val FreeForNegation: String = "NUM_FREE_FOR_NOT"
+
+  /**
+   * `|- !i t p q. NUM_FREE_FOR i t (NUM_CODE 7 (NUM_PAIR p q)) =
+   * (NUM_FREE_FOR i t p /\ NUM_FREE_FOR i t q)`
+   */
+  val FreeForImplication: String = "NUM_FREE_FOR_IMP"
+
+  /**
+   * `|- !i t j p. NUM_FREE_FOR i t (NUM_CODE 8 (NUM_PAIR j p)) =
+   * COND (j = i) T (~(NUM_FREE_FORM i p) \/ ~(NUM_FREE_TERM j t) /\ NUM_FREE_FOR i t p)`
+   *
+   * The clause that is the definition. The conditional stays in the statement for the reason it
+   * stays in [[FormulaSubstituteUniversal]]: both indices are variables and the caller decides.
+   */
+  val FreeForUniversal: String = "NUM_FREE_FOR_ALL"
+
+  /**
+   * `|- !i t p. NUM_FORM p ==> NUM_CLOSED t ==> NUM_FREE_FOR i t p`
+   *
+   * A closed term is substitutable anywhere, which is what lets every fact proved under the old
+   * condition keep its statement: each discharges the new condition from the closedness it already
+   * had. Course-of-values induction over the formula, and the quantifier is again the only case
+   * with content: `NUM_CLOSED t` says no index occurs in `t`, the bound one included.
+   */
+  val FreeForClosed: String = "NUM_FREE_FOR_CLOSED"
 
   /* ------------------------------------------------------------------ the logical axioms */
 
@@ -996,7 +1338,7 @@ object Language {
       Scheme(
         "NUM_LOGIC_SPECIALISE",
         List("i", "t", "p"),
-        List(formula, Condition.IsTerm("t"), Condition.Closed("t")),
+        List(formula, Condition.IsTerm("t"), Condition.FreeFor("i", "t", "p")),
         Obj.Implies(Obj.Forall("i", p), Obj.Substituted("i", t, p))
       ),
       Scheme(
@@ -1027,8 +1369,8 @@ object Language {
           formula,
           Condition.IsTerm("t"),
           Condition.IsTerm("u"),
-          Condition.Closed("t"),
-          Condition.Closed("u")
+          Condition.FreeFor("i", "t", "p"),
+          Condition.FreeFor("i", "u", "p")
         ),
         Obj.Implies(
           Obj.Eq(t, u),
@@ -1094,6 +1436,31 @@ object Language {
       "                             F " +
       "                             (f (NUM_SND (NUM_PAYLOAD s)))) " +
       "                       F)))"
+
+  /**
+   * The step of substitutability, with `i` and `t` free as its two parameters.
+   *
+   * The same nest of shape tests as [[FormulaFreeStepText]], answering with a proposition. The
+   * quantifier's branch reads [[FormulaFreeName]] and [[FreeName]], which is why this is defined
+   * after both, and reads itself only at the body, which the guard bounds.
+   */
+  val FreeForStepText: String =
+    "\\f:num -> bool. \\s:num. " +
+      "COND (s = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) (NUM_SND (NUM_PAYLOAD s)))) " +
+      "     T " +
+      "     (COND (s = NUM_CODE 6 (NUM_PAYLOAD s)) " +
+      "           (f (NUM_PAYLOAD s)) " +
+      "           (COND (s = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) " +
+      "                                           (NUM_SND (NUM_PAYLOAD s)))) " +
+      "                 (f (NUM_FST (NUM_PAYLOAD s)) /\\ f (NUM_SND (NUM_PAYLOAD s))) " +
+      "                 (COND (s = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) " +
+      "                                                 (NUM_SND (NUM_PAYLOAD s)))) " +
+      "                       (COND (NUM_FST (NUM_PAYLOAD s) = i) " +
+      "                             T " +
+      "                             (~(NUM_FREE_FORM i (NUM_SND (NUM_PAYLOAD s))) \\/ " +
+      "                              ~(NUM_FREE_TERM (NUM_FST (NUM_PAYLOAD s)) t) /\\ " +
+      "                              f (NUM_SND (NUM_PAYLOAD s)))) " +
+      "                       T)))"
 
   /**
    * Which argument positions of a clause the recursion reads, which is all the admissibility proof
@@ -1430,6 +1797,15 @@ object Language {
       ("!i:num j:num p:num. NUM_FREE_FORM i (NUM_CODE 8 (NUM_PAIR j p)) = " +
         "COND (j = i) F (NUM_FREE_FORM i p)"),
     ClosedCases -> "!t:num. NUM_CLOSED t = (!k:num. ~(NUM_FREE_TERM k t))",
+    FreeForEquality -> "!i:num t:num a:num b:num. NUM_FREE_FOR i t (NUM_CODE 5 (NUM_PAIR a b)) = T",
+    FreeForNegation -> "!i:num t:num p:num. NUM_FREE_FOR i t (NUM_CODE 6 p) = NUM_FREE_FOR i t p",
+    FreeForImplication ->
+      ("!i:num t:num p:num q:num. NUM_FREE_FOR i t (NUM_CODE 7 (NUM_PAIR p q)) = " +
+        "(NUM_FREE_FOR i t p /\\ NUM_FREE_FOR i t q)"),
+    FreeForUniversal ->
+      ("!i:num t:num j:num p:num. NUM_FREE_FOR i t (NUM_CODE 8 (NUM_PAIR j p)) = " +
+        "COND (j = i) T (~(NUM_FREE_FORM i p) \\/ ~(NUM_FREE_TERM j t) /\\ NUM_FREE_FOR i t p)"),
+    FreeForClosed -> "!i:num t:num p:num. NUM_FORM p ==> NUM_CLOSED t ==> NUM_FREE_FOR i t p",
     ClosedZero -> "NUM_CLOSED (NUM_CODE 1 0)",
     ClosedSuccessor -> "!s:num. NUM_CLOSED s ==> NUM_CLOSED (NUM_CODE 2 s)",
     ClosedSum ->
@@ -1815,12 +2191,50 @@ object Language {
         AxiomFormula
       )
 
-      withLogic <- defineLogic(axiomTheory, notation, axiomLogic)
+      // Substitutability names both freeness predicates and is named by the logical axioms, so it
+      // goes in between: after the axioms of PA, which do not read it, and before `NUM_LOGIC`.
+      withFreeFor <- defineShaped(
+        numbering, recursion, axiomTheory, notation, axiomLogic,
+        FreeForName, FreeForStepText, Type.Bool, replaced)
+      (freeForTheory, freeForDefinition, freeForNamed) = withFreeFor
+      freeForLogic <- numbering.logic.over(freeForTheory)
+      freeForVocabulary <- Vocabulary.of(numbering, freeForTheory, notation, freeForLogic)
+      freeForEquality <- shapedAt(
+        freeForVocabulary, freeForNamed, projections, successor, FreeForEquality, Type.Bool, replaced)
+      freeForNegation <- shapedAt(
+        freeForVocabulary, freeForNamed, projections, successor, FreeForNegation, Type.Bool, replaced)
+      freeForImplication <- shapedAt(
+        freeForVocabulary, freeForNamed, projections, successor,
+        FreeForImplication, Type.Bool, replaced)
+      freeForUniversal <- shapedAt(
+        freeForVocabulary, freeForNamed, projections, successor,
+        FreeForUniversal, Type.Bool, replaced)
+
+      withLogic <- defineLogic(freeForTheory, notation, freeForLogic)
       (logicTheory, logicDefinition, logicCasesRaw) = withLogic
       logicLogic <- numbering.logic.over(logicTheory)
       logicVocabulary <- Vocabulary.of(numbering, logicTheory, notation, logicLogic)
       logicCases <- logicVocabulary.checked(LogicCases, logicCasesRaw)
       closedCases <- logicVocabulary.checked(ClosedCases, closedCasesRaw)
+      freeForHead <- LogicError.lift(logicTheory.constant(
+        FreeForName, Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, Type.Bool)))))
+      freeForClosed <- keepsWellFormed(
+        logicVocabulary,
+        FreeForClosed,
+        None,
+        freeForHead,
+        strong,
+        formulaCases,
+        substitutableClause(
+          Map(
+            FreeForEquality -> freeForEquality,
+            FreeForNegation -> freeForNegation,
+            FreeForImplication -> freeForImplication,
+            FreeForUniversal -> freeForUniversal
+          ),
+          closedCases
+        )
+      )
       logicHead <- LogicError.lift(
         logicTheory.constant(LogicName, Type.fun(numbers, Type.Bool))
       )
@@ -1938,6 +2352,7 @@ object Language {
         FreeName -> freeDefinition,
         FormulaFreeName -> formulaFreeDefinition,
         ClosedName -> closedDefinition,
+        FreeForName -> freeForDefinition,
         AxiomName -> axiomDefinition,
         LogicName -> logicDefinition
       ) ++ connectiveDefinitions,
@@ -1984,7 +2399,12 @@ object Language {
         FormulaFreeEquality -> formulaFreeEquality,
         FormulaFreeNegation -> formulaFreeNegation,
         FormulaFreeImplication -> formulaFreeImplication,
-        FormulaFreeUniversal -> formulaFreeUniversal
+        FormulaFreeUniversal -> formulaFreeUniversal,
+        FreeForEquality -> freeForEquality,
+        FreeForNegation -> freeForNegation,
+        FreeForImplication -> freeForImplication,
+        FreeForUniversal -> freeForUniversal,
+        FreeForClosed -> freeForClosed
       ) ++ axiomFacts
         .updated(AxiomCases, axiomCases)
         .updated(AxiomFormula, axiomFormula)
@@ -4265,6 +4685,22 @@ object Language {
           val b = single("p")
           Right(("8", Some(Right((a, b))), List(a, b)))
 
+        case FreeForEquality =>
+          val a = single("a")
+          val b = single("b")
+          Right(("5", Some(Right((a, b))), List(a, b)))
+        case FreeForNegation =>
+          val inner = single("p")
+          Right(("6", Some(Left(inner)), List(inner)))
+        case FreeForImplication =>
+          val a = single("p")
+          val b = single("q")
+          Right(("7", Some(Right((a, b))), List(a, b)))
+        case FreeForUniversal =>
+          val a = single("j")
+          val b = single("p")
+          Right(("8", Some(Right((a, b))), List(a, b)))
+
         case other => Left(MissingDefinition(other))
       }
 
@@ -4766,7 +5202,8 @@ object Language {
     def bothWays(
       value: Kernel.Thm,
       whenHeld: (Kernel.Thm, Term) => Either[LogicError, Kernel.Thm],
-      whenDenied: (Kernel.Thm, Term) => Either[LogicError, Kernel.Thm]
+      whenDenied: (Kernel.Thm, Term) => Either[LogicError, Kernel.Thm],
+      answers: Type = vocabulary.numbers
     ): Either[LogicError, Kernel.Thm] =
       for {
         conditional <- Term
@@ -4777,7 +5214,7 @@ object Language {
           case App(App(App(_, guard), yes), no) => Right((guard, yes, no))
           case other => Left(NotOfForm("a conditional", other))
         }
-        numbers = vocabulary.numbers
+        numbers = answers
         middle <- classical.fact(Classical.ExcludedMiddle)
         cases <- rules.spec(split._1, middle)
         condTrue <- classical
@@ -5211,6 +5648,129 @@ object Language {
               } yield reached
             }
           } yield settled
+      }
+    } yield result
+  }
+
+  /**
+   * The four clauses of [[FreeForClosed]]: a closed term is substitutable anywhere.
+   *
+   * The claim is not about what a substitution gives, so the site's substitution slot holds the
+   * head `NUM_FREE_FOR` instead, and [[Site.valueAt]] then reads the clause of THAT recursion at
+   * the shape. Every case ends the same way: the clause says what the claim at this code is, and
+   * the case proves that.
+   *
+   * Equality is `T`. Negation and implication ask the hypothesis. The quantifier is the case with
+   * content and needs no case split on whether the binder is the index: its second branch holds
+   * outright, because closedness says the binder does not occur in the term and the hypothesis says
+   * the body accepts it, so both branches are proved and the conditional goes whichever way.
+   */
+  private def substitutableClause(
+    clauses: Map[String, Kernel.Thm],
+    closedCases: Kernel.Thm
+  )(site: Site, which: Int): Either[LogicError, Kernel.Thm] = {
+    val rules = site.rules
+    val logic = site.logic
+
+    /** The goal at the code, from the clause read at it and a proof of what the clause says. */
+    def settled(value: Kernel.Thm, proved: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv.sym(value).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, proved)))
+
+    val avoid = Set(site.code, site.tag, site.payload) ++ Term.freeVariables(site.index) ++
+      Term.freeVariables(site.replacement)
+
+    for {
+      assumed <- LogicError.lift(Kernel.assume(site.parts(which)))
+      result <- which match {
+        case 0 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            reached <- withWitnesses(site.vocabulary, arguments, avoid) { (left, right, atRight) =>
+              for {
+                isPair <- rules.conjElim1(atRight)
+                shape <- site.atLiteralPair(tagIs, isPair)
+                instance <- rules.specAll(
+                  clauses(FreeForEquality), List(site.index, site.replacement, left, right))
+                value <- site.valueAt(shape, instance)
+                truth <- rules.truth
+                done <- settled(value, truth)
+              } yield done
+            }
+          } yield reached
+
+        case 1 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            payloadIsFormula <- rules.conjElim2(assumed)
+            shape <- site.atLiteral(tagIs)
+            instance <- rules.specAll(
+              clauses(FreeForNegation), List(site.index, site.replacement, site.payload))
+            value <- site.valueAt(shape, instance)
+            inner <- site.inductive(site.payload, shape, payloadIsFormula)
+            done <- settled(value, inner)
+          } yield done
+
+        case 2 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            reached <- withWitnesses(site.vocabulary, arguments, avoid) { (left, right, atRight) =>
+              for {
+                isPair <- rules.conjElim1(atRight)
+                both <- rules.conjElim2(atRight)
+                leftIsFormula <- rules.conjElim1(both)
+                rightIsFormula <- rules.conjElim2(both)
+                shape <- site.atLiteralPair(tagIs, isPair)
+                instance <- rules.specAll(
+                  clauses(FreeForImplication), List(site.index, site.replacement, left, right))
+                value <- site.valueAt(shape, instance)
+                leftDone <- site.inductive(left, shape, leftIsFormula)
+                rightDone <- site.inductive(right, shape, rightIsFormula)
+                joined <- rules.conjIntro(leftDone, rightDone)
+                done <- settled(value, joined)
+              } yield done
+            }
+          } yield reached
+
+        case _ =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            reached <- withWitnesses(site.vocabulary, arguments, avoid) { (bound, inner, atInner) =>
+              for {
+                isPair <- rules.conjElim1(atInner)
+                innerIsFormula <- rules.conjElim2(atInner)
+                shape <- site.atLiteralPair(tagIs, isPair)
+                instance <- rules.specAll(
+                  clauses(FreeForUniversal), List(site.index, site.replacement, bound, inner))
+                value <- site.valueAt(shape, instance)
+
+                // `~(NUM_FREE_TERM j t)`, from closedness at the binder.
+                opened <- rules
+                  .spec(site.replacement, closedCases)
+                  .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, site.sideCondition)))
+                binderAbsent <- rules.spec(bound, opened)
+                body <- site.inductive(inner, shape, innerIsFormula)
+                both <- rules.conjIntro(binderAbsent, body)
+                done <- site.bothWays(
+                  value,
+                  (moved, _) => rules.truth.flatMap(settled(moved, _)),
+                  (moved, _) =>
+                    for {
+                      notFree <- Term
+                        .destEq(moved.conclusion)
+                        .map(_._2)
+                        .flatMap(logic.destDisj)
+                        .toRight(NotOfForm("a disjunction", moved.conclusion))
+                      widened <- rules.disjIntro2(notFree._1, both)
+                      result <- settled(moved, widened)
+                    } yield result,
+                  Type.Bool
+                )
+              } yield done
+            }
+          } yield reached
       }
     } yield result
   }

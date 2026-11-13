@@ -523,16 +523,15 @@ measurement with a date rather than a guard. The
 sentence that claimed `LanguageSpec` did it was contradicted by `LanguageSpec`'s own docstring on
 the day both were written.
 
-**`NUM_CLOSED t` is what the substitution's blindness to capture costs, written down.** **Two** of
-the eight schemes carry it, specialisation once and replacement twice; this sentence said three
-until 2026-09-15, which was three occurrences of the condition counted as three schemes. PA's
-induction scheme substitutes as well and needs no condition, putting `0` and `S i` where `i` stood:
-neither can capture, the first having no variables at all and the second only the one being
-replaced. The condition is **stronger** than the textbook one, which asks merely that the term be
-substitutable, and the difference is a real loss: the object system cannot instantiate a universal
-at a variable. What is not lost is Goedel's argument, which substitutes numerals. Lifting the
-restriction wants a substitutability predicate, which is a recursion over the formula this
-development has not got.
+**`NUM_FREE_FOR i t p` is what the substitution's blindness to capture costs, written down, since
+2026-11-12.** Specialisation and replacement ask it of the term they put in, which is the textbook
+condition: `t` is substitutable for `i` in `p` when no variable of `t` lands under a quantifier
+binding it. Until that day they asked `NUM_CLOSED t` instead, which is stronger and cost
+instantiation at a variable; `docs/adr/0078` is the change and `docs/adr/0040` the measurement
+that asked for it. A closed term is substitutable everywhere (`NUM_FREE_FOR_CLOSED`), so every
+derivation that substituted a numeral still does, through that lemma. PA's induction scheme
+substitutes as well and needs no condition, putting `0` and `S i` where `i` stood: neither can
+capture, the first having no variables at all and the second only the one being replaced.
 
 **And until 2026-09-15 nothing could discharge the condition**, which is a defect that fails no
 test: a scheme whose side condition is unmeetable is a theorem, and the eight were all provable
@@ -677,7 +676,8 @@ settles. `DeductionSpec` asserts that with `Derivation.restingOn` rather than by
 
 Both multiplication axioms had to be put to work first, which is the difference between a fact about
 a code and a fact a derivation can use: `NUM_PA_MUL_ZERO` says `!v0. v0 * 0 = 0` and
-`NUM_PROV_MUL_ZERO` is that axiom at a closed term. The successor one is where the substitution
+`NUM_PROV_MUL_ZERO` is that axiom at a closed term, and since `docs/adr/0078` at any term. The
+successor one is where the substitution
 walk is longer than addition's, because `v0 * S v1 = v0 * v1 + v0` puts a product **inside** a sum
 and the walk descends through both. Four facts, **zero axioms**, and the trusted base stayed at
 the nineteen it held that day.
@@ -741,9 +741,11 @@ sides. `TruthSpec` discharges both conditions at `~(0 = 0)` and gets `NUM_PROV ~
 **PA proves a true strict order between numerals, since 2026-11-10**, by
 `NUM_PROV_LESS_NUMERAL`: `NUM_LESS` is an existential, and `NUM_PROV_EXISTS_INTRO` introduces one
 at a closed witness, which is specialisation contraposed. The other half, refuting a false order,
-is not written, and neither is anything about a variable bounded by a numeral, for one reason that
-is the object logic's: every route found to them instantiates an axiom of PA at an open term, and
-specialisation and replacement take closed terms only. `docs/adr/0040` has the measurement.
+is not written, and neither is anything about a variable bounded by a numeral: every route found to
+them instantiates an axiom of PA at an open term. Specialisation and replacement took closed terms
+only until 2026-11-12 (`docs/adr/0040` has the measurement), and since `docs/adr/0078` they take any
+substitutable term, which `LanguageSpec` exercises at `S x != 0` specialised to `v_1 + v_2`. The
+derivations that use it are the next step.
 
 Not written above that: the bounded quantifiers, where PA has to prove `x < S n` splits, which is
 that open-term question; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so

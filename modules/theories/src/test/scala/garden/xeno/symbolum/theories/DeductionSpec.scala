@@ -316,38 +316,201 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
    * They are asserted apart from it because they are the pieces a reader checks by eye: the second
    * is the one whose substitution descends through a sum AND a product, where addition's descends
    * through a sum alone, and an error there would show as a code that is not the axiom's.
+   *
+   * At OPEN terms since `docs/adr/0078`, which is the point of the assertion now: `v_2` and `v_1`
+   * are what no closed-term rule could reach. `v_1` goes in second, where the fact asks nothing of
+   * it; `v_2` goes in first, where the fact asks that `v_1` not occur in it, and the refusal of
+   * `2 = 1` is what discharges that.
    */
-  it should "put both multiplication axioms to work at closed terms" in {
+  it should "put both multiplication axioms to work at open terms" in {
     val zero = force(deduction.fact(Deduction.MultiplicationAtZero))
     val successor = force(deduction.fact(Deduction.MultiplicationAtSuccessor))
+    val language = chain.language
 
     Derivation.axiomsOf(zero) should have size 2
     Derivation.axiomsOf(successor) should have size 2
 
-    val numeral = term("NUM_NUMERAL (SUC ZERO)")
-    val isTerm = force(rules.spec(term("SUC ZERO"), force(chain.language.fact(Language.NumeralIsTerm))))
-    val isClosed =
-      force(rules.spec(term("SUC ZERO"), force(chain.language.fact(Language.NumeralIsClosed))))
+    val two = term("NUM_CODE 0 2")
+    val one = term("NUM_CODE 0 1")
+    def variableIsTerm(index: String) =
+      force(rules.spec(term(index), force(language.fact(Language.TermVariable))))
+    val oneAbsentFromTwo = force(
+      for {
+        clause <- rules.specAll(force(language.fact(Language.FreeVariable)), List(term("1"), term("2")))
+        apart <- language.successor.distinct(term("2"), term("1"))
+        negation <- LogicError.lift(language.theory.constant("~", Type.fun(Type.Bool, Type.Bool)))
+        lifted <- Conv.apTerm(negation, clause).flatMap(Conv.sym)
+        moved <- LogicError.lift(Kernel.eqMp(lifted, apart))
+      } yield moved)
 
-    val atZero = force(
-      rules.specAll(zero, List(numeral)).flatMap(rules.mp(_, isTerm)).flatMap(rules.mp(_, isClosed)))
+    val atZero = force(rules.specAll(zero, List(two)).flatMap(rules.mp(_, variableIsTerm("2"))))
+    atZero.hypotheses shouldBe empty
     atZero.conclusion shouldBe proposition(
       "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
-        "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_CODE 1 0))) (NUM_CODE 1 0)))")
+        "(NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 1 0))) (NUM_CODE 1 0)))")
 
     val atSuccessor = force(
       rules
-        .specAll(successor, List(numeral, numeral))
-        .flatMap(rules.mp(_, isTerm))
-        .flatMap(rules.mp(_, isClosed))
-        .flatMap(rules.mp(_, isTerm))
-        .flatMap(rules.mp(_, isClosed)))
+        .specAll(successor, List(two, one))
+        .flatMap(rules.mp(_, variableIsTerm("2")))
+        .flatMap(rules.mp(_, oneAbsentFromTwo))
+        .flatMap(rules.mp(_, variableIsTerm("1"))))
+    atSuccessor.hypotheses shouldBe empty
     atSuccessor.conclusion shouldBe proposition(
       "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
-        "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_CODE 2 (NUM_NUMERAL (SUC ZERO))))) " +
+        "(NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 2 (NUM_CODE 0 1)))) " +
         "(NUM_CODE 3 (NUM_PAIR " +
-        "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_NUMERAL (SUC ZERO)))) " +
-        "(NUM_NUMERAL (SUC ZERO))))))")
+        "(NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 0 1))) " +
+        "(NUM_CODE 0 2)))))")
+  }
+
+  /**
+   * PA's `S x != 0` at an open term, the instance `docs/adr/0040` measured every refutation of a
+   * false order needing: `S (v_1 + v_2) != 0`.
+   */
+  it should "refute a successor equal to zero at a term with variables in it" in {
+    val language = chain.language
+    def variableIsTerm(index: String) =
+      force(rules.spec(term(index), force(language.fact(Language.TermVariable))))
+    val sum = term("NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2))")
+    val sumIsTerm = force(
+      rules
+        .specAll(force(language.fact(Language.TermSum)), List(term("NUM_CODE 0 1"), term("NUM_CODE 0 2")))
+        .flatMap(rules.mp(_, variableIsTerm("1")))
+        .flatMap(rules.mp(_, variableIsTerm("2"))))
+
+    val refuted = force(
+      rules
+        .spec(sum, force(deduction.fact(Deduction.SuccessorNotZero)))
+        .flatMap(rules.mp(_, sumIsTerm)))
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2)))) (NUM_CODE 1 0))))")
+  }
+
+  /**
+   * The successor's injectivity at two variables, `S v_2 = S v_0 ==> v_2 = v_0`.
+   *
+   * `v_2` goes in first, under the axiom's binder for `v_1`, so it is the one the condition is
+   * about; `v_0` is the axiom's own outer index and goes in second, which a substitution that
+   * re-read its own output would get wrong.
+   */
+  it should "take the successor's injectivity at two variables" in {
+    val language = chain.language
+    def variableIsTerm(index: String) =
+      force(rules.spec(term(index), force(language.fact(Language.TermVariable))))
+    val oneAbsentFromTwo = force(
+      for {
+        clause <- rules.specAll(force(language.fact(Language.FreeVariable)), List(term("1"), term("2")))
+        apart <- language.successor.distinct(term("2"), term("1"))
+        negation <- LogicError.lift(language.theory.constant("~", Type.fun(Type.Bool, Type.Bool)))
+        lifted <- Conv.apTerm(negation, clause).flatMap(Conv.sym)
+        moved <- LogicError.lift(Kernel.eqMp(lifted, apart))
+      } yield moved)
+
+    val injective = force(
+      rules
+        .specAll(force(deduction.fact(Deduction.SuccessorInjective)),
+          List(term("NUM_CODE 0 2"), term("NUM_CODE 0 0")))
+        .flatMap(rules.mp(_, variableIsTerm("2")))
+        .flatMap(rules.mp(_, oneAbsentFromTwo))
+        .flatMap(rules.mp(_, variableIsTerm("0"))))
+    injective.hypotheses shouldBe empty
+    injective.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 7 (NUM_PAIR " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 2)) (NUM_CODE 2 (NUM_CODE 0 0)))) " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 0 0)))))")
+  }
+
+  /**
+   * Symmetry and transitivity at a term with a variable in it, which the closed rules refuse.
+   *
+   * `v_1 + 0 = v_1` comes from PA's axiom at `v_1`; symmetry turns it round at the hole `v_0`,
+   * which `v_1 + 0` does not mention, and transitivity chains the two back to `v_1 = v_1`. The
+   * freeness conditions are discharged by `Language.freeInTerm`, which is what a caller at open
+   * terms has, and the negative control is that it answers `v_1` FREE in `v_1 + 0` at index `1`:
+   * a decider that refused everything would make the positive answers meaningless.
+   */
+  it should "reverse and chain equations between terms with variables in them" in {
+    val language = chain.language
+    val v1 = term("NUM_CODE 0 1")
+    val sum = term("NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 1 0))")
+    val v1IsTerm = force(rules.spec(term("1"), force(language.fact(Language.TermVariable))))
+    val sumIsTerm = force(
+      rules
+        .specAll(force(language.fact(Language.TermSum)), List(v1, term("NUM_CODE 1 0")))
+        .flatMap(rules.mp(_, v1IsTerm))
+        .flatMap(rules.mp(_, force(language.fact(Language.TermZero)))))
+
+    force(language.freeInTerm(term("1"), sum)).conclusion shouldBe
+      proposition("NUM_FREE_TERM 1 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 1 0)))")
+    val zeroAbsentFromSum = force(language.freeInTerm(term("0"), sum))
+    val zeroAbsentFromV1 = force(language.freeInTerm(term("0"), v1))
+    zeroAbsentFromSum.conclusion shouldBe
+      proposition("~(NUM_FREE_TERM 0 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 1 0))))")
+
+    val axiom = force(
+      rules.spec(v1, force(deduction.fact(Deduction.AdditionAtZero))).flatMap(rules.mp(_, v1IsTerm)))
+    val reversed = force(
+      rules
+        .specAll(force(deduction.fact(Deduction.SymmetryFree)), List(term("0"), sum, v1))
+        .flatMap(rules.mp(_, sumIsTerm))
+        .flatMap(rules.mp(_, v1IsTerm))
+        .flatMap(rules.mp(_, zeroAbsentFromSum))
+        .flatMap(rules.mp(_, axiom)))
+    reversed.hypotheses shouldBe empty
+    reversed.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 1) " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 1 0)))))")
+
+    val chained = force(
+      rules
+        .specAll(force(deduction.fact(Deduction.TransitivityFree)), List(term("0"), v1, sum, v1))
+        .flatMap(rules.mp(_, v1IsTerm))
+        .flatMap(rules.mp(_, sumIsTerm))
+        .flatMap(rules.mp(_, v1IsTerm))
+        .flatMap(rules.mp(_, zeroAbsentFromV1))
+        .flatMap(rules.mp(_, zeroAbsentFromV1))
+        .flatMap(rules.mp(_, reversed))
+        .flatMap(rules.mp(_, axiom)))
+    chained.hypotheses shouldBe empty
+    chained.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 1)))")
+  }
+
+  /**
+   * `!v_0. 0 + v_0 = v_0`, which PA proves and Robinson's Q does not, is proved by induction.
+   *
+   * The statement is pinned by the statement test like every fact here. What this adds is that the
+   * proof goes THROUGH the induction rule, asserted on the derivation rather than read off the
+   * code: a proof that reached the same statement another way would leave the claim that
+   * `NUM_PROV_INDUCTION` is usable unmeasured, and that claim is what the fact exists for.
+   */
+  it should "prove by induction inside PA what Robinson's Q cannot" in {
+    val theorem = force(deduction.fact(Deduction.ZeroAddition))
+    val induction = force(deduction.fact(Deduction.Induction))
+
+    theorem.hypotheses shouldBe empty
+    Derivation.restingOn(theorem, Set(induction.conclusion)) should contain(induction.conclusion)
+    Derivation.axiomsOf(theorem) should have size Derivation.axiomsOf(induction).size
+  }
+
+  /**
+   * `!v_0 v_1. S v_0 + v_1 = S (v_0 + v_1)`, the second induction, which is the first whose step
+   * needs the open rules of equality: its base joins two axioms through symmetry, transitivity and
+   * the successor's congruence at terms with variables in them.
+   */
+  it should "move a successor out of the left summand by induction" in {
+    val theorem = force(deduction.fact(Deduction.SuccessorAddition))
+    val induction = force(deduction.fact(Deduction.Induction))
+    val open = Vector(Deduction.SymmetryFree, Deduction.TransitivityFree,
+      Deduction.SuccessorCongruenceFree).map(name => force(deduction.fact(name)).conclusion)
+
+    theorem.hypotheses shouldBe empty
+    val restsOn = Derivation.restingOn(theorem, open.toSet + induction.conclusion)
+    restsOn should contain(induction.conclusion)
+    open.foreach(rule => restsOn should contain(rule))
   }
 
   it should "carry an object theorem across its own equality" in {

@@ -856,8 +856,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // binds `p` and `q`, of two types, and the other eight bind one or none, so `AGENTS.md`'s figures
     // move by nine, one and none. Measured as 1144 and 1141 over 1135 and 1132 before the rebase onto
     // the radical of an ideal, which added one.
-    library.entries.size shouldBe 1145
-    library.names.distinct.size shouldBe 1142
+    // 1159 and 1156 with instantiation at a substitutable term, 2026-11-12, card `4102f131`,
+    // ADR 0078: fourteen facts under fourteen new names, the four clauses of `NUM_FREE_FOR` and
+    // `NUM_FREE_FOR_CLOSED` from `Language.Statements` and nine from `Deduction.Statements`, derived
+    // from the diff of `docs/lemmas.md` before the pin was read. Eleven of them bind two or more
+    // leading quantifiers, all of `num`, so `AGENTS.md`'s figures move by fourteen, eleven and eleven.
+    library.entries.size shouldBe 1159
+    library.names.distinct.size shouldBe 1156
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

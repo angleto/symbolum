@@ -475,7 +475,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `RediscoverySpec` counts beside the same figure. Plus one.
     // 1005 with the table over the primes, 2026-11-11, card `c30eae79`: the nine `RediscoverySpec` counts beside the
     // same figure. Plus nine.
-    proposals.size shouldBe 1005
+    // 1029 with instantiation at a substitutable term, 2026-11-12, card `4102f131`, ADR 0078,
+    // predicted before the run and equal to it: twenty-eight antecedents on the fourteen new facts
+    // (seven on `NUM_PROV_TRANS_FREE`, four each on `NUM_PROV_SPECIALISE_FREE`,
+    // `NUM_PROV_SYMM_FREE` and `NUM_PROV_SUC_CONG_FREE`, three each on `NUM_PROV_SUC_INJ` and
+    // `NUM_PROV_INDUCTION`, two on `NUM_FREE_FOR_CLOSED`, one on `NUM_PROV_SUC_NOT_ZERO`, none on
+    // the four clauses, `NUM_PROV_ZERO_ADD` and `NUM_PROV_SUC_ADD`), less the four `NUM_CLOSED`
+    // antecedents `NUM_PROV_ADD_ZERO`, `NUM_PROV_MUL_ZERO`, `NUM_PROV_ADD_SUC` and
+    // `NUM_PROV_MUL_SUC` lost. Plus twenty-four.
+    proposals.size shouldBe 1029
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1530,7 +1538,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 861 with the table over the primes, 2026-11-11, read off the run and not decomposed: five of
     // its nine weakenings, claims about the list `p`, the table `d` or the normalised `f` that no
     // procedure reads. Predicted as all nine, 865, which the run refused. Plus five.
-    open shouldBe 861
+    // 863 with instantiation at a substitutable term, 2026-11-12, card `4102f131`, read off the
+    // run and not decomposed, and not predicted. Plus two.
+    open shouldBe 863
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1951,7 +1961,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 232 with the table over the primes, 2026-11-11: the other four of its nine weakenings, derived
     // as nine less the five `open` above read off the run, which this one did not reach because
     // `open` was red. Plus four.
-    unreadable shouldBe 232
+    // 254 with instantiation at a substitutable term, 2026-11-12, card `4102f131`: the other
+    // twenty-two of its twenty-four new weakenings, read off the run, which the first run did not
+    // reach because `open` above was red, and equal to twenty-four less the two `open` read.
+    // Plus twenty-two.
+    unreadable shouldBe 254
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2311,7 +2325,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // an entry's index. Plus six.
     // 359 with the table over the primes, 2026-11-11, read off the run and not decomposed: seven of
     // its nine weakenings. Predicted as all nine, 361, which the run refused. Plus seven.
-    aboutNumbers.size shouldBe 359
+    // 361 with instantiation at a substitutable term, 2026-11-12, card `4102f131`, read off the
+    // run and not decomposed, and not predicted. Plus two.
+    aboutNumbers.size shouldBe 361
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

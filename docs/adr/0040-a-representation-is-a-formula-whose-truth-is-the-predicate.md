@@ -137,3 +137,6 @@ textbook repair is the scheme's own condition, a term **substitutable** for the 
 a closed one, which needs a recursion over the formula `Language` does not have, and changes what
 `NUM_PROV` means for every fact above it. That is a decision about the object logic, and it is
 taken before completeness for bounded formulas is attempted again, not inside it.
+
+The decision was taken on 2026-11-12 and is `docs/adr/0078`: both schemes ask that the term be
+substitutable.

@@ -438,9 +438,10 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * An instance of specialisation, built at a concrete formula and a concrete closed term.
    *
    * The schemes are provable and that is not the same as usable. This one is the hardest of them
-   * to use, because its third condition is `NUM_CLOSED t`, and nothing until this commit
-   * could discharge such a condition at all: it needs freeness at every index, which is what the
-   * previous piece of work was for.
+   * to use, because its third condition asks something of the term, and until the closure facts
+   * landed nothing could discharge it at all. Since `docs/adr/0078` the condition is
+   * substitutability, and a closed term discharges it through `NUM_FREE_FOR_CLOSED`, which is the
+   * route this test takes and every derivation in `Deduction` takes.
    *
    * What comes out is the code of `(!v0. v0 = v0) ==> (v0 = v0)[v0 := 0]`, which is a logical
    * axiom. Everything the object theory will ever derive goes through instances built this way, so
@@ -483,7 +484,11 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
         )
         .flatMap(rules.mp(_, isFormula))
         .flatMap(rules.mp(_, force(language.fact(Language.TermZero))))
-        .flatMap(rules.mp(_, closed))
+        .flatMap(rules.mp(_, force(
+          rules
+            .specAll(force(language.fact(Language.FreeForClosed)), List(term("0"), zeroCode, claim))
+            .flatMap(rules.mp(_, isFormula))
+            .flatMap(rules.mp(_, closed)))))
     )
 
     instance.hypotheses shouldBe empty
@@ -494,6 +499,131 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
         "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))))))"
     )
     Derivation.axiomsOf(instance) should have size 2
+  }
+
+  /**
+   * Substitutability, attacked at the case that would make PA inconsistent.
+   *
+   * `v_1` for `v_0` in `!v_1. v_0 = v_1` is the textbook capture: the formula says `v_0` equals
+   * everything, which is false of every `v_0`, and after the capture it says `v_1 = v_1` for every
+   * `v_1`, which is true. A definition whose quantifier clause forgot the binder would accept it,
+   * and specialisation would then derive a falsity. The other four are the controls that keep the
+   * attack from passing by refusing everything: a fresh variable is accepted, so is a term where
+   * the index is not free, so is one where the quantifier binds the index itself, and the capture
+   * is still refused under a negation and an implication.
+   *
+   * Each answer is a theorem rather than a boolean, so a wrong answer cannot be produced at all; a
+   * definition that answered the other way would make the call fail to prove what is asserted.
+   */
+  "Substitutability" should "refuse the capture and accept the cases around it" in {
+    val atZeroOne = "NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))"
+    val atOneOne = "NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 1))"
+    val captured = s"NUM_CODE 8 (NUM_PAIR 1 ($atZeroOne))"
+    val cases = Vector(
+      ("NUM_CODE 0 1", captured, false),
+      ("NUM_CODE 0 2", captured, true),
+      ("NUM_CODE 0 1", s"NUM_CODE 8 (NUM_PAIR 1 ($atOneOne))", true),
+      ("NUM_CODE 0 1", s"NUM_CODE 8 (NUM_PAIR 0 ($atZeroOne))", true),
+      ("NUM_CODE 0 1", s"NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR ($atOneOne) ($captured)))", false)
+    )
+
+    cases.foreach { case (replacement, code, accepted) =>
+      val claim = s"NUM_FREE_FOR 0 ($replacement) ($code)"
+      val answer = force(language.substitutableIn(term("0"), term(replacement), term(code)))
+      withClue(s"$claim: ") {
+        answer.hypotheses shouldBe empty
+        answer.conclusion shouldBe proposition(if (accepted) claim else s"~($claim)")
+      }
+    }
+  }
+
+  /**
+   * The three code helpers pass a numeral standing for ANY number, which is a code no clause
+   * matches: `NUM_NUMERAL m` with `m` a variable.
+   *
+   * Substituting into `numeral m + S v_0 = numeral n` must leave both numerals where they are, the
+   * index `2` must be absent from `numeral m + v_1` while `1` is present, and the formula must be
+   * shown a formula. The `1` is the control: a helper that called every numeral-carrying term
+   * closed by refusing to look would pass the other three.
+   */
+  it should "pass a numeral of any number in the code helpers" in {
+    val formula = term(
+      "NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 2 (NUM_CODE 0 0)))) " +
+        "(NUM_NUMERAL n))")
+    val computed = force(language.substituteIn(term("0"), term("NUM_NUMERAL k"), formula))
+    computed.hypotheses shouldBe empty
+    computed.conclusion shouldBe proposition(
+      "NUM_SUBST_FORM 0 (NUM_NUMERAL k) (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 2 (NUM_CODE 0 0)))) (NUM_NUMERAL n))) = " +
+        "NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 2 (NUM_NUMERAL k)))) (NUM_NUMERAL n))")
+
+    val sum = "NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 0 1))"
+    force(language.freeInTerm(term("2"), term(sum))).conclusion shouldBe
+      proposition(s"~(NUM_FREE_TERM 2 ($sum))")
+    force(language.freeInTerm(term("1"), term(sum))).conclusion shouldBe
+      proposition(s"NUM_FREE_TERM 1 ($sum)")
+
+    force(language.wellFormedIn(formula)).conclusion shouldBe
+      force(LogicError.lift(Term.app(
+        force(LogicError.lift(language.theory.constant(Language.FormulaName, Type.fun(numbers, Type.Bool)))),
+        formula)))
+  }
+
+  /**
+   * What `docs/adr/0078` was for: an axiom of PA at an OPEN term.
+   *
+   * `!v_0. ~(S v_0 = 0)` specialised at `v_1 + v_2`, which is the instance `docs/adr/0040`'s
+   * measurement found every derivation of the bounded case needing and no scheme reaching. It is
+   * built with nothing assumed, and the substitution is computed so that what is asserted is the
+   * code a reader can check against `(!v_0. ~(S v_0 = 0)) ==> ~(S (v_1 + v_2) = 0)`.
+   */
+  it should "let specialisation reach a term with variables in it" in {
+    def fact(name: String) = force(language.fact(name))
+    val v0 = term("NUM_CODE 0 0")
+    val v1 = term("NUM_CODE 0 1")
+    val v2 = term("NUM_CODE 0 2")
+    val zero = term("NUM_CODE 1 0")
+    val successorOfV0 = term("NUM_CODE 2 (NUM_CODE 0 0)")
+    val equation = term("NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0))")
+    val sum = term("NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2))")
+    val body = term("NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0)))")
+
+    def variableIsTerm(index: String) = force(rules.spec(term(index), fact(Language.TermVariable)))
+    val sumIsTerm = force(
+      rules
+        .specAll(fact(Language.TermSum), List(v1, v2))
+        .flatMap(rules.mp(_, variableIsTerm("1")))
+        .flatMap(rules.mp(_, variableIsTerm("2"))))
+    val successorIsTerm = force(
+      rules.spec(v0, fact(Language.TermSuccessor)).flatMap(rules.mp(_, variableIsTerm("0"))))
+    val bodyIsFormula = force(
+      rules
+        .specAll(fact(Language.FormulaEquality), List(successorOfV0, zero))
+        .flatMap(rules.mp(_, successorIsTerm))
+        .flatMap(rules.mp(_, fact(Language.TermZero)))
+        .flatMap(isEquation =>
+          rules.spec(equation, fact(Language.FormulaNegation)).flatMap(rules.mp(_, isEquation))))
+
+    val substitutable = force(language.substitutableIn(term("0"), sum, body))
+    val instance = force(
+      rules
+        .specAll(fact("NUM_LOGIC_SPECIALISE"), List(term("0"), sum, body))
+        .flatMap(rules.mp(_, bodyIsFormula))
+        .flatMap(rules.mp(_, sumIsTerm))
+        .flatMap(rules.mp(_, substitutable)))
+    val computed = force(language.substituteIn(term("0"), sum, body))
+    val readable = force(
+      Rewrite.Rule.of(logic, computed).flatMap(rule => Rewrite.inTheorem(Vector(rule), instance)))
+
+    readable.hypotheses shouldBe empty
+    readable.conclusion shouldBe proposition(
+      "NUM_LOGIC (NUM_CODE 7 (NUM_PAIR " +
+        "(NUM_CODE 8 (NUM_PAIR 0 " +
+        "(NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0)))))) " +
+        "(NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2)))) (NUM_CODE 1 0))))))")
+    Derivation.axiomsOf(readable) should have size 2
   }
 
   /**

@@ -444,7 +444,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 1005 with the table over the primes, 2026-11-11: one antecedent per hypothesis of eight facts
     // of `Gilbreath.Statements`, two each on `GILBREATH_PRIMES_ALL` and `GILBREATH_NORMALISED`, one
     // on each of five others, none on `GILBREATH_PRIMES_EXIST`, counted before the run. Plus nine.
-    propose.weakenings.size shouldBe 1005
+    // 1029 with instantiation at a substitutable term, 2026-11-12, card `4102f131`, ADR 0078,
+    // counted before the run and equal to it: twenty-eight antecedents on the fourteen new facts of
+    // `Language.Statements` and `Deduction.Statements`, less the one `NUM_CLOSED` antecedent each of
+    // `NUM_PROV_ADD_ZERO`, `NUM_PROV_MUL_ZERO`, `NUM_PROV_ADD_SUC` and `NUM_PROV_MUL_SUC` lost.
+    // `ProposeSpec` carries the per-fact count beside the same figure. Plus twenty-four.
+    propose.weakenings.size shouldBe 1029
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

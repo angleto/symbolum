@@ -223,6 +223,39 @@ object Deduction {
   val Specialisation: String = "NUM_PROV_SPECIALISE"
 
   /**
+   * Specialisation at any term substitutable for the index, which is what `docs/adr/0078` made
+   * the scheme say.
+   *
+   * `|- !i t p. NUM_FORM p ==> NUM_TERM t ==> NUM_FREE_FOR i t p ==>`
+   * `NUM_PROV (NUM_CODE 8 (NUM_PAIR i p)) ==> NUM_PROV (NUM_SUBST_FORM i t p)`
+   *
+   * [[Specialisation]] is this with `NUM_CLOSED t` in place of the third condition, and it is
+   * derived from this through `NUM_FREE_FOR_CLOSED`, so the two are one derivation. The closed
+   * form stays because every caller holding a numeral holds its closure and nothing else.
+   */
+  val SubstitutableSpecialisation: String = "NUM_PROV_SPECIALISE_FREE"
+
+  /**
+   * PA's `S x != 0` at any term: `|- !t. NUM_TERM t ==> NUM_PROV (~(S t = 0))`.
+   *
+   * The first axiom of PA published at an OPEN term, which is what `docs/adr/0078` was for:
+   * refuting a false order between numerals ends at `S (numeral m + v_z) != 0`, a term with a
+   * variable in it. The body has no binder, so any term is substitutable and the fact asks
+   * nothing of `t` beyond being a term. Until 2026-11-12 this was a private step at closed terms
+   * inside the proof that distinct numerals are provably distinct, which now cites it.
+   */
+  val SuccessorNotZero: String = "NUM_PROV_SUC_NOT_ZERO"
+
+  /**
+   * PA's injectivity of the successor at two terms, the first not mentioning `v_1`:
+   * `|- !a b. NUM_TERM a ==> ~(NUM_FREE_TERM 1 a) ==> NUM_TERM b ==> NUM_PROV (S a = S b ==> a = b)`.
+   *
+   * The condition is [[AdditionAtSuccessor]]'s, for the same reason. Until 2026-11-12 this was a
+   * private step at two closed terms inside [[NumeralsDistinct]], which now cites it.
+   */
+  val SuccessorInjective: String = "NUM_PROV_SUC_INJ"
+
+  /**
    * The embedded theory's equality is symmetric.
    *
    * `NUM_LOGIC` has reflexivity and ONE replacement scheme, and two is the economical choice
@@ -252,6 +285,75 @@ object Deduction {
   val Transitivity: String = "NUM_PROV_TRANS"
 
   /**
+   * Symmetry at open terms, over a hole index the caller chooses:
+   * `|- !k t u. NUM_TERM t ==> NUM_TERM u ==> ~(NUM_FREE_TERM k t) ==>`
+   * `NUM_PROV (t = u) ==> NUM_PROV (u = t)`.
+   *
+   * The derivation is [[Symmetry]]'s, replacement at `v_k = t`, and what changes is what it asks:
+   * `t` sits in the hole and must come back untouched, so it must not mention `k`, and that is all.
+   * The index is a parameter rather than `0` because a term with variables mentions SOME index,
+   * and the caller is the one who knows which are free. [[Symmetry]] is this at `0`.
+   */
+  val SymmetryFree: String = "NUM_PROV_SYMM_FREE"
+
+  /**
+   * Transitivity at open terms, over a hole index `k` that neither end mentions:
+   * `|- !k t u w. NUM_TERM t ==> NUM_TERM u ==> NUM_TERM w ==> ~(NUM_FREE_TERM k t) ==>`
+   * `~(NUM_FREE_TERM k w) ==> NUM_PROV (t = u) ==> NUM_PROV (u = w) ==> NUM_PROV (t = w)`.
+   *
+   * [[Transitivity]] is this at `0`.
+   */
+  val TransitivityFree: String = "NUM_PROV_TRANS_FREE"
+
+  /**
+   * The successor's congruence at open terms, over a hole index `k` that `t` does not mention:
+   * `|- !k t u. NUM_TERM t ==> NUM_TERM u ==> ~(NUM_FREE_TERM k t) ==>`
+   * `NUM_PROV (t = u) ==> NUM_PROV (S t = S u)`.
+   *
+   * [[SuccessorCongruence]] is this at `0`. It is the first congruence moved, because an induction
+   * inside PA carries its hypothesis under a successor at the step.
+   */
+  val SuccessorCongruenceFree: String = "NUM_PROV_SUC_CONG_FREE"
+
+  /**
+   * PA's induction scheme as a rule:
+   * `|- !i p. NUM_FORM p ==> NUM_PROV (p[0/i]) ==> NUM_PROV (!v_i. p ==> p[S v_i/i]) ==>`
+   * `NUM_PROV (!v_i. p)`.
+   *
+   * The scheme is an axiom of PA, `NUM_PA_INDUCTION`, and this detaches it twice, which is the form
+   * a derivation inside PA wants: a base and a step in hand, the universal out. It is what
+   * separates PA from Robinson's Q (`docs/adr/0013`), and until 2026-11-12 nothing in this file
+   * used it, because a step is a claim about the variable `v_i` and the rules that could build
+   * one asked for closed terms. `docs/adr/0078` is what made the step buildable.
+   */
+  val Induction: String = "NUM_PROV_INDUCTION"
+
+  /**
+   * PA proves `!v_0. 0 + v_0 = v_0`, by induction inside the theory.
+   *
+   * The first theorem here that PA proves and Robinson's Q does not: Q has `x + 0 = x` and
+   * `x + S y = S (x + y)`, which put the variable on the right, and `0 + x = x` with the
+   * variable on the left needs an induction on `x`. That makes it the measurement of whether
+   * [[Induction]] is usable and not merely provable. The base is `NUM_PROV_ADD_ZERO` at `0`; the
+   * step is replacement at the hole `0 + S v_0 = S v_1`, read as the implication
+   * `0 + v_0 = v_0 ==> (0 + S v_0 = S (0 + v_0) ==> 0 + S v_0 = S v_0)`, with the middle supplied by
+   * `NUM_PROV_ADD_SUC` at `0` and `v_0`, then generalised over `v_0`. Every step is at an open term,
+   * which is why it could not be written before `docs/adr/0078`.
+   */
+  val ZeroAddition: String = "NUM_PROV_ZERO_ADD"
+
+  /**
+   * PA proves `!v_0 v_1. S v_0 + v_1 = S (v_0 + v_1)`, by induction on `v_1` inside the theory.
+   *
+   * The successor moved from the left summand to the outside, which PA's axioms state for the
+   * RIGHT summand only. It is what a statement about `x < S n` needs, since `x < S n` unfolds to a
+   * sum whose left side is the variable. The base is two axioms joined by the open symmetry,
+   * transitivity and successor congruence; the step is replacement under the hypothesis, as in
+   * [[ZeroAddition]], then a detached replacement and [[Syllogism]].
+   */
+  val SuccessorAddition: String = "NUM_PROV_SUC_ADD"
+
+  /**
    * The successor respects the embedded theory's equality.
    *
    * `Language` records that two equality axioms are enough because reflexivity and one replacement
@@ -267,7 +369,7 @@ object Deduction {
   val SuccessorCongruence: String = "NUM_PROV_SUC_CONG"
 
   /**
-   * PA's first axiom for addition, at any closed term rather than at a variable.
+   * PA's first axiom for addition, at any term rather than at a variable.
    *
    * `NUM_PA_ADD_ZERO` says `!v0. v0 + 0 = v0` and is a fact about a code; this is that axiom put
    * to work, which is a different thing and is what every arithmetic derivation actually reaches
@@ -276,13 +378,19 @@ object Deduction {
   val AdditionAtZero: String = "NUM_PROV_ADD_ZERO"
 
   /**
-   * PA's second axiom for addition, at two closed terms.
+   * PA's second axiom for addition, at two terms, the first not mentioning `v_1`.
    *
    * The same as [[AdditionAtZero]] with one more quantifier, and the extra quantifier is the whole
    * difference: the first substitution has to descend UNDER a binder for another index, and the
    * second has to pass over the term the first put in. The second is where
-   * [[Language.SubstituteIdle]] is spent, and it is the reason that lemma had to be about every
-   * closed term: what the first substitution leaves behind is an arbitrary `t`, not a numeral.
+   * [[Language.SubstituteIdle]] is spent: what the first substitution leaves behind is an
+   * arbitrary `t`, not a numeral.
+   *
+   * **The condition on `t` is the axiom's choice of index showing through**, and it is the only
+   * one left since `docs/adr/0078`. The axiom is `!v_0 v_1.`, so `t` goes under the binder for
+   * `v_1` and must not be captured there, and then `v_1` is replaced and must not reach into `t`.
+   * `~(NUM_FREE_TERM 1 t)` is both, and a closed `t` meets it, which is how every caller with a
+   * numeral discharges it. Until that ADR both terms had to be closed.
    */
   val AdditionAtSuccessor: String = "NUM_PROV_ADD_SUC"
 
@@ -352,11 +460,12 @@ object Deduction {
    */
   val Reflexivity: String = "NUM_PROV_REFL"
 
-  /** PA's first axiom for multiplication, at a closed term. [[AdditionAtZero]]'s counterpart. */
+  /** PA's first axiom for multiplication, at any term. [[AdditionAtZero]]'s counterpart. */
   val MultiplicationAtZero: String = "NUM_PROV_MUL_ZERO"
 
   /**
-   * PA's second axiom for multiplication, at two closed terms.
+   * PA's second axiom for multiplication, at two terms, the first not mentioning `v_1`, for the
+   * reason [[AdditionAtSuccessor]] gives.
    *
    * `[[AdditionAtSuccessor]]`'s counterpart and one step harder in the substitution: the axiom is
    * `v0 * S v1 = v0 * v1 + v0`, so the right side is a **sum of a product**, and the walk that
@@ -528,6 +637,39 @@ object Deduction {
     Specialisation ->
       ("!i:num t:num p:num. NUM_FORM p ==> NUM_TERM t ==> NUM_CLOSED t ==> " +
         "NUM_PROV (NUM_CODE 8 (NUM_PAIR i p)) ==> NUM_PROV (NUM_SUBST_FORM i t p)"),
+    SubstitutableSpecialisation ->
+      ("!i:num t:num p:num. NUM_FORM p ==> NUM_TERM t ==> NUM_FREE_FOR i t p ==> " +
+        "NUM_PROV (NUM_CODE 8 (NUM_PAIR i p)) ==> NUM_PROV (NUM_SUBST_FORM i t p)"),
+    SymmetryFree ->
+      ("!k:num t:num u:num. NUM_TERM t ==> NUM_TERM u ==> ~(NUM_FREE_TERM k t) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR u t))"),
+    TransitivityFree ->
+      ("!k:num t:num u:num w:num. NUM_TERM t ==> NUM_TERM u ==> NUM_TERM w ==> " +
+        "~(NUM_FREE_TERM k t) ==> ~(NUM_FREE_TERM k w) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR u w)) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR t w))"),
+    SuccessorCongruenceFree ->
+      ("!k:num t:num u:num. NUM_TERM t ==> NUM_TERM u ==> ~(NUM_FREE_TERM k t) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 t) (NUM_CODE 2 u)))"),
+    SuccessorAddition ->
+      ("NUM_PROV (NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 0 1))) " +
+        "(NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))))))))"),
+    ZeroAddition ->
+      ("NUM_PROV (NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 0 0))) (NUM_CODE 0 0)))))"),
+    Induction ->
+      ("!i:num p:num. NUM_FORM p ==> NUM_PROV (NUM_SUBST_FORM i (NUM_CODE 1 0) p) ==> " +
+        "NUM_PROV (NUM_CODE 8 (NUM_PAIR i (NUM_CODE 7 (NUM_PAIR p " +
+        "(NUM_SUBST_FORM i (NUM_CODE 2 (NUM_CODE 0 i)) p))))) ==> " +
+        "NUM_PROV (NUM_CODE 8 (NUM_PAIR i p))"),
+    SuccessorNotZero ->
+      "!t:num. NUM_TERM t ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 t) (NUM_CODE 1 0))))",
+    SuccessorInjective ->
+      ("!a:num b:num. NUM_TERM a ==> ~(NUM_FREE_TERM 1 a) ==> NUM_TERM b ==> " +
+        "NUM_PROV (NUM_CODE 7 (NUM_PAIR " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 a) (NUM_CODE 2 b))) (NUM_CODE 5 (NUM_PAIR a b))))"),
     Symmetry ->
       ("!t:num u:num. NUM_TERM t ==> NUM_TERM u ==> NUM_CLOSED t ==> NUM_CLOSED u ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR u t))"),
@@ -541,10 +683,10 @@ object Deduction {
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 t) (NUM_CODE 2 u)))"),
     AdditionAtZero ->
-      ("!t:num. NUM_TERM t ==> NUM_CLOSED t ==> " +
+      ("!t:num. NUM_TERM t ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR t (NUM_CODE 1 0))) t))"),
     AdditionAtSuccessor ->
-      ("!t:num u:num. NUM_TERM t ==> NUM_CLOSED t ==> NUM_TERM u ==> NUM_CLOSED u ==> " +
+      ("!t:num u:num. NUM_TERM t ==> ~(NUM_FREE_TERM 1 t) ==> NUM_TERM u ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
         "(NUM_CODE 3 (NUM_PAIR t (NUM_CODE 2 u))) " +
         "(NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR t u)))))"),
@@ -574,10 +716,10 @@ object Deduction {
         "(NUM_CODE 4 (NUM_PAIR w t)) (NUM_CODE 4 (NUM_PAIR w u))))"),
     Reflexivity -> "!t:num. NUM_TERM t ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR t t))",
     MultiplicationAtZero ->
-      ("!t:num. NUM_TERM t ==> NUM_CLOSED t ==> " +
+      ("!t:num. NUM_TERM t ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR t (NUM_CODE 1 0))) (NUM_CODE 1 0)))"),
     MultiplicationAtSuccessor ->
-      ("!t:num u:num. NUM_TERM t ==> NUM_CLOSED t ==> NUM_TERM u ==> NUM_CLOSED u ==> " +
+      ("!t:num u:num. NUM_TERM t ==> ~(NUM_FREE_TERM 1 t) ==> NUM_TERM u ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
         "(NUM_CODE 4 (NUM_PAIR t (NUM_CODE 2 u))) " +
         "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR t u)) t))))"),
@@ -638,6 +780,17 @@ object Deduction {
               builder.checked(ImplicationGeneralisation, builder.implicationGeneralisation),
             DeductionTheorem -> builder.checked(DeductionTheorem, builder.deductionTheorem),
             Specialisation -> builder.checked(Specialisation, builder.specialisation),
+            SubstitutableSpecialisation ->
+              builder.checked(SubstitutableSpecialisation, builder.substitutableSpecialisation),
+            SuccessorNotZero -> builder.checked(SuccessorNotZero, builder.successorNotZero),
+            SymmetryFree -> builder.checked(SymmetryFree, builder.symmetryFree),
+            TransitivityFree -> builder.checked(TransitivityFree, builder.transitivityFree),
+            SuccessorCongruenceFree ->
+              builder.checked(SuccessorCongruenceFree, builder.successorCongruenceFree),
+            Induction -> builder.checked(Induction, builder.induction),
+            ZeroAddition -> builder.checked(ZeroAddition, builder.zeroAddition),
+            SuccessorAddition -> builder.checked(SuccessorAddition, builder.successorAddition),
+            SuccessorInjective -> builder.checked(SuccessorInjective, builder.successorInjective),
             Symmetry -> builder.checked(Symmetry, builder.symmetry),
             Transitivity -> builder.checked(Transitivity, builder.transitivity),
             SuccessorCongruence ->
@@ -744,6 +897,29 @@ object Deduction {
     private val vacuous = force(language.fact("NUM_LOGIC_VACUOUS"))
     private val specialising = force(language.fact("NUM_LOGIC_SPECIALISE"))
     private val replacing = force(language.fact("NUM_LOGIC_REPLACE"))
+    private val closedIsSubstitutable = force(language.fact(Language.FreeForClosed))
+    private val freeForEquality = force(language.fact(Language.FreeForEquality))
+    private val freeForNegation = force(language.fact(Language.FreeForNegation))
+    private val freeForImplication = force(language.fact(Language.FreeForImplication))
+    private val freeForUniversal = force(language.fact(Language.FreeForUniversal))
+
+    /**
+     * `NUM_FREE_FOR i t p`, from `NUM_FORM p` and `NUM_CLOSED t`.
+     *
+     * Every derivation in this file was written when the two substituting schemes asked for
+     * closedness, and each still holds it; this is the one step between what it holds and what the
+     * schemes ask for since `docs/adr/0078`.
+     */
+    private def substitutable(
+      index: Term, replacement: Term, body: Term,
+      bodyIsFormula: Kernel.Thm, replacementIsClosed: Kernel.Thm
+    ): Kernel.Thm =
+      force(
+        rules
+          .specAll(closedIsSubstitutable, List(index, replacement, body))
+          .flatMap(rules.mp(_, bodyIsFormula))
+          .flatMap(rules.mp(_, replacementIsClosed))
+      )
     private val reflexive = force(language.fact("NUM_LOGIC_REFLEXIVE"))
     private val formulaOfEquality = force(language.fact(Language.FormulaEquality))
     private val variableIsTerm = force(language.fact(Language.TermVariable))
@@ -768,7 +944,6 @@ object Deduction {
     private val substituteProduct = force(language.fact(Language.SubstituteProduct))
     private val zeroIsTerm = force(language.fact(Language.TermZero))
     private val peanoIsProvable = force(provability.fact(Provability.ProvablePeano))
-    private lazy val specialisingRule = checked(Specialisation, specialisation)
     private val successorIsTerm = force(language.fact(Language.TermSuccessor))
     private val substituteSuccessor = force(language.fact(Language.SubstituteSuccessor))
     private val zeroTag = force(Parser.term(theory, notation, "0", numbers))
@@ -805,22 +980,23 @@ object Deduction {
     }
 
     /**
-     * A provable quantified formula instantiated at a closed term, with the substitution computed.
+     * A provable quantified formula instantiated at a term substitutable for the index, with the
+     * substitution computed.
      *
-     * The rule is [[Specialisation]] and the rest is arithmetic on codes: without `computed` the
-     * conclusion carries a `NUM_SUBST_FORM` and says nothing a reader can check.
+     * The rule is [[SubstitutableSpecialisation]] and the rest is arithmetic on codes: without
+     * `computed` the conclusion carries a `NUM_SUBST_FORM` and says nothing a reader can check.
      */
-    private def atClosedTerm(
+    private def atSubstitutable(
       provable: Kernel.Thm, index: Term, replacement: Term, body: Term,
-      bodyIsFormula: Kernel.Thm, replacementIsTerm: Kernel.Thm, replacementIsClosed: Kernel.Thm,
+      bodyIsFormula: Kernel.Thm, replacementIsTerm: Kernel.Thm, replacementIsFree: Kernel.Thm,
       computed: Kernel.Thm
     ): Kernel.Thm = {
       val specialised = force(
         rules
-          .specAll(specialisingRule, List(index, replacement, body))
+          .specAll(substitutableRule, List(index, replacement, body))
           .flatMap(rules.mp(_, bodyIsFormula))
           .flatMap(rules.mp(_, replacementIsTerm))
-          .flatMap(rules.mp(_, replacementIsClosed))
+          .flatMap(rules.mp(_, replacementIsFree))
           .flatMap(rules.mp(_, provable))
       )
       force(
@@ -830,15 +1006,93 @@ object Deduction {
       )
     }
 
-    /** An axiom of PA with its outermost quantifier instantiated at a closed term. */
-    private def axiomAt(
+    /** An axiom of PA with its outermost quantifier instantiated at a substitutable term. */
+    private def axiomAtSubstitutable(
       name: String, index: Term, replacement: Term, body: Term,
-      bodyIsFormula: Kernel.Thm, replacementIsTerm: Kernel.Thm, replacementIsClosed: Kernel.Thm,
+      bodyIsFormula: Kernel.Thm, replacementIsTerm: Kernel.Thm, replacementIsFree: Kernel.Thm,
       computed: Kernel.Thm
     ): Kernel.Thm =
-      atClosedTerm(
+      atSubstitutable(
         provesAxiom(name), index, replacement, body,
-        bodyIsFormula, replacementIsTerm, replacementIsClosed, computed)
+        bodyIsFormula, replacementIsTerm, replacementIsFree, computed)
+
+    /** `NUM_FREE_FOR i t (a = b)`: an equality has no binder, so any term goes in. */
+    private def substitutableInEquality(index: Term, replacement: Term, a: Term, b: Term)
+      : Kernel.Thm =
+      force(
+        rules
+          .specAll(freeForEquality, List(index, replacement, a, b))
+          .flatMap(Conv.sym)
+          .flatMap(equation =>
+            rules.truth.flatMap(truth => LogicError.lift(Kernel.eqMp(equation, truth)))))
+
+    /**
+     * `NUM_FREE_FOR i t (!v_j. q)` where `j` is not `i`, from `~(NUM_FREE_TERM j t)` and
+     * `NUM_FREE_FOR i t q`: the second disjunct of the clause, the guard refuted.
+     */
+    private def substitutableUnderOther(
+      index: Term, replacement: Term, bound: Term, body: Term,
+      boundAbsent: Kernel.Thm, bodyAccepts: Kernel.Thm
+    ): Kernel.Thm = {
+      val clause = force(rules.specAll(freeForUniversal, List(index, replacement, bound, body)))
+      val apart = force(language.successor.distinct(bound, index))
+      val guard = force(LogicError.lift(Term.eq(bound, index)))
+      val (yes, no) = Term.destEq(clause.conclusion).map(_._2) match {
+        case Some(App(App(App(_, _), first), second)) => (first, second)
+        case other => throw new RefusedHere(NotOfForm("a conditional", clause.conclusion))
+      }
+      val scheme = Kernel.instType(
+        Map(Classical.TypeVariable -> Type.Bool), force(classical.fact(Classical.CondFalse)))
+      val taken = force(
+        rules.specAll(scheme, List(guard, yes, no)).flatMap(rules.mp(_, apart)))
+      val opened = force(Conv.trans(clause, taken))
+      val notFreeInBody = force(logic.destDisj(no).toRight(NotOfForm("a disjunction", no)))._1
+      val held = force(
+        rules.conjIntro(boundAbsent, bodyAccepts).flatMap(rules.disjIntro2(notFreeInBody, _)))
+      force(Conv.sym(opened).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, held))))
+    }
+
+    /** `NUM_FREE_FOR i t (p ==> q)` from the same of both sides. */
+    private def substitutableInImplication(
+      index: Term, replacement: Term, left: Term, right: Term,
+      leftAccepts: Kernel.Thm, rightAccepts: Kernel.Thm
+    ): Kernel.Thm =
+      force(
+        rules
+          .specAll(freeForImplication, List(index, replacement, left, right))
+          .flatMap(Conv.sym)
+          .flatMap(equation =>
+            rules.conjIntro(leftAccepts, rightAccepts)
+              .flatMap(both => LogicError.lift(Kernel.eqMp(equation, both)))))
+
+    /** `NUM_FREE_FOR i t (~p)` from the same of `p`. */
+    private def substitutableInNegation(
+      index: Term, replacement: Term, inner: Term, innerAccepts: Kernel.Thm
+    ): Kernel.Thm =
+      force(
+        rules
+          .specAll(freeForNegation, List(index, replacement, inner))
+          .flatMap(Conv.sym)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, innerAccepts))))
+
+    /** `~(NUM_FREE_TERM i s)` from `NUM_CLOSED s`. */
+    private def absentFrom(index: Term, subject: Term, subjectIsClosed: Kernel.Thm): Kernel.Thm =
+      force(
+        rules
+          .spec(subject, closedCases)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, subjectIsClosed)))
+          .flatMap(rules.spec(index, _)))
+
+    /** `NUM_SUBST_TERM i r s = s` where `i` does not occur in `s`. */
+    private def idleWhereAbsent(
+      index: Term, replacement: Term, subject: Term,
+      subjectIsTerm: Kernel.Thm, absent: Kernel.Thm
+    ): Kernel.Thm =
+      force(
+        rules
+          .specAll(substituteIsIdle, List(index, replacement, subject))
+          .flatMap(rules.mp(_, subjectIsTerm))
+          .flatMap(rules.mp(_, absent)))
 
     /** What substituting under a successor gives, with the inside already settled. */
     private def acrossSuccessor(
@@ -864,6 +1118,21 @@ object Deduction {
       fromIsClosed: Kernel.Thm, toIsClosed: Kernel.Thm,
       premise: Kernel.Thm,
       atFrom: Kernel.Thm, atTo: Kernel.Thm
+    ): Kernel.Thm =
+      replacedFree(
+        index, from, to, hole, holeIsFormula, fromIsTerm, toIsTerm,
+        substitutable(index, from, hole, holeIsFormula, fromIsClosed),
+        substitutable(index, to, hole, holeIsFormula, toIsClosed),
+        premise, atFrom, atTo)
+
+    /** [[replaced]] where the two terms are substitutable in the hole rather than closed. */
+    private def replacedFree(
+      index: Term, from: Term, to: Term, hole: Term,
+      holeIsFormula: Kernel.Thm,
+      fromIsTerm: Kernel.Thm, toIsTerm: Kernel.Thm,
+      fromIsFree: Kernel.Thm, toIsFree: Kernel.Thm,
+      premise: Kernel.Thm,
+      atFrom: Kernel.Thm, atTo: Kernel.Thm
     ): Kernel.Thm = {
       val substituting = constant(
         Language.FormulaSubstituteName,
@@ -877,8 +1146,8 @@ object Deduction {
           .flatMap(rules.mp(_, holeIsFormula))
           .flatMap(rules.mp(_, fromIsTerm))
           .flatMap(rules.mp(_, toIsTerm))
-          .flatMap(rules.mp(_, fromIsClosed))
-          .flatMap(rules.mp(_, toIsClosed))
+          .flatMap(rules.mp(_, fromIsFree))
+          .flatMap(rules.mp(_, toIsFree))
       )
       val carried = detach(
         objEq(from, to), imp(left, right),
@@ -1044,6 +1313,13 @@ object Deduction {
       force(rules.specAll(substituteZero, List(index, replacement)))
     private val isTerm = predicate(Language.TermName)
     private val isClosed = predicate(Language.ClosedName)
+
+    private def isSubstitutable(index: Term, replacement: Term, body: Term): Term =
+      applied(
+        constant(
+          Language.FreeForName,
+          Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, Type.Bool)))),
+        List(index, replacement, body))
     private val substituting = force(LogicError.lift(theory.constant(
       Language.FormulaSubstituteName,
       Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers))))))
@@ -1181,14 +1457,14 @@ object Deduction {
       force(rules.disch(isFormula(p), reached).flatMap(rules.gen(p, _)))
     }
 
-    /** [[Specialisation]]. The scheme, made provable, then detached. */
-    lazy val specialisation: Kernel.Thm = {
+    /** [[SubstitutableSpecialisation]]. The scheme, made provable, then detached. */
+    lazy val substitutableSpecialisation: Kernel.Thm = {
       val i = Term.variable("i", numbers)
       val t = Term.variable("t", numbers)
       val p = Term.variable("p", numbers)
       val formula = assumed(isFormula(p))
       val term = assumed(isTerm(t))
-      val closed = assumed(isClosed(t))
+      val free = assumed(isSubstitutable(i, t, p))
       val quantified = forAll(i, p)
       val instance = substituted(i, t, p)
       val quantifiedIsProvable = assumed(isProvable(quantified))
@@ -1199,10 +1475,12 @@ object Deduction {
             specialising,
             imply(
               isFormula(p),
-              imply(isTerm(t), imply(isClosed(t), isLogical(imp(quantified, instance))))))
+              imply(
+                isTerm(t),
+                imply(isSubstitutable(i, t, p), isLogical(imp(quantified, instance))))))
           .flatMap(rules.mp(_, formula))
           .flatMap(rules.mp(_, term))
-          .flatMap(rules.mp(_, closed))
+          .flatMap(rules.mp(_, free))
       )
       val reached = detach(
         quantified, instance, axiom(imp(quantified, instance), logical), quantifiedIsProvable)
@@ -1210,6 +1488,38 @@ object Deduction {
       force(
         rules
           .disch(isProvable(quantified), reached)
+          .flatMap(rules.disch(isSubstitutable(i, t, p), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.disch(isFormula(p), _))
+          .flatMap(rules.genAll(_, List(i, t, p)))
+      )
+    }
+
+    private lazy val substitutableRule =
+      checked(SubstitutableSpecialisation, substitutableSpecialisation)
+
+    /** [[Specialisation]]: the rule above, its condition discharged from closedness. */
+    lazy val specialisation: Kernel.Thm = {
+      val i = Term.variable("i", numbers)
+      val t = Term.variable("t", numbers)
+      val p = Term.variable("p", numbers)
+      val formula = assumed(isFormula(p))
+      val term = assumed(isTerm(t))
+      val closed = assumed(isClosed(t))
+      val quantifiedIsProvable = assumed(isProvable(forAll(i, p)))
+
+      val reached = force(
+        rules
+          .specAll(substitutableRule, List(i, t, p))
+          .flatMap(rules.mp(_, formula))
+          .flatMap(rules.mp(_, term))
+          .flatMap(rules.mp(_, substitutable(i, t, p, formula, closed)))
+          .flatMap(rules.mp(_, quantifiedIsProvable))
+      )
+
+      force(
+        rules
+          .disch(isProvable(forAll(i, p)), reached)
           .flatMap(rules.disch(isClosed(t), _))
           .flatMap(rules.disch(isTerm(t), _))
           .flatMap(rules.disch(isFormula(p), _))
@@ -1217,34 +1527,44 @@ object Deduction {
       )
     }
 
-    /** [[Symmetry]]. Replacement at the formula `v_0 = t`, carried by reflexivity. */
-    lazy val symmetry: Kernel.Thm = {
+    /** `~(NUM_FREE_TERM k x)` as a term. */
+    private def absentTerm(index: Term, subject: Term): Term =
+      force(logic.mkNot(applied(
+        constant(Language.FreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))),
+        List(index, subject))))
+
+    /**
+     * [[SymmetryFree]]. Replacement at the formula `v_k = t`, carried by reflexivity.
+     *
+     * The hole's index is the caller's, and `t` must not mention it, because `t` stands in the hole
+     * and has to come back untouched from both substitutions. `u` is only ever put in, so nothing
+     * is asked of it: an equality has no binder to capture it.
+     */
+    lazy val symmetryFree: Kernel.Thm = {
+      val k = Term.variable("k", numbers)
       val t = Term.variable("t", numbers)
       val u = Term.variable("u", numbers)
-      val index = zeroTag
       val termT = assumed(isTerm(t))
       val termU = assumed(isTerm(u))
-      val closedT = assumed(isClosed(t))
-      val closedU = assumed(isClosed(u))
+      val absentT = assumed(absentTerm(k, t))
       val premise = assumed(isProvable(objEq(t, u)))
 
-      val hole = objEq(objVar(index), t)
+      val hole = objEq(objVar(k), t)
       val holeIsFormula = force(
         rules
-          .specAll(formulaOfEquality, List(objVar(index), t))
-          .flatMap(rules.mp(_, force(rules.spec(index, variableIsTerm))))
+          .specAll(formulaOfEquality, List(objVar(k), t))
+          .flatMap(rules.mp(_, force(rules.spec(k, variableIsTerm))))
           .flatMap(rules.mp(_, termT))
       )
-
-      // The hole filled with `t` is `t = t`, and with `u` is `u = t`. The right-hand `t` comes
-      // back untouched both times, which is the idleness lemma being spent.
       val atT = acrossEquality(
-        index, t, objVar(index), t, filled(index, t), idle(index, t, t, termT, closedT))
+        k, t, objVar(k), t, filled(k, t), idleWhereAbsent(k, t, t, termT, absentT))
       val atU = acrossEquality(
-        index, u, objVar(index), t, filled(index, u), idle(index, u, t, termT, closedT))
+        k, u, objVar(k), t, filled(k, u), idleWhereAbsent(k, u, t, termT, absentT))
 
-      val opened = replaced(
-        index, t, u, hole, holeIsFormula, termT, termU, closedT, closedU, premise, atT, atU)
+      val opened = replacedFree(
+        k, t, u, hole, holeIsFormula, termT, termU,
+        substitutableInEquality(k, t, objVar(k), t), substitutableInEquality(k, u, objVar(k), t),
+        premise, atT, atU)
 
       val reflexivity = force(
         rules
@@ -1257,6 +1577,37 @@ object Deduction {
       force(
         rules
           .disch(isProvable(objEq(t, u)), reached)
+          .flatMap(rules.disch(absentT.conclusion, _))
+          .flatMap(rules.disch(isTerm(u), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.genAll(_, List(k, t, u)))
+      )
+    }
+
+    private lazy val symmetryFreeRule = checked(SymmetryFree, symmetryFree)
+
+    /** [[Symmetry]]: [[SymmetryFree]] at the hole `v_0`, which a closed `t` does not mention. */
+    lazy val symmetry: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val u = Term.variable("u", numbers)
+      val termT = assumed(isTerm(t))
+      val termU = assumed(isTerm(u))
+      val closedT = assumed(isClosed(t))
+      val premise = assumed(isProvable(objEq(t, u)))
+
+      // `NUM_CLOSED u` stays in the published statement, which callers discharge, and is not
+      // spent: symmetry never needed anything of `u`.
+      val reached = force(
+        rules
+          .specAll(symmetryFreeRule, List(zeroTag, t, u))
+          .flatMap(rules.mp(_, termT))
+          .flatMap(rules.mp(_, termU))
+          .flatMap(rules.mp(_, absentFrom(zeroTag, t, closedT)))
+          .flatMap(rules.mp(_, premise)))
+
+      force(
+        rules
+          .disch(isProvable(objEq(t, u)), reached)
           .flatMap(rules.disch(isClosed(u), _))
           .flatMap(rules.disch(isClosed(t), _))
           .flatMap(rules.disch(isTerm(u), _))
@@ -1265,46 +1616,89 @@ object Deduction {
       )
     }
 
-    /** [[Transitivity]]. Symmetry first, then replacement at the hole `v_0 = w`. */
-    lazy val transitivity: Kernel.Thm = {
+    /**
+     * [[TransitivityFree]]. Symmetry first, then replacement at the hole `v_k = w`.
+     *
+     * `w` stands in the hole, so it must not mention `k`; `t` is reversed with symmetry at the same
+     * hole index, which asks the same of `t`. `u` is only put in.
+     */
+    lazy val transitivityFree: Kernel.Thm = {
+      val k = Term.variable("k", numbers)
       val t = Term.variable("t", numbers)
       val u = Term.variable("u", numbers)
       val w = Term.variable("w", numbers)
-      val index = zeroTag
       val termT = assumed(isTerm(t))
       val termU = assumed(isTerm(u))
       val termW = assumed(isTerm(w))
-      val closedT = assumed(isClosed(t))
-      val closedU = assumed(isClosed(u))
-      val closedW = assumed(isClosed(w))
+      val absentT = assumed(absentTerm(k, t))
+      val absentW = assumed(absentTerm(k, w))
       val first = assumed(isProvable(objEq(t, u)))
       val second = assumed(isProvable(objEq(u, w)))
 
       val reversed = force(
         rules
-          .specAll(symmetry, List(t, u))
+          .specAll(symmetryFreeRule, List(k, t, u))
           .flatMap(rules.mp(_, termT))
           .flatMap(rules.mp(_, termU))
-          .flatMap(rules.mp(_, closedT))
-          .flatMap(rules.mp(_, closedU))
+          .flatMap(rules.mp(_, absentT))
           .flatMap(rules.mp(_, first))
       )
 
-      val hole = objEq(objVar(index), w)
+      val hole = objEq(objVar(k), w)
       val holeIsFormula = force(
         rules
-          .specAll(formulaOfEquality, List(objVar(index), w))
-          .flatMap(rules.mp(_, force(rules.spec(index, variableIsTerm))))
+          .specAll(formulaOfEquality, List(objVar(k), w))
+          .flatMap(rules.mp(_, force(rules.spec(k, variableIsTerm))))
           .flatMap(rules.mp(_, termW))
       )
       val atU = acrossEquality(
-        index, u, objVar(index), w, filled(index, u), idle(index, u, w, termW, closedW))
+        k, u, objVar(k), w, filled(k, u), idleWhereAbsent(k, u, w, termW, absentW))
       val atT = acrossEquality(
-        index, t, objVar(index), w, filled(index, t), idle(index, t, w, termW, closedW))
+        k, t, objVar(k), w, filled(k, t), idleWhereAbsent(k, t, w, termW, absentW))
 
-      val opened = replaced(
-        index, u, t, hole, holeIsFormula, termU, termT, closedU, closedT, reversed, atU, atT)
+      val opened = replacedFree(
+        k, u, t, hole, holeIsFormula, termU, termT,
+        substitutableInEquality(k, u, objVar(k), w), substitutableInEquality(k, t, objVar(k), w),
+        reversed, atU, atT)
       val reached = detach(objEq(u, w), objEq(t, w), opened, second)
+
+      force(
+        rules
+          .disch(isProvable(objEq(u, w)), reached)
+          .flatMap(rules.disch(isProvable(objEq(t, u)), _))
+          .flatMap(rules.disch(absentW.conclusion, _))
+          .flatMap(rules.disch(absentT.conclusion, _))
+          .flatMap(rules.disch(isTerm(w), _))
+          .flatMap(rules.disch(isTerm(u), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.genAll(_, List(k, t, u, w)))
+      )
+    }
+
+    /** [[Transitivity]]: [[TransitivityFree]] at the hole `v_0`, which closed ends do not mention. */
+    lazy val transitivity: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val u = Term.variable("u", numbers)
+      val w = Term.variable("w", numbers)
+      val termT = assumed(isTerm(t))
+      val termU = assumed(isTerm(u))
+      val termW = assumed(isTerm(w))
+      val closedT = assumed(isClosed(t))
+      val closedW = assumed(isClosed(w))
+      val first = assumed(isProvable(objEq(t, u)))
+      val second = assumed(isProvable(objEq(u, w)))
+
+      // [[TransitivityFree]] at the hole `v_0`. `NUM_CLOSED u` stays in the statement unspent.
+      val reached = force(
+        rules
+          .specAll(checked(TransitivityFree, transitivityFree), List(zeroTag, t, u, w))
+          .flatMap(rules.mp(_, termT))
+          .flatMap(rules.mp(_, termU))
+          .flatMap(rules.mp(_, termW))
+          .flatMap(rules.mp(_, absentFrom(zeroTag, t, closedT)))
+          .flatMap(rules.mp(_, absentFrom(zeroTag, w, closedW)))
+          .flatMap(rules.mp(_, first))
+          .flatMap(rules.mp(_, second)))
 
       force(
         rules
@@ -1320,39 +1714,43 @@ object Deduction {
       )
     }
 
-    /** [[SuccessorCongruence]]. The hole is `S t = S v_0`, so both instances substitute inside. */
-    lazy val successorCongruence: Kernel.Thm = {
+    /**
+     * [[SuccessorCongruenceFree]]. Replacement at the hole `S t = S v_k`, carried by reflexivity.
+     *
+     * `t` stands in the hole on the left and must come back untouched, so it must not mention `k`;
+     * `u` is only put in.
+     */
+    lazy val successorCongruenceFree: Kernel.Thm = {
+      val k = Term.variable("k", numbers)
       val t = Term.variable("t", numbers)
       val u = Term.variable("u", numbers)
-      val index = zeroTag
       val termT = assumed(isTerm(t))
       val termU = assumed(isTerm(u))
-      val closedT = assumed(isClosed(t))
-      val closedU = assumed(isClosed(u))
+      val absentT = assumed(absentTerm(k, t))
       val premise = assumed(isProvable(objEq(t, u)))
 
       val successorOf = (inner: Term, isTerm: Kernel.Thm) =>
         force(rules.spec(inner, successorIsTerm).flatMap(rules.mp(_, isTerm)))
 
-      val hole = objEq(objSucc(t), objSucc(objVar(index)))
+      val hole = objEq(objSucc(t), objSucc(objVar(k)))
       val holeIsFormula = force(
         rules
-          .specAll(formulaOfEquality, List(objSucc(t), objSucc(objVar(index))))
+          .specAll(formulaOfEquality, List(objSucc(t), objSucc(objVar(k))))
           .flatMap(rules.mp(_, successorOf(t, termT)))
-          .flatMap(rules.mp(_, successorOf(objVar(index), force(rules.spec(index, variableIsTerm)))))
+          .flatMap(rules.mp(_, successorOf(objVar(k), force(rules.spec(k, variableIsTerm)))))
       )
 
-      def instanceAt(replacement: Term, replacementIsTerm: Kernel.Thm): Kernel.Thm =
+      def instanceAt(replacement: Term): Kernel.Thm =
         acrossEquality(
-          index, replacement, objSucc(t), objSucc(objVar(index)),
-          acrossSuccessor(index, replacement, t, idle(index, replacement, t, termT, closedT)),
-          acrossSuccessor(index, replacement, objVar(index), filled(index, replacement)))
+          k, replacement, objSucc(t), objSucc(objVar(k)),
+          acrossSuccessor(k, replacement, t, idleWhereAbsent(k, replacement, t, termT, absentT)),
+          acrossSuccessor(k, replacement, objVar(k), filled(k, replacement)))
 
-      val atT = instanceAt(t, termT)
-      val atU = instanceAt(u, termU)
-
-      val opened = replaced(
-        index, t, u, hole, holeIsFormula, termT, termU, closedT, closedU, premise, atT, atU)
+      val opened = replacedFree(
+        k, t, u, hole, holeIsFormula, termT, termU,
+        substitutableInEquality(k, t, objSucc(t), objSucc(objVar(k))),
+        substitutableInEquality(k, u, objSucc(t), objSucc(objVar(k))),
+        premise, instanceAt(t), instanceAt(u))
 
       val reflexivity = force(
         rules
@@ -1362,6 +1760,34 @@ object Deduction {
       val reached = detach(
         objEq(objSucc(t), objSucc(t)), objEq(objSucc(t), objSucc(u)),
         opened, axiom(objEq(objSucc(t), objSucc(t)), reflexivity))
+
+      force(
+        rules
+          .disch(isProvable(objEq(t, u)), reached)
+          .flatMap(rules.disch(absentT.conclusion, _))
+          .flatMap(rules.disch(isTerm(u), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.genAll(_, List(k, t, u)))
+      )
+    }
+
+    /** [[SuccessorCongruence]]: [[SuccessorCongruenceFree]] at the hole `v_0`. */
+    lazy val successorCongruence: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val u = Term.variable("u", numbers)
+      val termT = assumed(isTerm(t))
+      val termU = assumed(isTerm(u))
+      val closedT = assumed(isClosed(t))
+      val premise = assumed(isProvable(objEq(t, u)))
+
+      // `NUM_CLOSED u` stays in the published statement unspent, as in [[symmetry]].
+      val reached = force(
+        rules
+          .specAll(checked(SuccessorCongruenceFree, successorCongruenceFree), List(zeroTag, t, u))
+          .flatMap(rules.mp(_, termT))
+          .flatMap(rules.mp(_, termU))
+          .flatMap(rules.mp(_, absentFrom(zeroTag, t, closedT)))
+          .flatMap(rules.mp(_, premise)))
 
       force(
         rules
@@ -1379,7 +1805,6 @@ object Deduction {
       val t = Term.variable("t", numbers)
       val index = zeroTag
       val termT = assumed(isTerm(t))
-      val closedT = assumed(isClosed(t))
 
       val variable = objVar(index)
       val variableIsATerm = force(rules.spec(index, variableIsTerm))
@@ -1400,15 +1825,11 @@ object Deduction {
         acrossSum(index, t, variable, objZero, filled(index, t), zeroStays(index, t)),
         filled(index, t))
 
-      val reached = axiomAt(
-        "NUM_PA_ADD_ZERO", index, t, body, bodyIsFormula, termT, closedT, computed)
+      val reached = axiomAtSubstitutable(
+        "NUM_PA_ADD_ZERO", index, t, body, bodyIsFormula, termT,
+        substitutableInEquality(index, t, objSum(variable, objZero), variable), computed)
 
-      force(
-        rules
-          .disch(isClosed(t), reached)
-          .flatMap(rules.disch(isTerm(t), _))
-          .flatMap(rules.gen(t, _))
-      )
+      force(rules.disch(isTerm(t), reached).flatMap(rules.gen(t, _)))
     }
 
     /** [[AdditionAtSuccessor]]. Two specialisations, one under a binder and one over a term. */
@@ -1418,9 +1839,11 @@ object Deduction {
       val outer = zeroTag
       val inner = oneTag
       val termT = assumed(isTerm(t))
-      val closedT = assumed(isClosed(t))
       val termU = assumed(isTerm(u))
-      val closedU = assumed(isClosed(u))
+      // The one condition left: `v_1`, the axiom's inner index, does not occur in `t`.
+      val absentT = assumed(force(logic.mkNot(applied(
+        constant(Language.FreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))),
+        List(oneTag, t)))))
 
       val first = objVar(outer)
       val second = objVar(inner)
@@ -1468,8 +1891,12 @@ object Deduction {
           acrossSum(outer, t, first, second, filled(outer, t), missed(outer, t, inner))))
       val underBinder = acrossUniversal(outer, t, inner, core, coreAtT)
 
-      val once = axiomAt(
-        "NUM_PA_ADD_SUC", outer, t, body, bodyIsFormula, termT, closedT, underBinder)
+      val once = axiomAtSubstitutable(
+        "NUM_PA_ADD_SUC", outer, t, body, bodyIsFormula, termT,
+        substitutableUnderOther(
+          outer, t, inner, core, absentT,
+          substitutableInEquality(outer, t, leftSide, rightSide)),
+        underBinder)
 
       // Second: `v1` becomes `u`, and `t` has to come back untouched, which is idleness.
       val leftAtT = objSum(t, objSucc(second))
@@ -1479,7 +1906,7 @@ object Deduction {
         sumOf(t, objSucc(second), termT, succOf(second, secondIsTerm)),
         succOf(objSum(t, second), sumOf(t, second, termT, secondIsTerm)))
 
-      val stays = idle(inner, u, t, termT, closedT)
+      val stays = idleWhereAbsent(inner, u, t, termT, absentT)
       val coreAtU = acrossEquality(
         inner, u, leftAtT, rightAtT,
         acrossSum(
@@ -1489,14 +1916,14 @@ object Deduction {
           inner, u, objSum(t, second),
           acrossSum(inner, u, t, second, stays, filled(inner, u))))
 
-      val reached = atClosedTerm(
-        once, inner, u, objEq(leftAtT, rightAtT), coreAtTIsFormula, termU, closedU, coreAtU)
+      val reached = atSubstitutable(
+        once, inner, u, objEq(leftAtT, rightAtT), coreAtTIsFormula, termU,
+        substitutableInEquality(inner, u, leftAtT, rightAtT), coreAtU)
 
       force(
         rules
-          .disch(isClosed(u), reached)
-          .flatMap(rules.disch(isTerm(u), _))
-          .flatMap(rules.disch(isClosed(t), _))
+          .disch(isTerm(u), reached)
+          .flatMap(rules.disch(absentT.conclusion, _))
           .flatMap(rules.disch(isTerm(t), _))
           .flatMap(rules.genAll(_, List(t, u)))
       )
@@ -1620,7 +2047,6 @@ object Deduction {
       val t = Term.variable("t", numbers)
       val index = zeroTag
       val termT = assumed(isTerm(t))
-      val closedT = assumed(isClosed(t))
 
       val variable = objVar(index)
       val variableIsATerm = force(rules.spec(index, variableIsTerm))
@@ -1642,14 +2068,11 @@ object Deduction {
         acrossProd(index, t, variable, objZero, filled(index, t), zeroStays(index, t)),
         zeroStays(index, t))
 
-      val reached = axiomAt(
-        "NUM_PA_MUL_ZERO", index, t, body, bodyIsFormula, termT, closedT, computed)
+      val reached = axiomAtSubstitutable(
+        "NUM_PA_MUL_ZERO", index, t, body, bodyIsFormula, termT,
+        substitutableInEquality(index, t, objProd(variable, objZero), objZero), computed)
 
-      force(
-        rules
-          .disch(isClosed(t), reached)
-          .flatMap(rules.disch(isTerm(t), _))
-          .flatMap(rules.gen(t, _)))
+      force(rules.disch(isTerm(t), reached).flatMap(rules.gen(t, _)))
     }
 
     /** [[MultiplicationAtSuccessor]]. [[additionAtSuccessor]]'s shape over a sum of a product. */
@@ -1659,9 +2082,11 @@ object Deduction {
       val outer = zeroTag
       val inner = oneTag
       val termT = assumed(isTerm(t))
-      val closedT = assumed(isClosed(t))
       val termU = assumed(isTerm(u))
-      val closedU = assumed(isClosed(u))
+      // The one condition left: `v_1`, the axiom's inner index, does not occur in `t`.
+      val absentT = assumed(force(logic.mkNot(applied(
+        constant(Language.FreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))),
+        List(oneTag, t)))))
 
       val first = objVar(outer)
       val second = objVar(inner)
@@ -1720,8 +2145,12 @@ object Deduction {
           filled(outer, t)))
       val underBinder = acrossUniversal(outer, t, inner, core, coreAtT)
 
-      val once = axiomAt(
-        "NUM_PA_MUL_SUC", outer, t, body, bodyIsFormula, termT, closedT, underBinder)
+      val once = axiomAtSubstitutable(
+        "NUM_PA_MUL_SUC", outer, t, body, bodyIsFormula, termT,
+        substitutableUnderOther(
+          outer, t, inner, core, absentT,
+          substitutableInEquality(outer, t, leftSide, rightSide)),
+        underBinder)
 
       // Second: `v1` becomes `u`, and every occurrence of `t` has to come back untouched.
       val leftAtT = objProd(t, objSucc(second))
@@ -1731,7 +2160,7 @@ object Deduction {
         prodOf(t, objSucc(second), termT, succOf(second, secondIsTerm)),
         sumOf(objProd(t, second), t, prodOf(t, second, termT, secondIsTerm), termT))
 
-      val stays = idle(inner, u, t, termT, closedT)
+      val stays = idleWhereAbsent(inner, u, t, termT, absentT)
       val coreAtU = acrossEquality(
         inner, u, leftAtT, rightAtT,
         acrossProd(
@@ -1742,14 +2171,14 @@ object Deduction {
           acrossProd(inner, u, t, second, stays, filled(inner, u)),
           stays))
 
-      val reached = atClosedTerm(
-        once, inner, u, objEq(leftAtT, rightAtT), coreAtTIsFormula, termU, closedU, coreAtU)
+      val reached = atSubstitutable(
+        once, inner, u, objEq(leftAtT, rightAtT), coreAtTIsFormula, termU,
+        substitutableInEquality(inner, u, leftAtT, rightAtT), coreAtU)
 
       force(
         rules
-          .disch(isClosed(u), reached)
-          .flatMap(rules.disch(isTerm(u), _))
-          .flatMap(rules.disch(isClosed(t), _))
+          .disch(isTerm(u), reached)
+          .flatMap(rules.disch(absentT.conclusion, _))
           .flatMap(rules.disch(isTerm(t), _))
           .flatMap(rules.genAll(_, List(t, u))))
     }
@@ -1809,8 +2238,7 @@ object Deduction {
           val atZero = force(
             rules
               .specAll(checked(AdditionAtZero, additionAtZero), List(numeral(subject)))
-              .flatMap(rules.mp(_, numeralIsATerm(subject)))
-              .flatMap(rules.mp(_, numeralIsAClosed(subject))))
+              .flatMap(rules.mp(_, numeralIsATerm(subject))))
 
           val zeroIsNumeral = force(language.fact(Language.NumeralAtZero))
           val summandMoves = pairCongruence(
@@ -1841,9 +2269,8 @@ object Deduction {
                 checked(AdditionAtSuccessor, additionAtSuccessor),
                 List(numeral(subject), numeral(k)))
               .flatMap(rules.mp(_, numeralIsATerm(subject)))
-              .flatMap(rules.mp(_, numeralIsAClosed(subject)))
-              .flatMap(rules.mp(_, numeralIsATerm(k)))
-              .flatMap(rules.mp(_, numeralIsAClosed(k))))
+              .flatMap(rules.mp(_, absentFrom(oneTag, numeral(subject), numeralIsAClosed(subject))))
+              .flatMap(rules.mp(_, numeralIsATerm(k))))
 
           // The hypothesis, with a successor around both sides.
           val lifted = force(
@@ -1992,8 +2419,7 @@ object Deduction {
           val atZero = force(
             rules
               .specAll(checked(MultiplicationAtZero, multiplicationAtZero), List(numeral(subject)))
-              .flatMap(rules.mp(_, numeralIsATerm(subject)))
-              .flatMap(rules.mp(_, numeralIsAClosed(subject))))
+              .flatMap(rules.mp(_, numeralIsATerm(subject))))
 
           val zeroIsNumeral = force(language.fact(Language.NumeralAtZero))
           val factorMoves = pairCongruence(four, Conv.refl(numeral(subject)), zeroIsNumeral)
@@ -2024,9 +2450,8 @@ object Deduction {
                 checked(MultiplicationAtSuccessor, multiplicationAtSuccessor),
                 List(numeral(subject), numeral(k)))
               .flatMap(rules.mp(_, numeralIsATerm(subject)))
-              .flatMap(rules.mp(_, numeralIsAClosed(subject)))
-              .flatMap(rules.mp(_, numeralIsATerm(k)))
-              .flatMap(rules.mp(_, numeralIsAClosed(k))))
+              .flatMap(rules.mp(_, absentFrom(oneTag, numeral(subject), numeralIsAClosed(subject))))
+              .flatMap(rules.mp(_, numeralIsATerm(k))))
 
           // The hypothesis carried into the left summand, the right one being `numeral m` itself.
           val lifted = force(
@@ -2599,6 +3024,20 @@ object Deduction {
       fromIsTerm: Kernel.Thm, toIsTerm: Kernel.Thm,
       fromIsClosed: Kernel.Thm, toIsClosed: Kernel.Thm,
       atFrom: Kernel.Thm, atTo: Kernel.Thm
+    ): Kernel.Thm =
+      replacementFree(
+        index, from, to, hole, holeIsFormula, fromIsTerm, toIsTerm,
+        substitutable(index, from, hole, holeIsFormula, fromIsClosed),
+        substitutable(index, to, hole, holeIsFormula, toIsClosed),
+        atFrom, atTo)
+
+    /** [[replacement]] where the two terms are substitutable in the hole rather than closed. */
+    private def replacementFree(
+      index: Term, from: Term, to: Term, hole: Term,
+      holeIsFormula: Kernel.Thm,
+      fromIsTerm: Kernel.Thm, toIsTerm: Kernel.Thm,
+      fromIsFree: Kernel.Thm, toIsFree: Kernel.Thm,
+      atFrom: Kernel.Thm, atTo: Kernel.Thm
     ): Kernel.Thm = {
       val left = substituted(index, from, hole)
       val right = substituted(index, to, hole)
@@ -2608,8 +3047,8 @@ object Deduction {
           .flatMap(rules.mp(_, holeIsFormula))
           .flatMap(rules.mp(_, fromIsTerm))
           .flatMap(rules.mp(_, toIsTerm))
-          .flatMap(rules.mp(_, fromIsClosed))
-          .flatMap(rules.mp(_, toIsClosed))
+          .flatMap(rules.mp(_, fromIsFree))
+          .flatMap(rules.mp(_, toIsFree))
       )
       val law = axiom(imp(objEq(from, to), imp(left, right)), instance)
       val ruleSet = force(Rewrite.Rule.all(logic, Vector(atFrom, atTo)))
@@ -2826,8 +3265,252 @@ object Deduction {
           .flatMap(rules.genAll(_, List(t, u, a, b))))
     }
 
-    /** PA's `S x != 0` at a closed term, with the substitution computed. */
-    private def successorNotZeroAt(t: Term, termT: Kernel.Thm, closedT: Kernel.Thm): Kernel.Thm = {
+    /** [[Induction]]. The scheme's membership, made provable, then detached at base and step. */
+    lazy val induction: Kernel.Thm = {
+      val i = Term.variable("i", numbers)
+      val p = Term.variable("p", numbers)
+      val formula = assumed(isFormula(p))
+      val base = substituted(i, objZero, p)
+      val stepBody = imp(p, substituted(i, objSucc(objVar(i)), p))
+      val step = forAll(i, stepBody)
+      val conclusion = forAll(i, p)
+
+      val membership = force(
+        rules
+          .specAll(force(language.fact(Language.AxiomInduction)), List(i, p))
+          .flatMap(rules.mp(_, formula)))
+      val scheme = force(rules.spec(imp(base, imp(step, conclusion)), peanoIsProvable)
+        .flatMap(rules.mp(_, membership)))
+      val afterBase = detach(base, imp(step, conclusion), scheme, assumed(isProvable(base)))
+      val reached = detach(step, conclusion, afterBase, assumed(isProvable(step)))
+
+      force(
+        rules
+          .disch(isProvable(step), reached)
+          .flatMap(rules.disch(isProvable(base), _))
+          .flatMap(rules.disch(isFormula(p), _))
+          .flatMap(rules.genAll(_, List(i, p))))
+    }
+
+    private def fromHere[T](result: Either[LogicError, T]): T = force(result)
+
+    /** `|- NUM_FORM c` or `|- NUM_TERM c` at a concrete code. */
+    private def wellFormed(code: Term): Kernel.Thm = fromHere(language.wellFormedIn(code))
+
+    /** `|- NUM_SUBST_FORM i t c = c'` at concrete codes. */
+    private def computedAt(index: Term, replacement: Term, code: Term): Kernel.Thm =
+      fromHere(language.substituteIn(index, replacement, code))
+
+    private def rightOf(equation: Kernel.Thm): Term =
+      fromHere(
+        Term.destEq(equation.conclusion).map(_._2)
+          .toRight(NotOfForm("an equation", equation.conclusion)))
+
+    /** `NUM_PROV x` read as `NUM_PROV y` along `x = y`. */
+    private def along(equation: Kernel.Thm, proved: Kernel.Thm): Kernel.Thm =
+      fromHere(Conv.apTerm(provableConstant, equation)
+        .flatMap(lifted => LogicError.lift(Kernel.eqMp(lifted, proved))))
+
+    /** `~(NUM_FREE_TERM i t)` at concrete codes, refused if `i` does occur. */
+    private def absentAt(index: Term, code: Term): Kernel.Thm =
+      fromHere(language.freeInTerm(index, code))
+
+    /** `NUM_PROV (h ==> (a ==> b))` read with `NUM_PROV a` held: `NUM_PROV (h ==> b)`. */
+    private def middleDischarged(
+      hypothesis: Term, middle: Term, next: Term, law: Kernel.Thm, middleHeld: Kernel.Thm
+    ): Kernel.Thm = {
+      val hypothesisIsFormula = wellFormed(hypothesis)
+      val middleIsFormula = wellFormed(middle)
+      val weakened = fromHere(
+        rules
+          .specAll(checked(Weaken, weaken), List(hypothesis, middle))
+          .flatMap(rules.mp(_, hypothesisIsFormula))
+          .flatMap(rules.mp(_, middleIsFormula))
+          .flatMap(rules.mp(_, middleHeld)))
+      fromHere(
+        rules
+          .specAll(
+            checked(ImplicationModusPonens, implicationModusPonens), List(hypothesis, middle, next))
+          .flatMap(rules.mp(_, hypothesisIsFormula))
+          .flatMap(rules.mp(_, middleIsFormula))
+          .flatMap(rules.mp(_, wellFormed(next)))
+          .flatMap(rules.mp(_, law))
+          .flatMap(rules.mp(_, weakened)))
+    }
+
+    /**
+     * `NUM_PROV (!v_i. p)` by [[Induction]], from the base and the step at concrete codes.
+     *
+     * `base` is `NUM_PROV p[0/i]` with the substitution already carried out, and `step` is
+     * `NUM_PROV (p ==> p[S v_i/i])` likewise; this generalises the step and reads both back as the
+     * substitutions the scheme states, which is the bookkeeping every induction here repeats.
+     */
+    private def byInduction(
+      index: Term, claim: Term, base: Kernel.Thm, step: Kernel.Thm
+    ): Kernel.Thm = {
+      val atZero = computedAt(index, objZero, claim)
+      val atSuccessor = computedAt(index, objSucc(objVar(index)), claim)
+      val next = rightOf(atSuccessor)
+      val baseRead = along(fromHere(Conv.sym(atZero)), base)
+      val generalised = fromHere(
+        rules
+          .specAll(force(provability.fact(Provability.Generalisation)), List(index, imp(claim, next)))
+          .flatMap(rules.mp(_, step)))
+      val stepShape = fromHere(
+        Conv.sym(atSuccessor)
+          .flatMap(back => Conv.apTerm(applied(coding, List(seven)), pairCongruenceRight(claim, back)))
+          .flatMap(inside =>
+            Conv.apTerm(applied(coding, List(eight)), pairCongruenceRight(index, inside))))
+      fromHere(
+        rules
+          .specAll(checked(Induction, induction), List(index, claim))
+          .flatMap(rules.mp(_, wellFormed(claim)))
+          .flatMap(rules.mp(_, baseRead))
+          .flatMap(rules.mp(_, along(stepShape, generalised))))
+    }
+
+    /** [[ZeroAddition]]. Written out in that name's docstring. */
+    lazy val zeroAddition: Kernel.Thm = {
+      val v0 = objVar(zeroTag)
+      val sumZeroV0 = objSum(objZero, v0)
+      val claim = objEq(sumZeroV0, v0)                                  // 0 + v0 = v0
+
+      // The base, `0 + 0 = 0`.
+      val base = fromHere(
+        rules
+          .spec(objZero, checked(AdditionAtZero, additionAtZero))
+          .flatMap(rules.mp(_, zeroIsTerm)))
+
+      // The step's middle: `0 + S v0 = S (0 + v0)`, PA's axiom at `0` and `v0`.
+      val middle = fromHere(
+        rules
+          .specAll(checked(AdditionAtSuccessor, additionAtSuccessor), List(objZero, v0))
+          .flatMap(rules.mp(_, zeroIsTerm))
+          .flatMap(rules.mp(_, absentAt(oneTag, objZero)))
+          .flatMap(rules.mp(_, wellFormed(v0))))
+
+      // Replacement at the hole `0 + S v0 = S v1`, from `0 + v0` to `v0`, read as an implication.
+      val hole = objEq(objSum(objZero, objSucc(v0)), objSucc(objVar(oneTag)))
+      val atFrom = computedAt(oneTag, sumZeroV0, hole)
+      val atTo = computedAt(oneTag, v0, hole)
+      val law = replacementFree(
+        oneTag, sumZeroV0, v0, hole, wellFormed(hole), wellFormed(sumZeroV0), wellFormed(v0),
+        fromHere(language.substitutableIn(oneTag, sumZeroV0, hole)),
+        fromHere(language.substitutableIn(oneTag, v0, hole)),
+        atFrom, atTo)
+
+      val step = middleDischarged(claim, rightOf(atFrom), rightOf(atTo), law, middle)
+      byInduction(zeroTag, claim, base, step)
+    }
+
+    /**
+     * [[SuccessorAddition]]. Induction on `v_1` with `v_0` free, then generalised over `v_0`.
+     *
+     * Every rule of equality is taken at the hole index `2`, which no term here mentions.
+     */
+    lazy val successorAddition: Kernel.Thm = {
+      val v0 = objVar(zeroTag)
+      val v1 = objVar(oneTag)
+      val two = fromHere(Parser.term(theory, notation, "2", numbers))
+      val a = objSucc(v0)                                               // S v0
+      def claimAt(y: Term): Term = objEq(objSum(a, y), objSucc(objSum(v0, y)))
+      val claim = claimAt(v1)                                           // S v0 + v1 = S (v0 + v1)
+
+      def addZero(t: Term): Kernel.Thm =
+        fromHere(
+          rules.spec(t, checked(AdditionAtZero, additionAtZero)).flatMap(rules.mp(_, wellFormed(t))))
+      def addSuc(t: Term, u: Term): Kernel.Thm =
+        fromHere(
+          rules
+            .specAll(checked(AdditionAtSuccessor, additionAtSuccessor), List(t, u))
+            .flatMap(rules.mp(_, wellFormed(t)))
+            .flatMap(rules.mp(_, absentAt(oneTag, t)))
+            .flatMap(rules.mp(_, wellFormed(u))))
+      def symm(t: Term, u: Term, held: Kernel.Thm): Kernel.Thm =
+        fromHere(
+          rules
+            .specAll(checked(SymmetryFree, symmetryFree), List(two, t, u))
+            .flatMap(rules.mp(_, wellFormed(t)))
+            .flatMap(rules.mp(_, wellFormed(u)))
+            .flatMap(rules.mp(_, absentAt(two, t)))
+            .flatMap(rules.mp(_, held)))
+      def trans(t: Term, u: Term, w: Term, first: Kernel.Thm, second: Kernel.Thm): Kernel.Thm =
+        fromHere(
+          rules
+            .specAll(checked(TransitivityFree, transitivityFree), List(two, t, u, w))
+            .flatMap(rules.mp(_, wellFormed(t)))
+            .flatMap(rules.mp(_, wellFormed(u)))
+            .flatMap(rules.mp(_, wellFormed(w)))
+            .flatMap(rules.mp(_, absentAt(two, t)))
+            .flatMap(rules.mp(_, absentAt(two, w)))
+            .flatMap(rules.mp(_, first))
+            .flatMap(rules.mp(_, second)))
+      def sucCong(t: Term, u: Term, held: Kernel.Thm): Kernel.Thm =
+        fromHere(
+          rules
+            .specAll(checked(SuccessorCongruenceFree, successorCongruenceFree), List(two, t, u))
+            .flatMap(rules.mp(_, wellFormed(t)))
+            .flatMap(rules.mp(_, wellFormed(u)))
+            .flatMap(rules.mp(_, absentAt(two, t)))
+            .flatMap(rules.mp(_, held)))
+
+      // Base: `S v0 + 0 = S v0`, and `S v0 = S (v0 + 0)` from `v0 + 0 = v0`.
+      val sumV0Zero = objSum(v0, objZero)
+      val towardsV0 = sucCong(sumV0Zero, v0, addZero(v0))               // S (v0 + 0) = S v0
+      val base = trans(
+        objSum(a, objZero), a, objSucc(sumV0Zero),
+        addZero(a), symm(objSucc(sumV0Zero), a, towardsV0))
+
+      // Step, first half: the hypothesis carried under `S` in `S v0 + S v1 = S (S v0 + v1)`.
+      val hole = objEq(objSum(a, objSucc(v1)), objSucc(objVar(two)))
+      val from = objSum(a, v1)
+      val to = objSucc(objSum(v0, v1))
+      val atFrom = computedAt(two, from, hole)
+      val atTo = computedAt(two, to, hole)
+      val law = replacementFree(
+        two, from, to, hole, wellFormed(hole), wellFormed(from), wellFormed(to),
+        fromHere(language.substitutableIn(two, from, hole)),
+        fromHere(language.substitutableIn(two, to, hole)),
+        atFrom, atTo)
+      val halfway = rightOf(atTo)                                       // S v0 + S v1 = S S (v0 + v1)
+      val toHalfway = middleDischarged(claim, rightOf(atFrom), halfway, law, addSuc(a, v1))
+
+      // Step, second half: `S S (v0 + v1) = S (v0 + S v1)`, then replacement in the right side.
+      val inner = objSum(v0, objSucc(v1))
+      val reversed = symm(objSucc(inner), objSucc(to), sucCong(inner, to, addSuc(v0, v1)))
+      val target = objEq(objSum(a, objSucc(v1)), objVar(two))
+      val rewritten = replacedFree(
+        two, objSucc(to), objSucc(inner), target, wellFormed(target),
+        wellFormed(objSucc(to)), wellFormed(objSucc(inner)),
+        fromHere(language.substitutableIn(two, objSucc(to), target)),
+        fromHere(language.substitutableIn(two, objSucc(inner), target)),
+        reversed,
+        computedAt(two, objSucc(to), target), computedAt(two, objSucc(inner), target))
+      val next = claimAt(objSucc(v1))
+      val step = fromHere(
+        rules
+          .specAll(syllogismRule, List(claim, halfway, next))
+          .flatMap(rules.mp(_, wellFormed(claim)))
+          .flatMap(rules.mp(_, wellFormed(halfway)))
+          .flatMap(rules.mp(_, wellFormed(next)))
+          .flatMap(rules.mp(_, toHalfway))
+          .flatMap(rules.mp(_, rewritten)))
+
+      val overV1 = byInduction(oneTag, claim, base, step)
+      fromHere(
+        rules
+          .specAll(force(provability.fact(Provability.Generalisation)), List(zeroTag, forAll(oneTag, claim)))
+          .flatMap(rules.mp(_, overV1)))
+    }
+
+    /** `NUM_PAIR a x = NUM_PAIR a y` from `x = y`. */
+    private def pairCongruenceRight(left: Term, right: Kernel.Thm): Kernel.Thm =
+      force(Conv.apTerm(applied(pairing, List(left)), right))
+
+    /** [[SuccessorNotZero]]: PA's `S x != 0` at any term, with the substitution computed. */
+    lazy val successorNotZero: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val termT = assumed(isTerm(t))
       val index = zeroTag
       val variable = objVar(index)
       val variableIsATerm = force(rules.spec(index, variableIsTerm))
@@ -2840,14 +3523,29 @@ object Deduction {
       val computed = acrossNegation(index, t, equation,
         acrossEquality(index, t, objSucc(variable), objZero,
           acrossSuccessor(index, t, variable, filled(index, t)), zeroStays(index, t)))
-      axiomAt("NUM_PA_SUC_NOT_ZERO", index, t, body, bodyIsFormula, termT, closedT, computed)
+      val accepts = substitutableInNegation(
+        index, t, equation, substitutableInEquality(index, t, objSucc(variable), objZero))
+      val reached = axiomAtSubstitutable(
+        "NUM_PA_SUC_NOT_ZERO", index, t, body, bodyIsFormula, termT, accepts, computed)
+      force(rules.disch(isTerm(t), reached).flatMap(rules.gen(t, _)))
     }
 
-    /** PA's injectivity of the successor at two closed terms: `NUM_PROV (S a = S b ==> a = b)`. */
-    private def successorInjectiveAt(
-      a: Term, b: Term,
-      termA: Kernel.Thm, closedA: Kernel.Thm, termB: Kernel.Thm, closedB: Kernel.Thm
-    ): Kernel.Thm = {
+    /** [[SuccessorNotZero]] at a term already known to be one. */
+    private def successorNotZeroAt(t: Term, termT: Kernel.Thm): Kernel.Thm =
+      force(
+        rules
+          .spec(t, checked(SuccessorNotZero, successorNotZero))
+          .flatMap(rules.mp(_, termT)))
+
+    /** [[SuccessorInjective]]: `NUM_PROV (S a = S b ==> a = b)` at two terms, `v_1` not in `a`. */
+    lazy val successorInjective: Kernel.Thm = {
+      val a = Term.variable("a", numbers)
+      val b = Term.variable("b", numbers)
+      val termA = assumed(isTerm(a))
+      val termB = assumed(isTerm(b))
+      val absentA = assumed(force(logic.mkNot(applied(
+        constant(Language.FreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))),
+        List(oneTag, a)))))
       val outer = zeroTag
       val inner = oneTag
       val first = objVar(outer)
@@ -2880,21 +3578,47 @@ object Deduction {
           acrossSuccessor(outer, a, second, other)),
         acrossEquality(outer, a, first, second, filled(outer, a), other))
       val underBinder = acrossUniversal(outer, a, inner, core(first, second), coreAtA)
-      val once = axiomAt(
-        "NUM_PA_SUC_INJECTIVE", outer, a, body, bodyIsFormula, termA, closedA, underBinder)
+      def acceptsCore(index: Term, t: Term, x: Term, y: Term): Kernel.Thm =
+        substitutableInImplication(
+          index, t, objEq(objSucc(x), objSucc(y)), objEq(x, y),
+          substitutableInEquality(index, t, objSucc(x), objSucc(y)),
+          substitutableInEquality(index, t, x, y))
+      val once = axiomAtSubstitutable(
+        "NUM_PA_SUC_INJECTIVE", outer, a, body, bodyIsFormula, termA,
+        substitutableUnderOther(
+          outer, a, inner, core(first, second), absentA, acceptsCore(outer, a, first, second)),
+        underBinder)
 
       // Second: `v1` becomes `b`, and `a` comes back untouched.
-      val stays = idle(inner, b, a, termA, closedA)
+      val stays = idleWhereAbsent(inner, b, a, termA, absentA)
       val coreAtB = acrossImplication(
         inner, b, objEq(objSucc(a), objSucc(second)), objEq(a, second),
         acrossEquality(inner, b, objSucc(a), objSucc(second),
           acrossSuccessor(inner, b, a, stays),
           acrossSuccessor(inner, b, second, filled(inner, b))),
         acrossEquality(inner, b, a, second, stays, filled(inner, b)))
-      atClosedTerm(
+      val reached = atSubstitutable(
         once, inner, b, core(a, second), coreIsFormula(a, second, termA, secondIsTerm),
-        termB, closedB, coreAtB)
+        termB, acceptsCore(inner, b, a, second), coreAtB)
+
+      force(
+        rules
+          .disch(isTerm(b), reached)
+          .flatMap(rules.disch(absentA.conclusion, _))
+          .flatMap(rules.disch(isTerm(a), _))
+          .flatMap(rules.genAll(_, List(a, b))))
     }
+
+    /** [[SuccessorInjective]] at two terms already known to be terms, `v_1` absent from the first. */
+    private def successorInjectiveAt(
+      a: Term, b: Term, termA: Kernel.Thm, absentA: Kernel.Thm, termB: Kernel.Thm
+    ): Kernel.Thm =
+      force(
+        rules
+          .specAll(checked(SuccessorInjective, successorInjective), List(a, b))
+          .flatMap(rules.mp(_, termA))
+          .flatMap(rules.mp(_, absentA))
+          .flatMap(rules.mp(_, termB)))
 
     /** [[NumeralsDistinct]]. Induction on `m` with `n` inside, and a case split on `n`. */
     lazy val numeralsDistinct: Kernel.Thm = {
@@ -2976,7 +3700,7 @@ object Deduction {
         val closedZero = force(language.fact(Language.ClosedZero))
         val flipped = flippedDenial(
           successor, objZero, termS, zeroIsTerm, closedS, closedZero,
-          successorNotZeroAt(inner, numeralTerm(k), numeralClosed(k)))
+          successorNotZeroAt(inner, numeralTerm(k)))
         val reached = folded(zero, suc(k), atZero, atSuccessor(k), flipped)
         force(rules.disch(not(eq(zero, suc(k))), reached))
       })
@@ -2987,7 +3711,7 @@ object Deduction {
       val step = byCases(suc(j), n, {
         val inner = numeral(j)
         val reached = folded(suc(j), zero, atSuccessor(j), atZero,
-          successorNotZeroAt(inner, numeralTerm(j), numeralClosed(j)))
+          successorNotZeroAt(inner, numeralTerm(j)))
         force(rules.disch(not(eq(suc(j), zero)), reached))
       }, k => {
         val apart = not(eq(suc(j), suc(k)))
@@ -3005,7 +3729,7 @@ object Deduction {
         def succTerm(x: Term, inner: Kernel.Thm): Kernel.Thm =
           force(rules.spec(x, successorIsTerm).flatMap(rules.mp(_, inner)))
         val injective =
-          successorInjectiveAt(nj, nk, termJ, numeralClosed(j), termK, numeralClosed(k))
+          successorInjectiveAt(nj, nk, termJ, absentFrom(oneTag, nj, numeralClosed(j)), termK)
         val reached = tollens(
           objEq(objSucc(nj), objSucc(nk)), objEq(nj, nk),
           formEq(objSucc(nj), objSucc(nk), succTerm(nj, termJ), succTerm(nk, termK)),
@@ -3054,10 +3778,14 @@ object Deduction {
           .specTo(
             specialising,
             imply(isFormula(np),
-              imply(isTerm(t), imply(isClosed(t), isLogical(imp(quantified, substituted(i, t, np)))))))
+              imply(
+                isTerm(t),
+                imply(
+                  isSubstitutable(i, t, np),
+                  isLogical(imp(quantified, substituted(i, t, np)))))))
           .flatMap(rules.mp(_, formulaNp))
           .flatMap(rules.mp(_, termT))
-          .flatMap(rules.mp(_, closedT)))
+          .flatMap(rules.mp(_, substitutable(i, t, np, formulaNp, closedT))))
       val inside = force(rules.specAll(substituteNegation, List(i, t, p)))
       val specialised = force(
         Conv
