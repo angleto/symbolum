@@ -209,7 +209,7 @@ final class Language private (
    * The same arrangement as [[substituteIn]]: the clauses of the three recursions it reads
    * (substitutability, and freeness in formulas and in terms), the conditional at `T` and `F`, and
    * one decision per pair of indices the code and the term mention. What is left is a proposition
-   * built from `T` and `F` alone, which [[Propositional]] proves or refutes. A residue, which is an
+   * built from `T` and `F` alone, which `Propositional` proves or refutes. A residue, which is an
    * index that is not a numeral, is refused by name.
    */
   def substitutableIn(

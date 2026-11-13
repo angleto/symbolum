@@ -148,6 +148,9 @@ object Spellings {
       .operator("NUM_SUBST_FORM", 3, "#3[#1 := #2]", Multiplicative + 5)
       .delimited("NUM_FREE_TERM", 2, "\\operatorname{free}(#1, #2)")
       .delimited("NUM_FREE_FORM", 2, "\\operatorname{free}(#1, #2)")
+      // `NUM_FREE_FOR i t p` says the term `t` may replace the index `i` in `p` without a binder of
+      // `p` capturing a free index of `t`, which the literature reads "t is free for i in p".
+      .delimited("NUM_FREE_FOR", 3, "\\operatorname{freefor}(#1, #2, #3)")
       .delimited("NUM_CLOSED", 1, "\\operatorname{closed}(#1)")
       .delimited("NUM_LOGIC", 1, "\\operatorname{Log}(#1)")
       .delimited("NUM_STEP", 3, "\\operatorname{step}(#1, #2, #3)")
