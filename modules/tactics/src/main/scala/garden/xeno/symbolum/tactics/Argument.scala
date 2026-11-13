@@ -6,7 +6,7 @@ import garden.xeno.symbolum.theories.{Linarith, Prose}
 /**
  * A whole argument on one page: what each conclusion cost, what it rests on, and where it came from.
  *
- * `Cost` answers five questions about **one** claim and `Provenance` names the sources behind
+ * `Cost` answers its questions about **one** claim and `Provenance` names the sources behind
  * **one** proof. A document is neither: it is a dozen claims that lean on each other and on one
  * register of measurements, and the questions a reader of a document asks are about the set.
  *

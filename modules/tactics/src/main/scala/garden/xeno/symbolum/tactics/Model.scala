@@ -35,8 +35,8 @@ final case class Model(
   /**
    * The constants this model computes with no `Double` anywhere in the answer.
    *
-   * Empty for [[Model.Reals]], because every one of its seven is arithmetic on `Double` and the
-   * file says so in its first paragraph. Not empty for [[Model.Numbers]], where the six operations
+   * Empty for [[Model.Reals]], because every one of its constants is arithmetic on `Double` and
+   * the file says so in its first paragraph. Not empty for [[Model.Numbers]], where the operations
    * on `num` are `BigInt` and a point found among them is a **refutation** rather than evidence
    * about a model. `Evaluate.exact` is what reads this and `Abduce.Gap.decisive` is what a caller
    * gets from it.

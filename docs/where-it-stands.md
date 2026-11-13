@@ -839,7 +839,7 @@ and without a head marker in front a digit can sit at position 0; the second bec
 rules fire at **any** occurrence of `/`.
 
 **Those two witnesses are derivations since 2026-09-21, and what they replaced is a reading.**
-`Collatz.ClassWitnesses` is the pair, nine theorems each checked against the text it is written
+`Collatz.ClassWitnesses` is the pair, theorems each checked against the text it is written
 down as saying, and `CollatzSpec` is what reads them: marked, not anchored, stepped, and the
 conclusion of the published lemma refuted at that pair. The half that costs something is
 `~(WORD_STEP S2_COUNTED (0/0.) (0/t.))`, a **negative** about a relation, which naming `B1` does not
@@ -1016,24 +1016,23 @@ a symbolic ratio **with its value** `inv (1 - q)` and its divergence from magnit
 test and its other side, and a constant factor carried in and out. The powers of a fraction vanish
 without an Archimedean step, because their limit equals its own multiple by the fraction.
 
-`Convergence` is the procedure and `Prove.Address.Series` is where the three shapes of the question
-go. **It reads a summand against closed forms and does not apply the ratio test**, because applying
-the ratio test is a derivation per shape at a symbolic index and every closed form already has a
+`Convergence` is the procedure and `Prove.Address.Series` is where the shapes of the question go.
+**It reads a summand against closed forms and does not apply the ratio test**, because applying the
+ratio test is a derivation per shape at a symbolic index and every closed form already has a
 published theorem; so the hypergeometric terms are outside the fragment and refused by name, a
 rational function of the index is refused as the class where the ratio tends to one, and a goal the
 procedure refutes comes back as `Denied`, carrying the theorem. A goal naming a value other than the
-one the procedure proved is `NotEqualTo`, decided, where both values are numbers built from
-numerals with every divisor shown apart from nought, and `ValueUnidentified`, not decided, where
-either holds an atom such as `exp 0` or a reciprocal nothing places, such as `inv 0`; a goal asking
-a value of a series the procedure only shows convergent is refused as unnamed, not decided. The five
-are listed in `Convergence`'s docstring with which of them are decisions.
-`docs/adr/0041` is the decision. **A polynomial in the index times a geometric term is in the
-fragment since the same night**, `docs/adr/0045`: degree one is the ratio test, which is that
-test's first consumer outside a spec, and each degree after it is a comparison that spends
-`CONVERGES_BOUNDED`; the procedure names no value for these and says so when a value is asked.
-`Conjugacy.GAMMA_CONVERGES` is the Collatz series it made
-statable, and it is one direction of section 3.1.10 B in the form the comparison test gives, which
-that file says in its first paragraph.
+one the procedure proved is `NotEqualTo`, decided, where both values are numbers built from numerals
+with every divisor shown apart from nought, and `ValueUnidentified`, not decided, where either holds
+an atom such as `exp 0` or a reciprocal nothing places, such as `inv 0`; a goal asking a value of a
+series the procedure only shows convergent is refused as unnamed, not decided. The five are listed
+in `Convergence`'s docstring with which of them are decisions. `docs/adr/0041` is the decision. **A
+polynomial in the index times a geometric term is in the fragment since the same night**,
+`docs/adr/0045`: degree one is the ratio test, which is that test's first consumer outside a spec,
+and each degree after it is a comparison that spends `CONVERGES_BOUNDED`; the procedure names no
+value for these and says so when a value is asked. `Conjugacy.GAMMA_CONVERGES` is the Collatz series
+it made statable, and it is one direction of section 3.1.10 B in the form the comparison test gives,
+which that file says in its first paragraph.
 
 **`Transcendental.EXP_ONE_ABOVE_TWO` is `2 < exp 1` and it is proved, since 2026-09-20.** It is
 the first fact here about a value this repository does not compute: every other one is a value at

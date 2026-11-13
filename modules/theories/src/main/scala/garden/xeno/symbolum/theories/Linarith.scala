@@ -1896,7 +1896,7 @@ object Linarith {
    * A rational as a term the form reader gives that rational back for.
    *
    * Whole values are a numeral and nothing else; the rest are a quotient of two numerals, which is
-   * one of the four shapes [[LinearForm]] reads as a constant rather than as an atom. The sign is
+   * one of the shapes [[LinearForm]] reads as a constant rather than as an atom. The sign is
    * on the numerator because `Rational.of` puts it there, so a negative value is a numeral under
    * `Real.Negation` and never a negative denominator, which that reader does not accept.
    *

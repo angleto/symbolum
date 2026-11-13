@@ -43,8 +43,12 @@ jobs:
       fail-fast: false
 
     steps:
+      # The whole history, because the step after the tests compares this change with the commit
+      # it was pushed onto, and the default checkout fetches one commit and nothing to compare with.
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
@@ -102,6 +106,23 @@ jobs:
       # a `-Xfatal-warnings` that has stopped arriving is silent by construction.
       - name: Run tests
         run: sbt test
+
+      # A change that moved the number of cases of an enumeration, read for prose that still says
+      # the old number beside the enumeration's name. On 2026-11-12 `Refutation.Outcome` went from
+      # seven cases to eight and nineteen sentences in files the change never opened went on saying
+      # seven; from that change this names eighteen of them. `StaleCount`'s comment has what it
+      # reads and what it does not, and the argument for reading the change rather than the tree.
+      #
+      # It runs whichever way the tests went, because a stale sentence and a failing test are
+      # different findings. It reuses the test classes the step above compiled. Which base it
+      # compares from is decided in `StaleCount.base` and held by its spec: the keys are there
+      # because an empty value would vanish from sbt's argument list.
+      - name: Prose still counting what a change recounted
+        if: always()
+        run: >-
+          sbt "tactics/Test/runMain garden.xeno.symbolum.tactics.StaleCount --event
+          ${{ github.event_name }} before=${{ github.event.before }}
+          base=${{ github.event.pull_request.base.sha }}"
 
       # There was a formatting step here and it checked nothing. `scalafmtCheckAll` is not a task
       # this build defines: there is no scalafmt plugin in `project/plugins.sbt` and no

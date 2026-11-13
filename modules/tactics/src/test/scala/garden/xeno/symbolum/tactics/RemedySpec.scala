@@ -147,7 +147,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
   /**
    * The agreement `Remedy`'s own comment claims, asserted rather than described.
    *
-   * `Discovery.why` sorts a refusal into four situations for the screening loop and `Remedy.of`
+   * `Discovery.why` sorts a refusal into situations for the screening loop and `Remedy.of`
    * sorts the same refusal into a next step. They are two classifications of one thing, written in
    * two files, and nothing but this stops them drifting apart into two answers a session would have
    * to reconcile.
@@ -457,7 +457,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
 
   "Every ledger verdict" should "carry a next step" in {
     // This replaced the table in a comment, so the assertion is that the replacement is total:
-    // eight verdicts, eight remedies, and the three that mean "never ask again" are the three the
+    // a remedy for every verdict, and the three that mean "never ask again" are the three the
     // comment names.
     //
     // Three since 2026-09-11, when `DecidedNotCertified` landed. It joins the two that were there
@@ -844,7 +844,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
    * excuses.
    */
   private val OutsideTheCensus: Vector[String] = Vector(
-    // The four situations `Discovery` sorts a refusal into for the screening loop. A caller never
+    // The situations `Discovery` sorts a refusal into for the screening loop. A caller never
     // receives one: `of(Discovery.Outcome)` defers to the refusal underneath rather than deciding
     // again from `Why`, which is what makes the agreement asserted above assertable at all.
     "Discovery.Why",
@@ -884,7 +884,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     // the caller does with the price is read it.
     "Prove.Outcome",
 
-    // Which of its five questions a report answers. `Cost.render` already sends the refusal the
+    // Which of its questions a report answers. `Cost.render` already sends the refusal the
     // report carries through `Remedy`, and reads the outcome only for the label above it.
     "Cost.Outcome",
 

@@ -16,7 +16,7 @@ import garden.xeno.symbolum.theories.{Counterpart, Natural, Prose, RealTheory, S
  * == Why this is a function and not a table in a comment ==
  *
  * The table existed already, in the comment on `Ledger.Verdict`, and it is the model for this file:
- * seven verdicts against the one question a ledger is asked, which is whether asking again could
+ * its verdicts against the one question a ledger is asked, which is whether asking again could
  * give a different answer. What a comment cannot do is fail. A case added to [[TacticError]] with
  * no next step named is a case a session meets and cannot act on, and prose does not notice. Every
  * mapping below is a total match, so the compiler notices instead.

@@ -703,8 +703,8 @@ object LogicError {
   /**
    * What a refusal is about: the claim, the search, or the asking.
    *
-   * Three answers rather than one, for the reason `Refutation` keeps its answers apart and
-   * `Cost.Outcome` keeps five: a caller that merges any two of them turns "I could not ask" into "I
+   * Three answers rather than one, for the reason `Refutation` and `Cost.Outcome` keep their
+   * answers apart: a caller that merges any two of them turns "I could not ask" into "I
    * asked and the answer was no". This is that discipline at the layer where the procedures
    * actually live, and it was the last one where the distinction was written in prose instead of in
    * the type.

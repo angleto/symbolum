@@ -33,7 +33,7 @@ import garden.xeno.symbolum.theories.{Field, Library, Ring, Signature}
  *
  * **An ordering, not a verdict.** Surprising is not a property a program decides, and this file
  * does not pretend otherwise: what comes back ranks what a person will look at first. That is the
- * same discipline `Refutation` keeps its outcomes apart for and `Discovery` keeps four reasons for.
+ * same discipline `Refutation` keeps its outcomes apart for and `Discovery` its reasons.
  * Collapsing the ordering into "this is a discovery" is the one way this machinery can mislead.
  *
  * **And the honest limit, which the calibration below measures rather than hides.** Everything the
@@ -268,7 +268,7 @@ object Novelty {
    * What a claim cost against the minimum, with the report it came from.
    *
    * `report` is kept whole rather than summarised: this file ranks, and a caller that wants to know
-   * what a claim charges or where it fails reads the five answers `Cost` gathered instead of a
+   * what a claim charges or where it fails reads the answers `Cost` gathered instead of a
    * number this one invented.
    */
   final case class Reading(

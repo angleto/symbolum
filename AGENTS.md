@@ -800,6 +800,12 @@ account. And **a figure spelled out in words has no digits in it**, so a grep fo
 reports an absence that is not one: `ClassicalSpec` guards `841` by spelling it, and the card that
 was opened on `git grep 841` concluded nothing guarded it.
 
+**A count of an enumeration's cases is a copy the compiler holds the original of**, so the
+repair is to name the cases rather than count them. What watches for the ones left is the change
+that moves the count: CI reads the prose beside the enumeration's name for the old number, and
+`StaleCount` in the tactics test scope says what it reads and why it reads the change rather than
+the tree.
+
 ## Where this is going
 
 The goal is exploration: proposing identities quickly and having each one certified, so that a long

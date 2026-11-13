@@ -931,7 +931,7 @@ The first bullet of the list above measures one theorem. This measures a corpus,
 question a prover has never been able to answer about a body of work: not how much of it went
 through, but which of the things anyone was asked to believe actually took part.
 
-`Cost` in `modules/tactics` asks the five questions at once and keeps their answers apart, and
+`Cost` in `modules/tactics` asks these questions at once and keeps their answers apart, and
 `CostCorpusSpec` runs it over track R's file. Frozen at the commit `RingCorpusSpec`'s notice names,
 measured on 2026-09-10.
 

@@ -1307,10 +1307,10 @@ would join, and one that leaves them unsatisfiable comes back under `vacuous`, n
 It is still reported, because a premise set one assumption away from impossible is a fact about the
 argument.
 
-**And that check answers less often than it looks.** `Refutation.satisfying` has five answers here
-and only two of them decide anything: a point at which the premises hold, or a proof that no point
-does. The other three say the question was not settled, which is what happens as soon as a premise
-is an equality between reals the solver cannot read as a linear system. A candidate under one of
+**And that check answers less often than it looks.** Of the answers `Refutation.satisfying` has
+here, only two decide anything: a point at which the premises hold, or a proof that no point does.
+The others say the question was not settled, which is what happens as soon as a premise is an
+equality between reals the solver cannot read as a linear system. A candidate under one of
 those comes back under `unchecked`:
 
 ```scala
@@ -2003,7 +2003,7 @@ decides and `DomainTheorySpec` measures at the chain length where it happens.
 
 ### A whole argument on one page
 
-`Cost` answers five questions about one claim and `Provenance` names the sources behind one proof.
+`Cost` answers its questions about one claim and `Provenance` names the sources behind one proof.
 A document is neither: it is a dozen claims leaning on each other and on one register of
 measurements, and there is a question that only exists at that size.
 

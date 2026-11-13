@@ -580,7 +580,7 @@ object Session {
      * `Remedy`. `SessionSpec` asserts the rendering on that cell. Turning an error into its message
      * before this point is what `RemedySpec` exists to prevent, and it is what this file did first.
      *
-     * Three overloads because there are three refusal types and `Remedy` maps each. The kernel's has
+     * One overload per refusal type, because `Remedy` maps each. The kernel's has
      * no signature-taking form in `Remedy`, and does not need one; its reason is still rendered
      * with the theory, because a declaration the kernel refuses can name terms too.
      */

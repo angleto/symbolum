@@ -74,7 +74,7 @@ final class ReachSpec extends AnyFlatSpec with Matchers {
   /**
    * What became of one statement.
    *
-   * The five `Cost` outcomes are carried through unchanged rather than folded into "proved" and
+   * The `Cost` outcomes are carried through unchanged rather than folded into "proved" and
    * "not", because a conditional theorem and a claim nothing is known about are the two things this
    * repository is most careful never to merge.
    */
