@@ -93,4 +93,18 @@ class AnalysisSpec extends AnyFlatSpec with Matchers {
     both.head.message should include("A is a published document")
     Analysis.diagnostics(check(importing, published = Map("A" -> twice))) shouldBe empty
   }
+
+  "A datatype and a function by recursion" should "span their lines in the outline, and show what they are on a hover" in {
+    val text = "datatype tree = LEAF\n  | NODE tree num tree\n\ndefine SIZE : tree -> num\n  SIZE LEAF = 0\n  SIZE (NODE l x r) = SIZE l + 1 + SIZE r\nend"
+    val checked = check(text)
+    Analysis.diagnostics(checked) shouldBe empty
+    Analysis.outline(checked).map(o => (o.name, o.kind, o.from, o.to)) shouldBe
+      Vector(("tree", Elaborate.Kind.Datatype, 1, 2), ("SIZE", Elaborate.Kind.Definition, 4, 7))
+    val datatype = Analysis.hover(checked, 2).getOrElse(fail("no hover on the constructors' line"))
+    datatype should startWith("datatype tree: defined")
+    datatype should include("tree = LEAF | NODE tree num tree")
+    datatype should not include "|- "
+    Analysis.hover(checked, 6).getOrElse("") should startWith("define SIZE: defined")
+    Analysis.hover(checked, 3) shouldBe empty
+  }
 }

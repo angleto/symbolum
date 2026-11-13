@@ -124,14 +124,11 @@ final class Workspace(elaborate: Elaborate, val source: String => Option[String]
     val (imported, clashes) = seen.foldLeft((Imported.none, Vector.empty[Problem])) { case ((acc, clashing), done) =>
       val line = via(done.name)
       val definitions = done.report.entries.collect {
-        case entry if entry.status == Status.Defined =>
-          entry.theorem.flatMap(t => Term.destEq(t.conclusion)).map { case (_, body) =>
-            Imported.Definition(done.name, entry.name, body, line)
-          }
+        case entry if entry.status == Status.Defined => entry.made.map(Imported.Definition(done.name, entry.name, _, line))
       }.flatten
       val facts = done.report.entries.collect {
         case entry if entry.status == Status.Defined || entry.status == Status.Proved =>
-          entry.theorem.map(t => entry.name -> Imported.Fact(done.name, Kernel.cite(entry.name, t)))
+          entry.facts.map { case (fact, t) => fact -> Imported.Fact(done.name, Kernel.cite(fact, t), entry.simp.contains(fact)) }
       }.flatten
       val failures = done.report.entries.collect {
         case entry if entry.status == Status.Incomplete || entry.status == Status.Refused =>

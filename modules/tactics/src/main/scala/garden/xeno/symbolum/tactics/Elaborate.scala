@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Chain, Library, Natural, NaturalLinear, Peano, Reach, Real, Signature}
+import garden.xeno.symbolum.theories.{Chain, Datatype, Library, Natural, NaturalLinear, Peano, Reach, Real, Signature}
 
 /**
  * A proof document checked: each declaration elaborated into kernel calls, and what became of it.
@@ -90,11 +90,7 @@ final class Elaborate private (
     val base = Scope(chain.widest.theory, chain.widest.notation, chain.widest.logic)
     val (start, refusals) = imported.definitions.foldLeft((base, Vector.empty[Problem])) {
       case ((scope, problems), definition) =>
-        val made = for {
-          pair <- LogicError.lift(Kernel.defineConstant(scope.theory, definition.name, definition.body))
-          logic <- scope.logic.over(pair._1)
-        } yield Scope(pair._1, scope.notation, logic)
-        made match {
+        make(scope, definition.made) match {
           case Right(wider) => (wider, problems)
           case Left(error) =>
             (scope, problems :+ Problem(definition.line,
@@ -128,6 +124,60 @@ final class Elaborate private (
         Some(s"run `import ${taken.name}` on a line of its own"), None))
     Report(declarations(document, scope, held, imported.copy(definitions = Vector.empty)), document.errors, refused)
   }
+
+  /**
+   * `scope` with what a declaration of another document made, made again: a constant from its
+   * body, a datatype from its constructors, a function defined by recursion from its clauses.
+   *
+   * Made again, it is the same constant or type the other document made, because each is made by
+   * the same construction from the same description: a defined constant carries its definition
+   * (`docs/adr/0008`), and a datatype is a type defined from a predicate its constructors decide.
+   * So a theorem the other document proved is about what this scope reads. This is the one place
+   * that happens, for the checker's imports, the published library and a notebook's import alike.
+   */
+  def make(scope: Scope, made: Made): Either[LogicError, Scope] =
+    made match {
+      case Made.Constant(name, body) =>
+        for {
+          pair <- LogicError.lift(Kernel.defineConstant(scope.theory, name, body))
+          logic <- scope.logic.over(pair._1)
+        } yield scope.copy(theory = pair._1, logic = logic)
+      case Made.Inductive(specification) =>
+        for {
+          datatype <- Datatype.define(ground, scope.theory, scope.notation, specification)
+          logic <- scope.logic.over(datatype.theory)
+        } yield Scope(datatype.theory, datatype.notation, logic, scope.datatypes + (specification.typeName -> datatype))
+      case Made.Recursive(typeName, name, parameters, clauses) =>
+        for {
+          datatype <- scope.datatypes.get(typeName).toRight(MissingDefinition(typeName))
+          defined <- Datatype.defineRecursive(datatype, ground, scope.theory, name, parameters, clauses)
+          logic <- scope.logic.over(defined._1)
+        } yield scope.copy(theory = defined._1, logic = logic)
+    }
+
+  /** What `Datatype` builds a type and its recursion theorem from, as the chain holds it. */
+  private lazy val ground: Datatype.Ground = Datatype.Ground.of(chain)
+
+  /**
+   * The connectives' clauses `simp` rewrites with, derived once. A clause that does not derive is a
+   * defect of `Simp`, and the elaborator refuses to exist with it.
+   */
+  private lazy val clauses: Vector[Kernel.Thm] =
+    Simp.clauses(chain.widest.logic, chain.widest.theory, chain.widest.notation)
+      .fold(error => throw new IllegalStateException(s"the simp clauses do not derive: ${error.message}"), identity)
+
+  /** The clauses and the base as rules, which every `simp` starts from. */
+  private lazy val simpBase: Vector[Kernel.Thm] =
+    (clauses ++ base).flatMap(theorem => Simp.rules(chain.widest.logic, theorem)
+      .fold(error => throw new IllegalStateException(s"the simp set holds a fact that is not a rule: ${error.message}"), identity))
+
+  private def sequenceLogic[A](results: Vector[Either[LogicError, A]]): Either[LogicError, Vector[A]] =
+    results.foldLeft[Either[LogicError, Vector[A]]](Right(Vector.empty))((acc, one) => acc.flatMap(done => one.map(done :+ _)))
+
+  /** The library's part of the simp set, `Simp.Base`, by name. */
+  private lazy val base: Vector[Kernel.Thm] =
+    Simp.Base.map(name => library.named(name).headOption.map(_.theorem)
+      .getOrElse(throw new IllegalStateException(s"the simp set names $name, and the library has no lemma of that name")))
 
   /** Every declaration, in order, each in the scope and with the facts the ones before it left. */
   private def declarations(document: Document.Parsed, start: Scope, held: Held, imported: Imported): Vector[Entry] =
@@ -182,14 +232,62 @@ final class Elaborate private (
         } yield (pair._2, Scope(pair._1, scope.notation, logic))
         outcome match {
           case Right((definition, wider)) =>
-            (Entry(name, line, Kind.Definition, Status.Defined, wider.show(definition.conclusion), Vector.empty, Some(definition)),
+            val made = Term.destEq(definition.conclusion).map { case (_, body) => Made.Constant(name, body) }
+            (Entry(name, line, Kind.Definition, Status.Defined, wider.show(definition.conclusion), Vector.empty, Some(definition), made = made),
               wider, held.proved(name, definition))
           case Left(error) =>
             (Entry(name, line, Kind.Definition, Status.Refused, body, Vector(problem(scope, line, error, None)), None),
               scope, held.failed(name, line))
         }
 
-      case Document.Declaration.Theorem(line, name, claimText, proof) =>
+      case Document.Declaration.Recursive(line, name, _, _, _) if taken(held, imported, name).isDefined =>
+        val (reason, next) = taken(held, imported, name).get
+        (Entry(name, line, Kind.Definition, Status.Refused, name, Vector(Problem(line, reason, Some(next), None)), None), scope, held)
+
+      case Document.Declaration.Recursive(line, name, typeText, equations, _) =>
+        val written = equations.map(_.text).mkString(" /\\ ")
+        Recursive.define(ground, scope.theory, scope.notation, scope.datatypes, name, line, typeText, equations) match {
+          case Left(refused) =>
+            (Entry(name, line, Kind.Definition, Status.Refused, written, Vector(Problem(refused.line, refused.reason, refused.next, None)), None),
+              scope, held.failed(name, line))
+          case Right(defined) =>
+            val outcome = for {
+              logic <- scope.logic.over(defined.theory)
+              joined <- defined.equations.tail.foldLeft[Either[LogicError, Kernel.Thm]](Right(defined.equations.head))((acc, e) =>
+                acc.flatMap(logic.rules.conjIntro(_, e)))
+            } yield (scope.copy(theory = defined.theory, logic = logic), joined)
+            outcome match {
+              case Left(error) =>
+                (Entry(name, line, Kind.Definition, Status.Refused, written, Vector(problem(scope, line, error, None)), None), scope, held.failed(name, line))
+              case Right((wider, joined)) =>
+                (Entry(name, line, Kind.Definition, Status.Defined, wider.show(joined.conclusion), Vector.empty, Some(joined),
+                  simp = Vector(name), made = Some(Made.Recursive(defined.typeName, name, defined.parameters, defined.clauses))),
+                  wider, held.proved(name, joined).simplifies(Vector(name)))
+            }
+        }
+
+      case declared @ Document.Declaration.Datatype(line, name, _, _) =>
+        datatype(scope, held, imported, declared) match {
+          case Left(problem) =>
+            (Entry(name, line, Kind.Datatype, Status.Refused, written(declared), Vector(problem), None), scope, held.failed(name, line))
+          case Right(made) =>
+            val facts = factOrder(made.specification).flatMap(fact => made.facts.get(fact).map(fact -> _))
+            // The freeness of the constructors, which is everything after induction, cases and recursion.
+            val simp = facts.map(_._1).drop(3)
+            val wider = for (logic <- scope.logic.over(made.theory))
+              yield Scope(made.theory, made.notation, logic, scope.datatypes + (made.specification.typeName -> made))
+            wider match {
+              case Left(error) =>
+                (Entry(name, line, Kind.Datatype, Status.Refused, written(declared), Vector(problem(scope, line, error, None)), None),
+                  scope, held.failed(name, line))
+              case Right(next) =>
+                (Entry(name, line, Kind.Datatype, Status.Defined, written(declared), Vector.empty, None, provides = facts, simp = simp,
+                  made = Some(Made.Inductive(made.specification))),
+                  next, facts.foldLeft(held) { case (acc, (fact, theorem)) => acc.proved(fact, theorem) }.simplifies(simp))
+            }
+        }
+
+      case Document.Declaration.Theorem(line, name, claimText, proof, simp) =>
         taken(held, imported, name) match {
           case Some((reason, next)) =>
             (Entry(name, line, Kind.Theorem, Status.Refused, claimText, Vector(Problem(line, reason, Some(next), None)), None),
@@ -198,6 +296,11 @@ final class Elaborate private (
           Parser.proposition(scope.theory, scope.notation, claimText) match {
             case Left(error) =>
               (Entry(name, line, Kind.Theorem, Status.Refused, claimText, Vector(problem(scope, line, error, None)), None),
+                scope, held.failed(name, line))
+            case Right(claim) if simp && simpRefusal(scope, claim).isDefined =>
+              (Entry(name, line, Kind.Theorem, Status.Refused, claimText,
+                Vector(Problem(line, s"$name cannot be in the simp set: ${simpRefusal(scope, claim).get}",
+                  Some("leave `[simp]` off, and name it where it is wanted: `simp [NAME]` is refused for the same reason, and `rewrite` takes an equation"), None)), None),
                 scope, held.failed(name, line))
             case Right(claim) =>
               val checked = new Run(scope, held, imported).establish(Context.empty, claim, proof).flatMap { theorem =>
@@ -211,9 +314,10 @@ final class Elaborate private (
               }
               checked.value.filter(_ => checked.problems.isEmpty) match {
                 case Some(theorem) =>
+                  val tagged = if (simp) Vector(name) else Vector.empty
                   (Entry(name, line, Kind.Theorem, Status.Proved, scope.show(claim), Vector.empty, Some(theorem),
-                    Some(price(scope, held, imported, theorem, checked.notes)), checked.goals),
-                    scope, held.proved(name, theorem))
+                    Some(price(scope, held, imported, theorem, checked.notes)), checked.goals, simp = tagged),
+                    scope, held.proved(name, theorem).simplifies(tagged))
                 case None =>
                   (Entry(name, line, Kind.Theorem, Status.Incomplete, scope.show(claim), checked.problems, None, None, checked.goals),
                     scope, held.failed(name, line))
@@ -221,6 +325,65 @@ final class Elaborate private (
           }
         }
     }
+
+  /** Why a claim cannot be a rule of the simp set, read off its shape before it is proved. */
+  private def simpRefusal(scope: Scope, claim: Term): Option[String] =
+    LogicError.lift(Kernel.assume(claim)).flatMap(Simp.rules(scope.logic, _)).left.toOption.map(_.render(scope.show))
+
+  /** A datatype as it was written, which is its statement in a report. */
+  private def written(declared: Document.Declaration.Datatype): String = {
+    val parameters = if (declared.parameters.isEmpty) "" else declared.parameters.mkString("(", ", ", ")")
+    s"${declared.name}$parameters = " + declared.constructors.map(c => (c.name +: c.arguments).mkString(" ")).mkString(" | ")
+  }
+
+  /**
+   * The facts of a datatype in the order a reader looks for them: induction, cases, recursion, then
+   * the freeness of the constructors, each one's injectivity and each pair's distinctness. The
+   * freeness is what goes in the simp set, and it is everything after the first three.
+   */
+  private def factOrder(specification: Datatype.Specification): Vector[String] = {
+    val constructors = specification.constructors.map(_.name).toVector
+    Vector(Datatype.induction(specification.typeName), Datatype.cases(specification.typeName), Datatype.recursion(specification.typeName)) ++
+      constructors.map(Datatype.injective) ++
+      constructors.combinations(2).map(pair => Datatype.distinct(pair(0), pair(1)))
+  }
+
+  /**
+   * A datatype declared: its constructors' argument types read, an argument of the type itself
+   * recognised by its name, and the type built by `Datatype`, refused naming the name a fact of it
+   * would take when another declaration has that name.
+   */
+  private def datatype(scope: Scope, held: Held, imported: Imported, declared: Document.Declaration.Datatype): Either[Problem, Datatype] = {
+    val line = declared.line
+    val itself = if (declared.parameters.isEmpty) declared.name else s"${declared.name}(${declared.parameters.mkString(",")})"
+    def argument(text: String): Either[Problem, Datatype.Argument] =
+      if (text.filterNot(_.isWhitespace) == itself) Right(Datatype.Argument.Recursive)
+      else if (text.filterNot(_.isWhitespace).takeWhile(c => c != '(') == declared.name)
+        Left(Problem(line, s"$text is the type being declared at other parameters, and a datatype here recurses only at its own: $itself",
+          Some("nested and mutual recursion are not built here"), None))
+      else {
+        val bare = if (text.startsWith("(") && text.endsWith(")")) text.drop(1).dropRight(1) else text
+        Parser.parseType(scope.theory, bare).map(Datatype.Argument.Of(_)).left.map(error =>
+          Problem(line, s"$text is not a type here: ${error.render(scope.show)}", None, None))
+      }
+    val specification = for {
+      constructors <- declared.constructors.foldLeft[Either[Problem, List[Datatype.Constructor]]](Right(Nil)) { (acc, c) =>
+        acc.flatMap(done => c.arguments.foldLeft[Either[Problem, List[Datatype.Argument]]](Right(Nil))((args, text) =>
+          args.flatMap(read => argument(text).map(read :+ _))).map(arguments => done :+ Datatype.Constructor(c.name, arguments)))
+      }
+    } yield Datatype.Specification(declared.name, constructors)
+    for {
+      spec <- specification
+      _ <- factOrder(spec).flatMap(fact => taken(held, imported, fact).map(fact -> _)).headOption match {
+        case Some((fact, (reason, next))) => Left(Problem(line, s"the datatype ${declared.name} names a fact $fact, and $reason", Some(next), None))
+        case None => Right(())
+      }
+      _ <- if (scope.theory.typeOperators.contains(declared.name))
+          Left(Problem(line, s"${declared.name} is already a type of the theory", Some("give the datatype a name of its own"), None))
+        else Right(())
+      made <- Datatype.define(ground, scope.theory, scope.notation, spec).left.map(error => problem(scope, line, error, None))
+    } yield made
+  }
 
   /**
    * What a proved theorem asks a reader to believe, and what it was built from.
@@ -481,8 +644,18 @@ final class Elaborate private (
 
         case Step.Rewrite(line, names) :: rest =>
           for {
-            equations <- Checked.all(names.map(fact(line, context, goal, _)))
+            facts <- Checked.all(names.map(fact(line, context, goal, _)))
+            equations <- Checked.all(facts.map(f => attempt(line, context, goal)(Simp.equations(logic, f)))).map(_.flatten)
             moved <- rewritten(line, context, goal, names, equations)
+            result <-
+              if (closes(moved._2)) unreachable(line, rest).andThen(closeBy(line, context, goal, moved._1, moved._2))
+              else run(context, moved._2, rest, end).flatMap(inner => carry(line, context, goal, moved._1, inner))
+          } yield result
+
+        case Step.Simp(line, names) :: rest =>
+          for {
+            rules <- simpSet(line, context, goal, names)
+            moved <- simplified(line, context, goal, names, rules)
             result <-
               if (closes(moved._2)) unreachable(line, rest).andThen(closeBy(line, context, goal, moved._1, moved._2))
               else run(context, moved._2, rest, end).flatMap(inner => carry(line, context, goal, moved._1, inner))
@@ -634,7 +807,13 @@ final class Elaborate private (
             val principle: Checked[(String, Kernel.Thm, Vector[String])] = using match {
               case Some(lemma) => fact(line, context, goal, lemma).map(t => (lemma, t, Vector.empty))
               case None =>
-                Defaults.get(variable.ty) match {
+                val declared = variable.ty match {
+                  case TyApp(operator, _) =>
+                    scope.datatypes.get(operator).map(d =>
+                      (Datatype.induction(d.specification.typeName), d.specification.constructors.map(_.name).toVector))
+                  case _ => None
+                }
+                Defaults.get(variable.ty).orElse(declared) match {
                   case Some((lemma, labels)) => fact(line, context, goal, lemma).map(t => (lemma, t, labels))
                   case None =>
                     refuse(line, context, goal, s"no default induction principle for ${Show.show(variable.ty)}",
@@ -768,23 +947,26 @@ final class Elaborate private (
      * a waypoint would carry on as though it were a normal form. A walk the limit stopped or the
      * ceiling stopped is a refusal naming which, and a proof never continues from one.
      */
-    private def rewriting(names: Vector[String], equations: Vector[Kernel.Thm], goal: Term): Either[(String, Option[String]), (Kernel.Thm, Term)] = {
-      val written = names.mkString(", ")
+    private def rewriting(names: Vector[String], equations: Vector[Kernel.Thm], goal: Term): Either[(String, Option[String]), (Kernel.Thm, Term)] =
+      normalising(s"rewriting with ${names.mkString(", ")}", equations, goal)
+
+    /** [[rewriting]], for any set of equations, which `what` names in a refusal. */
+    private def normalising(what: String, equations: Vector[Kernel.Thm], goal: Term): Either[(String, Option[String]), (Kernel.Thm, Term)] = {
       Rewrite.Rule.all(logic, equations).flatMap(Rewrite.rewriteReporting(_, goal)) match {
         case Left(error) => Left((error.render(scope.show), Some(Remedy.of(scope, error).message)))
         case Right((equation, stop)) =>
           stop match {
             case Rewrite.Stop.Steps =>
-              Left((s"rewriting with $written did not finish: the step limit ran out, so what it reached is a waypoint and not a normal form",
+              Left((s"$what did not finish: the step limit ran out, so what it reached is a waypoint and not a normal form",
                 Some("the equations may undo each other; rewrite with fewer of them, or with one oriented the other way")))
             case Rewrite.Stop.Size(width) =>
-              Left((s"rewriting with $written grew the goal past the ceiling, to $width nodes: the equations multiply the term",
+              Left((s"$what grew the goal past the ceiling, to $width nodes: the equations multiply the term",
                 Some("rewrite with fewer equations")))
             case Rewrite.Stop.Settled =>
               Term.destEq(equation.conclusion).map(_._2) match {
                 case None => Left(("the rewriter returned something other than an equation", None))
                 case Some(after) if after == goal =>
-                  Left((s"rewriting with $written changes nothing in the goal",
+                  Left((s"$what changes nothing in the goal",
                     Some("an equation rewrites where its left side matches; `find` shows a lemma's statement")))
                 case Some(after) => Right((equation, after))
               }
@@ -794,6 +976,35 @@ final class Elaborate private (
 
     private def rewritten(line: Int, context: Context, goal: Term, names: Vector[String], equations: Vector[Kernel.Thm]): Checked[(Kernel.Thm, Term)] =
       rewriting(names, equations, goal).fold({ case (message, next) => refuse(line, context, goal, message, next) }, Checked.ok)
+
+    /**
+     * The simp set at this point of the proof, as rules, with `names` added: `Simp`'s clauses and
+     * base, the imported facts in the set, this document's, and the facts the step names, which may
+     * be the proof's own. A named fact that cannot be a rule is refused naming it.
+     */
+    private def simpRules(names: Vector[String], lookup: String => Either[Problem, Kernel.Thm], problemAt: String => Problem): Either[Problem, Vector[Kernel.Thm]] = {
+      val inSet = imported.facts.values.filter(_.simp).map(_.theorem).toVector ++ held.simp.flatMap(held.facts.get)
+      val fromSet = inSet.foldLeft[Either[Problem, Vector[Kernel.Thm]]](Right(Vector.empty)) { (acc, theorem) =>
+        acc.flatMap(done => Simp.rules(logic, theorem).map(done ++ _).left.map(error => problemAt(error.render(scope.show))))
+      }
+      val added = names.foldLeft[Either[Problem, Vector[Kernel.Thm]]](Right(Vector.empty)) { (acc, name) =>
+        for {
+          done <- acc
+          theorem <- lookup(name)
+          rules <- Simp.rules(logic, theorem).left.map(error => problemAt(s"$name cannot be a rule of `simp`: ${error.render(scope.show)}"))
+        } yield done ++ rules
+      }
+      for { set <- fromSet; more <- added } yield simpBase ++ set ++ more
+    }
+
+    private def simpSet(line: Int, context: Context, goal: Term, names: Vector[String]): Checked[Vector[Kernel.Thm]] =
+      simpRules(names, lookup(line, context, goal, _), at(line, context, goal, _)).fold(Checked.failed, Checked.ok)
+
+    private def simpWhat(names: Vector[String]): String =
+      if (names.isEmpty) "`simp`" else s"`simp [${names.mkString(", ")}]`"
+
+    private def simplified(line: Int, context: Context, goal: Term, names: Vector[String], rules: Vector[Kernel.Thm]): Checked[(Kernel.Thm, Term)] =
+      normalising(simpWhat(names), rules, goal).fold({ case (message, next) => refuse(line, context, goal, message, next) }, Checked.ok)
 
     /** `goal` from `|- goal = after`, where `after` is `T` or `t = t`. */
     private def closing(equation: Kernel.Thm, after: Term): Either[LogicError, Kernel.Thm] =
@@ -946,7 +1157,7 @@ final class Elaborate private (
 
         case Method.Rewrite(names) =>
           for {
-            equations <- named(names)
+            equations <- named(names).flatMap(found => fromLogic(sequenceLogic(found.map(Simp.equations(logic, _)))).map(_.flatten))
             moved <- rewriting(names, equations, goal).left.map { case (message, next) => here(message, next) }
             result <-
               if (closes(moved._2)) fromLogic(closing(moved._1, moved._2)).flatMap(checked(_))
@@ -972,9 +1183,28 @@ final class Elaborate private (
               else fromLogic(rules.genAll(application.theorem, application.generalising.toList)).flatMap(checked(_))
           } yield result
 
+        case Method.Simp(names) =>
+          for {
+            rules <- simpRules(names, lookup(line, context, goal, _), here(_))
+            moved <- normalising(simpWhat(names), rules, goal).left.map { case (message, next) => here(message, next) }
+            result <-
+              if (closes(moved._2)) fromLogic(closing(moved._1, moved._2)).flatMap(checked(_))
+              else Left(here(s"${simpWhat(names)} leaves ${scope.show(moved._2)}",
+                Some(s"`${simpWhat(names).drop(1).dropRight(1)} then auto` hands what is left to the tactic surface")))
+          } yield result
+
+        case Method.Then(Method.Simp(names), second) =>
+          for {
+            rules <- simpRules(names, lookup(line, context, goal, _), here(_))
+            moved <- normalising(simpWhat(names), rules, goal).left.map { case (message, next) => here(message, next) }
+            inner <- outcome(line, context, moved._2, second)
+            carried <- fromLogic(carrying(moved._1, inner._1))
+            result <- checked(carried, inner._2)
+          } yield result
+
         case Method.Then(Method.Rewrite(names), second) =>
           for {
-            equations <- named(names)
+            equations <- named(names).flatMap(found => fromLogic(sequenceLogic(found.map(Simp.equations(logic, _)))).map(_.flatten))
             moved <- rewriting(names, equations, goal).left.map { case (message, next) => here(message, next) }
             inner <- outcome(line, context, moved._2, second)
             carried <- fromLogic(carrying(moved._1, inner._1))
@@ -982,7 +1212,7 @@ final class Elaborate private (
           } yield result
 
         case Method.Then(_, _) =>
-          Left(here("only `rewrite` changes a goal and leaves something for `then`; the method before `then` here closes the goal or refuses"))
+          Left(here("only `rewrite` and `simp` change a goal and leave something for `then`; the method before `then` here closes the goal or refuses"))
 
         case Method.First(alternatives) =>
           val tried = alternatives.map(outcome(line, context, goal, _))
@@ -1062,15 +1292,42 @@ object Elaborate {
       )
   }
 
-  /** The signature a document is read against, which grows with its definitions. */
-  final case class Scope(theory: Theory, notation: Notation, logic: Logic) extends Signature
+  /**
+   * The signature a document is read against, which grows with its definitions, and the datatypes
+   * declared in it by type name: what a definition by recursion recurses over and what `induction`
+   * finds a principle for.
+   */
+  final case class Scope(theory: Theory, notation: Notation, logic: Logic, datatypes: Map[String, Datatype] = Map.empty) extends Signature
+
+  /**
+   * What a declaration added to the theory, as a document importing it makes it again: see
+   * `Elaborate.make`.
+   */
+  enum Made {
+
+    /** `define NAME := BODY`. */
+    case Constant(name: String, body: Term)
+
+    /** `datatype NAME = ...`. */
+    case Inductive(specification: Datatype.Specification)
+
+    /** `define NAME : TYPE` and its equations, as the clauses `Datatype.defineRecursive` takes. */
+    case Recursive(typeName: String, name: String, parameters: List[FVar], clauses: List[Term])
+  }
 
   /**
    * What the document has proved so far, and the names whose proofs did not check. `holder` is
    * what holds them, as a refusal names it: a document, or the session a cell is checked in.
    */
-  private final case class Held(facts: Map[String, Kernel.Thm], failures: Map[String, Int], holder: String = "this document") {
+  private final case class Held(
+    facts: Map[String, Kernel.Thm],
+    failures: Map[String, Int],
+    holder: String = "this document",
+    /** The facts of [[facts]] in the simp set, in the order they were declared. */
+    simp: Vector[String] = Vector.empty
+  ) {
     def has(name: String): Boolean = facts.contains(name) || failures.contains(name)
+    def simplifies(names: Vector[String]): Held = copy(simp = simp ++ names)
     /**
      * `name` held as a fact, recorded as a citation of it (`Kernel.cite`, `docs/adr/0047`): a later
      * proof that uses it is priced at the name, as a proof citing a library lemma is, rather than
@@ -1222,11 +1479,11 @@ object Elaborate {
 
   object Imported {
 
-    /** A definition of an imported document, and the line of the import that brought it. */
-    final case class Definition(document: String, name: String, body: Term, line: Int)
+    /** A definition of an imported document, what makes it again, and the line of the import that brought it. */
+    final case class Definition(document: String, name: String, made: Made, line: Int)
 
-    /** A theorem or a defining equation of an imported document. */
-    final case class Fact(document: String, theorem: Kernel.Thm)
+    /** A theorem or a defining equation of an imported document, and whether it is in the simp set. */
+    final case class Fact(document: String, theorem: Kernel.Thm, simp: Boolean = false)
 
     /** A declaration of an imported document that did not check, on its line there. */
     final case class Failure(document: String, line: Int)
@@ -1235,7 +1492,16 @@ object Elaborate {
     val none: Imported = Imported(Vector.empty, Map.empty, Map.empty)
   }
 
-  enum Kind { case Definition, Theorem }
+  enum Kind {
+    case Definition, Datatype, Theorem
+
+    /** The word that declares it. */
+    def word: String = this match {
+      case Definition => "define"
+      case Datatype => "datatype"
+      case Theorem => "theorem"
+    }
+  }
 
   enum Status {
 
@@ -1264,8 +1530,17 @@ object Elaborate {
     /** What a proved theorem rests on and what it cost; nothing for anything else. */
     price: Option[Price] = None,
     /** The goal at each line of the proof, in the order the lines were checked; see [[goalAt]]. */
-    goals: Vector[Goal] = Vector.empty
+    goals: Vector[Goal] = Vector.empty,
+    /** The facts a declaration provides under names of their own, which a datatype's are. */
+    provides: Vector[(String, Kernel.Thm)] = Vector.empty,
+    /** The names among [[facts]] in the simp set. */
+    simp: Vector[String] = Vector.empty,
+    /** What the declaration added to the theory, for a document importing it to make again. */
+    made: Option[Made] = None
   ) {
+
+    /** Every fact the declaration gives later declarations and importers, by name. */
+    def facts: Vector[(String, Kernel.Thm)] = theorem.map(name -> _).toVector ++ provides
 
     /**
      * The goal at `line` of this declaration's proof: the one the last line at or above it was
@@ -1294,10 +1569,10 @@ object Elaborate {
       def priced(price: Price): Vector[String] = price.lines("this document").map("  " + _)
       def problem(p: Problem): Vector[String] = s"  line ${p.line}: ${p.reason}" +: p.detail.map("    " + _)
       def entry(e: Entry): Vector[String] = {
-        val word = e.kind match { case Kind.Definition => "define"; case Kind.Theorem => "theorem" }
-        val head = s"line ${e.line}: $word ${e.name}: ${e.status.toString.toLowerCase}"
+        val head = s"line ${e.line}: ${e.kind.word} ${e.name}: ${e.status.toString.toLowerCase}"
         val body =
-          if (e.status == Status.Proved || e.status == Status.Defined) s"  |- ${e.statement}" +: e.price.toVector.flatMap(priced)
+          if (e.kind == Kind.Datatype && e.status == Status.Defined) Vector(s"  ${e.statement}", s"  facts: ${e.provides.map(_._1).mkString(", ")}")
+          else if (e.status == Status.Proved || e.status == Status.Defined) s"  |- ${e.statement}" +: e.price.toVector.flatMap(priced)
           else Vector.empty
         (head +: body) ++ e.problems.flatMap(problem)
       }

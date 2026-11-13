@@ -875,7 +875,12 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     // problem the report carries has its next step already, asked of `Remedy` where the refusal was
     // still a value, which is the reason `Session.Outcome` is named here.
     "Elaborate.Kind",
-    "Elaborate.Status"
+    "Elaborate.Status",
+
+    // What a declaration made, kept so that an importer makes it again: a constant's body, a
+    // datatype's specification, a recursive function's clauses. It is a description handed to
+    // `Elaborate.make`, never an outcome, and a refusal of `make` arrives as a `LogicError`.
+    "Elaborate.Made"
   )
 
   "Every verdict this module declares" should "be mapped by Remedy or named as an exception" in {

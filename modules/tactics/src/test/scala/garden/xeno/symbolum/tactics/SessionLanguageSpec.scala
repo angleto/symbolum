@@ -28,7 +28,13 @@ class SessionLanguageSpec extends AnyFlatSpec with Matchers {
     "B" ->
       """import A
         |theorem TWICE_ZERO_AGAIN : TWICE 0 = 0 by exact TWICE_ZERO""".stripMargin,
-    "Broken" -> "theorem NOT_SO : 0 = 1:num by arith"
+    "Broken" -> "theorem NOT_SO : 0 = 1:num by arith",
+    "Trees" ->
+      """datatype tree = LEAF | NODE tree num tree
+        |define MIRROR : tree -> tree
+        |  MIRROR LEAF = LEAF
+        |  MIRROR (NODE l x r) = NODE (MIRROR r) x (MIRROR l)
+        |end""".stripMargin
   )
 
   private lazy val fresh: Session = Session.of(Chain.standard, documents.get)
@@ -237,5 +243,25 @@ class SessionLanguageSpec extends AnyFlatSpec with Matchers {
       session.entries.map(_.outcome).collect { case incomplete: Session.Outcome.Incomplete => incomplete } shouldBe empty
       session.state.fact("ZERO_RIGHT") should not be empty
     }
+  }
+
+  "A session importing a document with a datatype" should "prove by its induction and its simp set in a cell" in {
+    val cell =
+      """theorem MIRROR_MIRROR : !t. MIRROR (MIRROR t) = t
+        |proof
+        |  fix t
+        |  induction t
+        |  case LEAF:
+        |    simp
+        |  case NODE l x r ihl ihr:
+        |    simp [ihl, ihr]
+        |  end
+        |qed""".stripMargin
+    val session = fresh.run("import Trees").runAll(lines(cell))
+    session.entries.head.outcome should not be a[Session.Outcome.Refused]
+    last(session) shouldBe a[Session.Outcome.Proved]
+    session.state.datatypes.keySet shouldBe Set("tree")
+    // Without the import the cell does not read: the type and its constructors are the document's.
+    last(fresh.runAll(lines(cell))) should not be a[Session.Outcome.Proved]
   }
 }

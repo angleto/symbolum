@@ -116,14 +116,10 @@ object Published {
     val (scope, clashes) = checked.done.foldLeft((base, Vector.empty[String])) { case ((current, refused), done) =>
       done.report.entries.filter(_.status == Elaborate.Status.Defined).foldLeft((current, refused)) {
         case ((inner, problems), entry) =>
-          entry.theorem.flatMap(theorem => Term.destEq(theorem.conclusion)) match {
-            case None => (inner, problems :+ s"${done.name}: ${entry.name} is defined and its defining theorem is not an equation")
-            case Some((_, body)) =>
-              val made = for {
-                pair <- LogicError.lift(Kernel.defineConstant(inner.theory, entry.name, body))
-                logic <- inner.logic.over(pair._1)
-              } yield Elaborate.Scope(pair._1, inner.notation, logic)
-              made match {
+          entry.made match {
+            case None => (inner, problems :+ s"${done.name}: ${entry.name} is defined and says nothing of what it made")
+            case Some(made) =>
+              elaborate.make(inner, made) match {
                 case Right(wider) => (wider, problems)
                 case Left(error) =>
                   (inner, problems :+ s"${done.name}: ${entry.name} cannot be defined beside the other published documents: ${error.render(inner.show)}")
@@ -134,9 +130,7 @@ object Published {
 
     // One name, one fact: a theorem name two documents share is refused even when neither imports
     // the other, which the per-document check cannot see.
-    val facts = checked.done.flatMap(done => done.report.entries.collect {
-      case entry if entry.theorem.isDefined => (entry.name, done.name, entry.theorem.get)
-    })
+    val facts = checked.done.flatMap(done => done.report.entries.flatMap(entry => entry.facts.map { case (fact, theorem) => (fact, done.name, theorem) }))
     val shared = facts.groupBy(_._1).toVector.sortBy(_._1).collect {
       case (name, holders) if holders.size > 1 => s"$name is declared in ${holders.map(_._2).distinct.mkString(" and ")}"
     }
@@ -149,7 +143,7 @@ object Published {
     else {
       val documents = checked.done.map(done => Document(done.name, done.parsed.imports.map(_.name), done.report))
       val library = Library.of(checked.done.map(done =>
-        done.name -> done.report.entries.collect { case entry if entry.theorem.isDefined => entry.name -> entry.theorem.get }.toMap))
+        done.name -> done.report.entries.flatMap(_.facts).toMap))
       Right(new Published(documents, scope, library))
     }
   }

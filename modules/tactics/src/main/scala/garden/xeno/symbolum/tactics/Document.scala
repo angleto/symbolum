@@ -65,9 +65,28 @@ object Document {
     /** `define NAME := TERM`, a conservative definition: it costs a name and no belief. */
     case Define(at: Int, name: String, body: String) extends Declaration(at)
 
-    /** `theorem NAME : CLAIM`, with its proof. */
-    case Theorem(at: Int, name: String, claim: String, proof: Justification) extends Declaration(at)
+    /**
+     * `define NAME : TYPE`, then one equation per line, then `end`: a function defined by structural
+     * recursion over a datatype, one equation per constructor.
+     */
+    case Recursive(at: Int, name: String, ty: String, equations: Vector[Equation], closed: Int) extends Declaration(at)
+
+    /**
+     * `datatype NAME = C1 | C2 T1 T2 | ...`, or `datatype NAME('a) = ...`, with the constructors on
+     * the line or on lines after it that start with `|`. Each constructor is its name and the types
+     * of its arguments, as text, a compound type in parentheses.
+     */
+    case Datatype(at: Int, name: String, parameters: Vector[String], constructors: Vector[Constructor]) extends Declaration(at)
+
+    /** `theorem NAME : CLAIM`, with its proof; `theorem NAME [simp] : CLAIM` puts it in the simp set. */
+    case Theorem(at: Int, name: String, claim: String, proof: Justification, simp: Boolean = false) extends Declaration(at)
   }
+
+  /** One equation of a recursive definition, as text, and its line. */
+  final case class Equation(line: Int, text: String)
+
+  /** One constructor of a datatype: its name and the types of its arguments, as text. */
+  final case class Constructor(line: Int, name: String, arguments: Vector[String])
 
   /** How a claim is established: one method on the same line, or a block of steps. */
   enum Justification {
@@ -120,6 +139,9 @@ object Document {
     /** `rewrite F, G`: the goal is rewritten with the equations named, and the proof goes on. */
     case Rewrite(at: Int, facts: Vector[String]) extends Step(at)
 
+    /** `simp` or `simp [F, G]`: the goal is rewritten with the simp set, and the facts named, and the proof goes on. */
+    case Simp(at: Int, facts: Vector[String]) extends Step(at)
+
     /**
      * `apply L`: the goal is an instance of what `L` concludes, and the proof goes on with what `L`
      * assumes. Branches numbered from 1 when it assumes more than one thing.
@@ -154,13 +176,16 @@ object Document {
     /** `rewrite F, G`: the goal rewritten with the equations named until it is `T` or `t = t`. */
     case Rewrite(facts: Vector[String])
 
+    /** `simp [F, G]`: the goal rewritten with the simp set and the facts named until it is `T` or `t = t`. */
+    case Simp(facts: Vector[String])
+
     /** `exact F`: the goal is the fact, or an instance of it. */
     case Exact(fact: String)
 
     /** `apply L`: the goal is an instance of what `L` concludes and `L` owes nothing more. */
     case Apply(lemma: String)
 
-    /** `A then B`: `A` changes the goal and `B` closes what is left. Only `rewrite` changes a goal. */
+    /** `A then B`: `A` changes the goal and `B` closes what is left. Only `rewrite` and `simp` change a goal. */
     case Then(first: Method, second: Method)
 
     /** `first A | B`: the first that settles the goal, and every refusal if none does. */
@@ -170,7 +195,7 @@ object Document {
   /** The words a proof step starts with, which are also what `read` recognises. */
   val StepKeywords: Vector[String] =
     Vector("fix", "assume", "have", "show", "by", "obtain", "cases", "induction", "split", "left", "right",
-      "witness", "rewrite", "apply", "calc")
+      "witness", "rewrite", "simp", "apply", "calc")
 
   /**
    * What a document is called: its file name without `.sym`, and what an `import` names.
@@ -188,7 +213,7 @@ object Document {
 
   /** The words a method starts with. */
   val MethodKeywords: Vector[String] =
-    Vector("auto", "ring", "linarith", "arith", "rewrite", "exact", "apply", "first")
+    Vector("auto", "ring", "linarith", "arith", "rewrite", "simp", "exact", "apply", "first")
 
   /* ------------------------------------------------------------------ reading */
 
@@ -212,6 +237,9 @@ object Document {
    * and its errors are reported by [[read]] on exactly those lines. `DocumentSpec` asserts the two
    * agree on every proof of `docs/language.md` and of the published documents.
    *
+   * A recursive definition, `define NAME : TYPE` with no `:=`, runs to its `end`, and a datatype
+   * over the lines after it that start with `|`.
+   *
    * The first word decides nothing inside a proof: `show` and `assume` are steps there and
    * commands of a session outside one, which is why the boundary is `qed` and not the next line
    * that looks like a command.
@@ -219,9 +247,19 @@ object Document {
   def extent(lines: Vector[String], from: Int): Int = {
     val text = lines.map(raw => stripComment(raw).trim)
     val first = text.lift(from).getOrElse("")
+    val keyword = first.takeWhile(c => !c.isWhitespace && c != ':')
     val claimed = first.contains(':') && trailingBy(first.drop(first.indexOf(':') + 1).trim)._2.isDefined
     val opened = text.indexWhere(_.nonEmpty, from + 1)
-    if (claimed || opened < 0 || text(opened) != "proof") 1
+    if (keyword == "define" && !first.contains(":=")) {
+      // A recursive definition runs to its `end`, and to the end of the text when it has none.
+      val closed = text.indexWhere(_ == "end", from + 1)
+      if (closed < 0) text.size - from else closed + 1 - from
+    } else if (keyword == "datatype") {
+      // A datatype runs over the lines after it that start with `|`, blank lines between them included.
+      val continued = text.indexWhere(line => line.nonEmpty && !line.startsWith("|"), from + 1)
+      val last = text.lastIndexWhere(_.startsWith("|"), if (continued < 0) text.size - 1 else continued - 1)
+      if (last <= from) 1 else last + 1 - from
+    } else if (claimed || opened < 0 || text(opened) != "proof") 1
     else {
       @annotation.tailrec
       def close(position: Int, depth: Int): Int =
@@ -261,7 +299,7 @@ object Document {
   private final class Reader(lines: Vector[Line]) {
     private type Read[A] = Either[Malformed, (A, Int)]
 
-    private val Declarations = Set("import", "define", "theorem")
+    private val Declarations = Set("import", "define", "datatype", "theorem")
 
     private def lastLine: Int = lines.lastOption.map(_.number).getOrElse(0)
     private def at(position: Int): Option[Line] = lines.lift(position)
@@ -320,23 +358,98 @@ object Document {
     private def declaration(position: Int): Read[Declaration] = {
       val line = lines(position)
       line.keyword match {
-        case "define" =>
+        case "define" if line.rest.contains(":=") =>
           split(line, line.rest, ":=", "define NAME := TERM").map { case (name, body) =>
             (Declaration.Define(line.number, name, body), position + 1)
           }
+        case "define" =>
+          for {
+            parts <- split(line, line.rest, ":", "define NAME := TERM, or define NAME : TYPE and its equations up to `end`")
+            (named, ty) = parts
+            _ <- check(isName(named), line.number,
+              s"`define` is written `define NAME := TERM`, or `define NAME : TYPE` and its equations up to `end`, and `$named` is not a name")
+            read <- equations(line, position + 1)
+          } yield (Declaration.Recursive(line.number, named, ty, read._1, read._2), read._3)
+        case "datatype" => datatype(line, position)
         case "theorem" =>
           for {
             parts <- split(line, line.rest, ":", "theorem NAME : CLAIM")
-            (name, rest) = parts
-            (claim, written) = trailingBy(rest)
-            read <- written match {
+            (written, rest) = parts
+            simp = written.endsWith("[simp]")
+            named = if (simp) written.dropRight("[simp]".length).trim else written
+            _ <- name(line, named)
+            (claim, by) = trailingBy(rest)
+            read <- by match {
               case Some(text) => method(line, text).map(m => (Justification.By(line.number, m), position + 1))
               case None => block(line, position + 1)
             }
-          } yield (Declaration.Theorem(line.number, name, claim, read._1), read._2)
+          } yield (Declaration.Theorem(line.number, named, claim, read._1, simp), read._2)
         case other =>
-          fail(line.number, s"a document holds `import`, `define` and `theorem` at its top level, and this line starts with `$other`")
+          fail(line.number, s"a document holds `import`, `define`, `datatype` and `theorem` at its top level, and this line starts with `$other`")
       }
+    }
+
+    /** The equations of a recursive definition, one per line, up to `end`: the equations, the line of `end`, and the position after it. */
+    private def equations(opener: Line, position: Int): Either[Malformed, (Vector[Equation], Int, Int)] = {
+      @annotation.tailrec
+      def go(current: Int, read: Vector[Equation]): Either[Malformed, (Vector[Equation], Int, Int)] =
+        at(current) match {
+          case Some(line) if line.text == "end" =>
+            if (read.isEmpty) fail(line.number, s"the definition on line ${opener.number} has no equation before its `end`")
+            else Right((read, line.number, current + 1))
+          case Some(line) if Declarations.contains(line.keyword) =>
+            fail(line.number, s"the equations of the definition on line ${opener.number} end with `end`, and this line starts a declaration")
+          case Some(line) => go(current + 1, read :+ Equation(line.number, line.text))
+          case None => fail(lastLine, s"the definition on line ${opener.number} has no `end`")
+        }
+      go(position, Vector.empty)
+    }
+
+    /**
+     * `datatype NAME = ...` and the lines after it that start with `|`.
+     *
+     * The constructors are split at every `|` outside parentheses, and each constructor's arguments
+     * at every space outside them, so `NODE (num -> bool) tree` has two arguments and
+     * `PAIR btree('a, 'b)` one. What the argument types mean is the elaborator's to read.
+     */
+    private def datatype(line: Line, position: Int): Read[Declaration] = {
+      val continued = lines.drop(position + 1).takeWhile(_.text.startsWith("|"))
+      val text = (line.rest +: continued.map(_.text)).mkString(" ")
+      val shape = "datatype NAME = C1 | C2 T1 T2, or datatype NAME('a) = ..."
+      for {
+        parts <- split(line, text, "=", shape)
+        (head, body) = parts
+        headed <- head.indexOf('(') match {
+          case -1 => Right((head, Vector.empty[String]))
+          case open =>
+            val inside = head.drop(open + 1).stripSuffix(")")
+            val found = inside.split(",").map(_.trim).toVector
+            check(head.endsWith(")") && found.forall(_.matches("'[A-Za-z][A-Za-z0-9_]*")), line.number,
+              s"the parameters of a datatype are type variables, `NAME('a, 'b)`, and `$head` is not that shape")
+              .map(_ => (head.take(open).trim, found))
+        }
+        (named, parameters) = headed
+        _ <- name(line, named)
+        written = topLevel(body.trim.stripPrefix("|"), '|').map(_.trim)
+        _ <- check(written.forall(_.nonEmpty), line.number, s"a datatype is written `$shape`, and a constructor here is empty")
+        constructors <- sequence(written.map { text =>
+          val words = topLevel(text, ' ').map(_.trim).filter(_.nonEmpty)
+          name(line, words.head).map(c => Constructor(line.number, c, words.tail))
+        })
+      } yield (Declaration.Datatype(line.number, named, parameters, constructors), position + 1 + continued.size)
+    }
+
+    /** `text` split at every `separator` outside parentheses. */
+    private def topLevel(text: String, separator: Char): Vector[String] = {
+      val (parts, last, _) = text.foldLeft((Vector.empty[String], "", 0)) { case ((done, current, depth), c) =>
+        c match {
+          case '(' => (done, current + c, depth + 1)
+          case ')' => (done, current + c, depth - 1)
+          case `separator` if depth == 0 => (done :+ current, "", depth)
+          case _ => (done, current + c, depth)
+        }
+      }
+      parts :+ last
     }
 
     /** `proof`, steps, `qed`, starting at `position`, after the line that asked for it. */
@@ -455,6 +568,7 @@ object Document {
             _ <- check(line.rest.nonEmpty, line.number, "`witness` wants the term")
           } yield (Step.Witness(line.number, line.rest), next)
         case "rewrite" => alone(list(line, line.keyword, line.rest, "the equations it rewrites with").map(Step.Rewrite(line.number, _)))
+        case "simp" => alone(simpFacts(line, line.rest).map(Step.Simp(line.number, _)))
         case "apply" =>
           for {
             lemma <- single(line, line.keyword, line.rest, "the lemma it applies")
@@ -588,6 +702,7 @@ object Document {
           case "linarith" => from.map(Method.Linarith(_))
           case "arith" => from.map(Method.Arith(_))
           case "rewrite" => list(line, keyword, rest, "the equations it rewrites with").map(Method.Rewrite(_))
+          case "simp" => simpFacts(line, rest).map(Method.Simp(_))
           case "exact" => single(line, keyword, rest, "the fact").map(Method.Exact(_))
           case "apply" => single(line, keyword, rest, "the lemma").map(Method.Apply(_))
           case "first" => fail(line.number, "`first` is written `first A | B`, with at least two methods")
@@ -595,6 +710,12 @@ object Document {
         }
       }
     }
+
+    /** What follows `simp`: nothing, or the facts added to the simp set in brackets, `[F, G]`. */
+    private def simpFacts(line: Line, text: String): Either[Malformed, Vector[String]] =
+      if (text.isEmpty) Right(Vector.empty)
+      else if (text.startsWith("[") && text.endsWith("]")) list(line, "simp", text.drop(1).dropRight(1), "the facts it adds, inside the brackets")
+      else fail(line.number, "`simp` is written `simp`, or `simp [F, G]` with the facts it adds to the simp set")
 
     private def sequence[A](reads: Vector[Either[Malformed, A]]): Either[Malformed, Vector[A]] =
       reads.foldLeft(Right(Vector.empty): Either[Malformed, Vector[A]])((acc, read) => acc.flatMap(done => read.map(done :+ _)))

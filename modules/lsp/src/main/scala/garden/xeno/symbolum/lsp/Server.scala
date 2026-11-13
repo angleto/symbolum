@@ -111,6 +111,7 @@ final class Server(elaborate: () => Elaborate, published: String => Option[Strin
         val kind = span.kind match {
           case Elaborate.Kind.Definition => SymbolKind.Constant
           case Elaborate.Kind.Theorem => SymbolKind.Function
+          case Elaborate.Kind.Datatype => SymbolKind.Enum
         }
         Choice.forRight[SymbolInformation, DocumentSymbol](new DocumentSymbol(span.name, kind, range, range, span.status.toString.toLowerCase))
       }

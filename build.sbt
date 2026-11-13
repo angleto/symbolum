@@ -1140,12 +1140,16 @@ lazy val published = (project in file("modules/published"))
   .settings(coverageSettings)
   .settings(
     name := "symbolum-published",
-    // Measured 2026-11-11 by `clean coverage published/test published/coverageReport`: 142 of 170
-    // statements, 83.53%. What is not reached is the exit of `Check.main`, `Notebook.main`, which
-    // blocks until the process is stopped, the throw of `standard`, and the refusals of a definition
-    // that is not an equation and of an axiom, which no declaration of the language can produce
-    // today. One statement is 0.59%, so the floor leaves one.
-    coverageMinimumStmtTotal := 82.9
+    // Measured 2026-11-13 by the whole coverage run over every module: 132 of 160 statements,
+    // 82.50%. What is not reached is the exit of `Check.main`, `Notebook.main`, which blocks until
+    // the process is stopped, the throw of `standard`, the refusal of a defined declaration that
+    // carries no record of what it made and of an axiom, which no declaration of the language can
+    // produce today, and the renderer a clash's message is handed and does not call. One statement
+    // is 0.63%, so the floor leaves one. It was 82.9 over 142 of 170 on 2026-11-11, and the ten
+    // statements that went were all reached: a published definition stopped rebuilding its body out
+    // of its defining equation and is made again by `Elaborate.make` (`docs/adr/0080`), so the
+    // same 28 statements are unreached over a smaller total.
+    coverageMinimumStmtTotal := 81.8
   )
 
 // Runnable demonstrations, of both halves. Separate from `core` so they stay out of the published
@@ -1166,7 +1170,10 @@ lazy val lsp = (project in file("modules/lsp"))
   .settings(
     name := "symbolum-lsp",
     publish / skip := true,
-    libraryDependencies += "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "1.0.0"
+    libraryDependencies += "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "1.0.0",
+    // Measured 2026-11-13 by the whole coverage run over every module: 255 of 278 statements,
+    // 91.73%. One statement is 0.36%, so the floor leaves one.
+    coverageMinimumStmtTotal := 91.3
   )
 
 lazy val examples = (project in file("modules/examples"))

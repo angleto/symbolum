@@ -69,7 +69,7 @@ class ElaborateRoutesSpec extends AnyFlatSpec with Matchers {
       ("a fact cited from a proof holding others", theorem("!x:real. x = x ==> x = x", "  fix x\n  assume h\n  by exact nowhere"),
         Status.Incomplete, 5, "no fact named nowhere: this proof holds h"),
       ("a rewrite with something not an equation", theorem("!x:real. 0 <= x ==> x = x", "  fix x\n  assume h\n  rewrite h\n  by ring"),
-        Status.Incomplete, 5, "expected an equation, found 0 <= x"),
+        Status.Incomplete, 5, "expected an equation, or a conjunction of equations, found 0 <= x"),
       ("a rewrite that changes nothing", theorem("!x:real. x = x", "  fix x\n  rewrite NUM_ADD_ZERO\n  by ring"), Status.Incomplete, 4,
         "rewriting with NUM_ADD_ZERO changes nothing in the goal"),
       ("a rewrite method that leaves something", "define twice := \\x:real. x + x\n" +
@@ -78,7 +78,7 @@ class ElaborateRoutesSpec extends AnyFlatSpec with Matchers {
       ("an apply method that leaves obligations", theorem("!n:num. !m:num. !k:num. m <= k ==> n + m <= n + k",
         "  fix n m k\n  assume h\n  by apply NUM_ADD_MONOTONE"), Status.Incomplete, 5, "NUM_ADD_MONOTONE leaves m <= k to prove"),
       ("then after a method that closes", theorem("!x:real. x = x", "  fix x\n  by ring then ring"), Status.Incomplete, 4,
-        "only `rewrite` changes a goal and leaves something for `then`"),
+        "only `rewrite` and `simp` change a goal and leave something for `then`"),
       ("first where nothing settles", theorem("!x:real. x = x + 1", "  fix x\n  by first ring | linarith"), Status.Incomplete, 4,
         "none of the alternatives settled the goal: "),
       ("a method proving something else", theorem("!x:real. !y:real. x + y = y + x", "  fix x y\n  by exact NUM_ADD_SYM"), Status.Incomplete, 4,

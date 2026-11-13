@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Chain, Essay, Library, Signature}
+import garden.xeno.symbolum.theories.{Chain, Datatype, Essay, Library, Signature}
 
 /**
  * A development written one command at a time, where the order of the commands is the development.
@@ -450,8 +450,13 @@ object Session {
      */
     val imported: Elaborate.Imported = Elaborate.Imported.none,
     /** The documents imported, in the order their definitions were made in [[theory]]. */
-    val documents: Vector[String] = Vector.empty
+    val documents: Vector[String] = Vector.empty,
+    /** The datatypes the imported documents declared, by type name, as a theorem cell's `induction` reads them. */
+    val datatypes: Map[String, Datatype] = Map.empty
   ) extends Signature {
+
+    /** The session as the elaborator reads a document in it. */
+    def scope: Elaborate.Scope = Elaborate.Scope(theory, notation, logic, datatypes)
 
     /** A theorem this session holds under that name: its own first, then one it imported. */
     def fact(name: String): Option[Kernel.Thm] =
@@ -460,13 +465,15 @@ object Session {
 
     private[tactics] def extended(
       theory: Theory = this.theory,
+      notation: Notation = this.notation,
       logic: Logic = this.logic,
       named: Vector[(String, Kernel.Thm)] = this.named,
       assumed: Vector[(String, Term)] = this.assumed,
       script: Script = this.script,
       imported: Elaborate.Imported = this.imported,
-      documents: Vector[String] = this.documents
-    ): State = new State(theory, notation, logic, named, assumed, script, imported, documents)
+      documents: Vector[String] = this.documents,
+      datatypes: Map[String, Datatype] = this.datatypes
+    ): State = new State(theory, notation, logic, named, assumed, script, imported, documents, datatypes)
   }
 
   object State {
@@ -834,7 +841,7 @@ object Session {
      */
     private def theorem(state: State, text: String): (Outcome, State) = {
       val parsed = Document.read(text)
-      val report = elaborate.within(Elaborate.Scope(state.theory, state.notation, state.logic), state.named, state.imported, parsed)
+      val report = elaborate.within(state.scope, state.named, state.imported, parsed)
       val syntax = parsed.errors.map(e => Elaborate.Problem(e.line, e.reason, None, None))
       report.entries match {
         case Vector(entry) if entry.kind == Elaborate.Kind.Theorem =>
@@ -880,23 +887,21 @@ object Session {
             val definitions = done.report.entries.filter(_.status == Elaborate.Status.Defined)
             val widened = definitions.foldLeft[Either[String, State]](Right(current)) { (inner, entry) =>
               inner.flatMap { here =>
-                entry.theorem.flatMap(t => Term.destEq(t.conclusion)) match {
-                  case None => Left(s"${done.name}: ${entry.name} is defined and its defining theorem is not an equation")
-                  case Some((_, body)) =>
-                    (for {
-                      pair <- LogicError.lift(Kernel.defineConstant(here.theory, entry.name, body))
-                      logic <- here.logic.over(pair._1)
-                    } yield here.extended(theory = pair._1, logic = logic)).left.map(error =>
+                entry.made match {
+                  case None => Left(s"${done.name}: ${entry.name} is defined and says nothing of what it made")
+                  case Some(made) =>
+                    elaborate.make(here.scope, made).map(scope =>
+                      here.extended(theory = scope.theory, notation = scope.notation, logic = scope.logic, datatypes = scope.datatypes)).left.map(error =>
                       s"${entry.name}, defined in ${done.name}, cannot be defined in this session: ${error.render(here.show)}")
                 }
               }
             }
-            val facts = done.report.entries.collect { case entry if entry.theorem.isDefined => entry.name -> entry.theorem.get }
+            val facts = done.report.entries.flatMap(entry => entry.facts.map { case (fact, theorem) => (fact, theorem, entry.simp.contains(fact)) })
             widened.flatMap { here =>
-              facts.find { case (fact, _) => taken.contains(fact) || here.imported.facts.contains(fact) } match {
-                case Some((fact, _)) => Left(s"$fact, declared in ${done.name}, is a name this session already holds")
+              facts.find { case (fact, _, _) => taken.contains(fact) || here.imported.facts.contains(fact) } match {
+                case Some((fact, _, _)) => Left(s"$fact, declared in ${done.name}, is a name this session already holds")
                 case None =>
-                  val held = facts.map { case (fact, theorem) => fact -> Elaborate.Imported.Fact(done.name, Kernel.cite(fact, theorem)) }
+                  val held = facts.map { case (fact, theorem, simp) => fact -> Elaborate.Imported.Fact(done.name, Kernel.cite(fact, theorem), simp) }
                   Right(here.extended(
                     imported = here.imported.copy(facts = here.imported.facts ++ held),
                     documents = here.documents :+ done.name

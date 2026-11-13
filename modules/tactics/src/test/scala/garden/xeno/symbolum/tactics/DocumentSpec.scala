@@ -31,7 +31,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
 
     parsed.errors shouldBe empty
     parsed.declarations should have size 1
-    val Declaration.Theorem(line, name, claim, Justification.Block(_, steps, closed)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(line, name, claim, Justification.Block(_, steps, closed), _) = parsed.declarations.head: @unchecked
     (line, name, claim, closed) shouldBe ((1, "T", "!n:num. 0 + n = n", 10))
     steps.map(_.line) shouldBe Vector(3, 4)
     val Step.Induction(_, variable, using, branches) = steps(1): @unchecked
@@ -57,14 +57,14 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
 
   it should "take the claim before the last ` by ` and the method after it" in {
     val parsed = read("theorem T : !x:real. 0 <= x * x by auto from h, k")
-    val Declaration.Theorem(_, _, claim, Justification.By(_, method)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(_, _, claim, Justification.By(_, method), _) = parsed.declarations.head: @unchecked
     claim shouldBe "!x:real. 0 <= x * x"
     method shouldBe Method.Auto(Vector("h", "k"))
   }
 
   it should "read `then` and `first` as methods over methods" in {
     val parsed = read("theorem T : !x:real. x = x by first rewrite A then ring | auto")
-    val Declaration.Theorem(_, _, _, Justification.By(_, method)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(_, _, _, Justification.By(_, method), _) = parsed.declarations.head: @unchecked
     method shouldBe Method.First(Vector(Method.Then(Method.Rewrite(Vector("A")), Method.Ring), Method.Auto(Vector.empty)))
   }
 
@@ -76,7 +76,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
         |  calc x = x + 0 by ring
         |       _ <= x + 1 by linarith
         |qed""".stripMargin)
-    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _), _) = parsed.declarations.head: @unchecked
     val Step.Calc(_, links) = steps(1): @unchecked
     links.map(_.claim) shouldBe Vector("x = x + 0", "(x + 0) <= x + 1")
   }
@@ -88,7 +88,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
         |  calc (p ==> p) = (p ==> p) by auto
         |       _ = T by auto
         |qed""".stripMargin)
-    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _), _) = parsed.declarations.head: @unchecked
     val Step.Calc(_, links) = steps.head: @unchecked
     links(1).claim shouldBe "((p ==> p)) = T"
   }
@@ -98,7 +98,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
       """-- a comment line
         |theorem T : !x:real. x = x by ring -- a trailing comment""".stripMargin)
     parsed.errors shouldBe empty
-    val Declaration.Theorem(_, _, claim, Justification.By(_, method)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(_, _, claim, Justification.By(_, method), _) = parsed.declarations.head: @unchecked
     (claim, method) shouldBe (("!x:real. x = x", Method.Ring))
   }
 
@@ -157,7 +157,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
       ("apply with no lemma", proof("  apply"), 3, "`apply` wants the lemma it applies"),
       ("a stray case", proof("  case left:"), 3, "`case` belongs to the branches"),
       ("a stray qed inside branches", proof("  split\n  case left:\n    by ring\n  qed now"), 6, "end with `end`"),
-      ("a step that is not one", proof("  simp"), 3, "no step `simp`; a step is one of"),
+      ("a step that is not one", proof("  blast"), 3, "no step `blast`; a step is one of"),
       ("a branch with no colon", proof("  split\n  case left\n  end"), 4, "ending with a colon"),
       ("a branch with no label", proof("  split\n  case :\n  end"), 4, "a branch wants its label"),
       ("a branch with a bad name", proof("  split\n  case left 9:\n  end"), 4, "`9` is not a name"),
@@ -165,7 +165,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
       ("a calc link with no method", proof("  calc x = x"), 3, "every link of a `calc` ends with `by METHOD`"),
       ("a calc link after the first without _", proof("  calc x = x by ring\n  _ = x by ring\n  x = x by ring"), 5, "no step `x`"),
       ("a calc link that is not a relation", proof("  calc f x by ring"), 3, "a link of a `calc` is a relation"),
-      ("a method that is not one", proof("  by simp"), 3, "no method `simp`; a method is one of"),
+      ("a method that is not one", proof("  by blast"), 3, "no method `blast`; a method is one of"),
       ("first with one alternative", proof("  by first ring"), 3, "with at least two methods"),
       ("first written as a bare word", proof("  by first"), 3, "with at least two methods"),
       ("ring with an argument", proof("  by ring h"), 3, "`ring` takes nothing after it"),
@@ -206,7 +206,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
         |qed
         |theorem U : !x:real. x = x by apply LEMMA""".stripMargin)
     withClue(parsed.errors) { parsed.errors shouldBe empty }
-    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _), _) = parsed.declarations.head: @unchecked
     val Step.Have(_, "h", "x = x", Justification.Block(_, inner, _)) = steps(1): @unchecked
     inner.head shouldBe Step.Show(6, None, Justification.By(6, Method.First(Vector(Method.Ring, Method.Auto(Vector.empty)))))
     steps(2) shouldBe Step.Apply(8, "LEMMA", Vector(Branch(9, "1", Vector.empty, Vector(Step.Show(10, None, Justification.By(10, Method.Exact("h")))))))
@@ -285,7 +285,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
         |qed""".stripMargin)
 
     parsed.errors shouldBe empty
-    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _)) = parsed.declarations.head: @unchecked
+    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _), _) = parsed.declarations.head: @unchecked
     val Step.CasesFrom(line, name, from, branches) = steps(2): @unchecked
     (line, name, from, branches.map(_.label)) shouldBe ((5, "k", "h", Vector("left", "right")))
     // With a colon it is the claim form, whatever follows: `from` inside a claim is not this step.
@@ -335,7 +335,7 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
     // readings of one structure agree only where something compares them, and this is that.
     val compared = written.flatMap { text =>
       val raw = text.linesIterator.toVector
-      read(text).declarations.collect { case Declaration.Theorem(line, name, _, proof) =>
+      read(text).declarations.collect { case Declaration.Theorem(line, name, _, proof, _) =>
         val expected = proof match {
           case Justification.By(_, _) => 1
           case Justification.Block(_, _, closed) => closed - line + 1
@@ -359,5 +359,48 @@ class DocumentSpec extends AnyFlatSpec with Matchers {
     // finds `proof` at the top level and says so.
     extent(Vector("theorem T : P by auto", "proof", "qed"), 0) shouldBe 1
     extent(Vector("theorem T : P by auto", "ask x"), 0) shouldBe 1
+  }
+
+  "A datatype" should "read its constructors from its line and the lines after it that start with `|`" in {
+    val parsed = read(
+      """datatype btree('a, 'b) = LEAF
+        |  | BRANCH 'a btree('a, 'b) (num -> bool) btree('a, 'b)
+        |theorem T : T by auto""".stripMargin)
+    parsed.errors shouldBe empty
+    parsed.declarations.head shouldBe Declaration.Datatype(1, "btree", Vector("'a", "'b"), Vector(
+      Constructor(1, "LEAF", Vector.empty),
+      Constructor(1, "BRANCH", Vector("'a", "btree('a, 'b)", "(num -> bool)", "btree('a, 'b)"))))
+    parsed.declarations(1).line shouldBe 3
+    extent(Vector("datatype t = A", "  | B t", "", "  | C", "theorem T : T by auto"), 0) shouldBe 4
+    extent(Vector("datatype t = A | B t", "theorem T : T by auto"), 0) shouldBe 1
+    // A parameter that is not a type variable is refused, and the next declaration is still read.
+    val bad = read("datatype t(num) = A\ntheorem T : T by auto")
+    bad.errors.map(_.line) shouldBe Vector(1)
+    bad.declarations.map(_.line) shouldBe Vector(2)
+  }
+
+  "A definition by recursion" should "read its equations up to `end`, and run there for `extent`" in {
+    val lines = Vector("define SIZE : tree -> num", "  SIZE LEAF = 0", "  SIZE (NODE l x r) = SIZE l + 1 + SIZE r", "end", "define K := 0")
+    val parsed = read(lines.mkString("\n"))
+    parsed.errors shouldBe empty
+    parsed.declarations.head shouldBe Declaration.Recursive(1, "SIZE", "tree -> num",
+      Vector(Equation(2, "SIZE LEAF = 0"), Equation(3, "SIZE (NODE l x r) = SIZE l + 1 + SIZE r")), 4)
+    parsed.declarations(1) shouldBe Declaration.Define(5, "K", "0")
+    extent(lines, 0) shouldBe 4
+    extent(lines, 4) shouldBe 1
+    // With no `end`, the next declaration is where the reader says it is missing.
+    read("define F : num -> num\n  F x = x\ntheorem T : T by auto").errors.head.reason should include("this line starts a declaration")
+  }
+
+  "`[simp]` and `simp`" should "mark a theorem, and read as a step and as a method with the facts it adds" in {
+    val parsed = read("theorem A [simp] : T by simp\ntheorem B : T by simp [A, C] then auto\ntheorem D : T\nproof\n  simp\n  simp [A]\nqed")
+    parsed.errors shouldBe empty
+    val Declaration.Theorem(_, name, _, Justification.By(_, first), marked) = parsed.declarations.head: @unchecked
+    (name, first, marked) shouldBe (("A", Method.Simp(Vector.empty), true))
+    val Declaration.Theorem(_, _, _, Justification.By(_, second), unmarked) = parsed.declarations(1): @unchecked
+    (second, unmarked) shouldBe ((Method.Then(Method.Simp(Vector("A", "C")), Method.Auto(Vector.empty)), false))
+    val Declaration.Theorem(_, _, _, Justification.Block(_, steps, _), _) = parsed.declarations(2): @unchecked
+    steps shouldBe Vector(Step.Simp(5, Vector.empty), Step.Simp(6, Vector("A")))
+    read("theorem E : T by simp A").errors.head.reason should include("`simp [F, G]`")
   }
 }

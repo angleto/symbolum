@@ -136,7 +136,10 @@ it.
 |---|---|
 | `import NAME` | The definitions and theorems of the document `NAME` can be used here. Imports come before every other declaration. |
 | `define NAME := TERM` | A conservative definition. It costs a name and no belief, and `NAME` is then a fact: the defining equation. |
+| `datatype NAME = C1 \| C2 T1 T2` | An inductive type and its constructors, with its induction principle, case analysis, recursion theorem and the freeness of its constructors, all proved. |
+| `define NAME : TYPE`, equations, `end` | A function defined by structural recursion over a datatype, one equation per constructor. `NAME` is then a fact: the equations. |
 | `theorem NAME : CLAIM` | A claim and its proof. Once proved, `NAME` is a fact for every later declaration. |
+| `theorem NAME [simp] : CLAIM` | The same, and from here on the theorem is in the simp set. |
 
 A name is a fact once declared, so a declaration may not take the name of a lemma of the library
 or of a theorem of an imported document: a later proof citing the name would reach the declaration
@@ -152,6 +155,77 @@ proof
   by ring
 qed
 ```
+
+## Datatypes and recursion
+
+A datatype is declared by its constructors, each followed by the types of its arguments. A
+compound type is put in parentheses, and the type itself is written by its name, with its
+parameters when it has them. The constructors can go on the lines after the first, each starting
+with `|`.
+
+```
+datatype tree = LEAF
+  | NODE tree num tree
+
+datatype opt('a) = NONE | SOME 'a
+```
+
+Nothing is asserted. The type is carved out of a universe of labelled trees the chain already has,
+so a datatype costs choice, eta and infinity, which every type of the chain already costs, and
+`docs/adr/0042` is how. Declaring `tree` makes these facts, named after it and its constructors:
+
+| fact | what it says |
+|---|---|
+| `TREE_INDUCT` | the induction principle, one case per constructor |
+| `TREE_CASES` | every value is one constructor applied to something |
+| `TREE_RECURSION` | a function exists with any given value at each constructor |
+| `NODE_INJECTIVE` | `NODE l x r = NODE l' x' r' ==> l = l' /\ x = x' /\ r = r'` |
+| `LEAF_NOT_NODE` | `~(LEAF = NODE l x r)` |
+
+A type recurses at its own parameters only: `datatype t('a) = A | B t(num)` is refused, as is a
+recursion under another type (`num -> t`) or between two types. Those are what nested and mutual
+datatypes are, and nothing here builds them.
+
+A function over a datatype is defined by one equation per constructor, between the line that
+names it with its type and `end`:
+
+```sym
+datatype tree = LEAF
+  | NODE tree num tree
+
+define SIZE : tree -> num
+  SIZE LEAF = 0
+  SIZE (NODE l x r) = SIZE l + 1 + SIZE r
+end
+
+define MIRROR : tree -> tree
+  MIRROR LEAF = LEAF
+  MIRROR (NODE l x r) = NODE (MIRROR r) x (MIRROR l)
+end
+
+theorem MIRROR_MIRROR : !t. MIRROR (MIRROR t) = t
+proof
+  fix t
+  induction t
+  case LEAF:
+    simp
+  case NODE l x r ihl ihr:
+    simp [ihl, ihr]
+  end
+qed
+```
+
+The recursion is structural, and what that allows is exactly this. One argument is matched against
+a constructor applied to variables, the same argument in every equation. The arguments before it
+are parameters, the same in every equation, and a recursive call passes them unchanged. The
+arguments after it are variables, and a recursive call may pass anything there. A recursive call
+is on an argument the constructor takes of the type itself. So `APPEND (CONS x xs) ys = CONS x
+(APPEND xs ys)` is a definition, and so is `MAPN f (CONS x xs) = CONS (f x) (MAPN f xs)` with `f`
+a parameter. A call on anything else, a nested pattern, or a constructor with no equation is
+refused on the line that shows it.
+
+The equations are proved from the recursion theorem, and they are compared with the equations as
+written: the definition is what was written or it is refused.
 
 ## Steps
 
@@ -172,6 +246,7 @@ qed
 | `left`, `right` | `A \/ B` | `A`, or `B` |
 | `witness t` | `?x. P x` | `P t` |
 | `rewrite F, G` | any | the goal rewritten with the equations named |
+| `simp`, `simp [F, G]` | any | the goal rewritten with the simp set, and the facts named |
 | `apply L` | an instance of what `L` concludes | what `L` assumes: one goal, or branches numbered from 1 |
 | `calc a = b by M`, then `_ = c by M` lines | `a = c`, or an order | closed |
 
@@ -180,8 +255,10 @@ implication is assumed under it. `case succ m ih:` fixes `m` and assumes the ind
 as `ih`. A header with more names than its case binds is refused.
 
 **Induction** is over a variable the proof has fixed. Over `num` the principle is `NUM_INDUCTION`
-and its cases are `zero` and `succ` (or `1` and `2`). Any other principle is named with `using`,
-and its cases are numbered. A fact of the proof that mentions the variable is refused, because the
+and its cases are `zero` and `succ` (or `1` and `2`). Over a datatype it is the datatype's own,
+and its cases are named by the constructors, in the order declared: `case NODE l x r ihl ihr:`
+fixes the arguments and assumes one hypothesis per argument of the type itself. Any other
+principle is named with `using`, and its cases are numbered. A fact of the proof that mentions the variable is refused, because the
 induction would leave it behind; state it as a hypothesis of the claim before `fix`, so the
 induction carries it.
 
@@ -250,11 +327,59 @@ qed
 | `arith`, `arith from F, G` | linear arithmetic over the naturals, with the facts named |
 | `rewrite F, G` | the equations named, until the goal is `T` or `t = t`. A rewrite whose walk ran out of steps, or grew the term past the ceiling, is refused naming which, and is never read as a normal form |
 | `rewrite F then M` | the equations, then `M` on what is left |
+| `simp`, `simp [F, G]` | the simp set, with the facts named added to it, until the goal is `T` or `t = t` |
+| `simp then M` | the simp set, then `M` on what is left |
 | `exact F` | the fact, or an instance of it |
 | `apply L` | `L`, when it owes nothing more at this goal |
 | `first M \| N` | the first of them that settles the goal, and every refusal if none does |
 
-A name in `from`, `rewrite`, `exact` or `apply` is looked up in the proof first, then among the
+`rewrite F` takes each equation `F` states, and a conjunction of equations is several. A definition
+by recursion is the conjunction of its equations, so `rewrite SIZE` rewrites with all of them.
+
+**`simp`** rewrites with a set nobody names at the step. It holds:
+
+- the clauses of the connectives: `(x = x) = T`, `(T /\ p) = p`, `(F ==> p) = T` and the like;
+- the equations defining `+` and `*` over `num`, and the freeness of `0` and `SUC`;
+- for each datatype declared here or in an imported document, the injectivity and the
+  distinctness of its constructors, and for each function defined by recursion, its equations;
+- each theorem marked `[simp]`, here or in an imported document, from its declaration on.
+
+`simp [F, G]` adds the facts named, which may be the proof's own, as an induction hypothesis is
+above. A fact is taken apart into rules: an equation is itself, a conjunction is each conjunct, a
+negation `~P` is `P = F`, a constructor's injectivity is the equation between its two sides, and
+any other proposition `P` is `P = T`. An implication of another shape is a conditional equation,
+which the rewriter does not apply, so it is refused: by `[simp]` on the declaration, and by
+`simp [F]` at the step. When the set does not close the goal, `simp` says what it left, and `simp
+then M` hands that to `M`:
+
+```sym
+datatype nlist = NIL | CONS num nlist
+
+define APPEND : nlist -> nlist -> nlist
+  APPEND NIL ys = ys
+  APPEND (CONS x xs) ys = CONS x (APPEND xs ys)
+end
+
+define LENGTH : nlist -> num
+  LENGTH NIL = 0
+  LENGTH (CONS x xs) = LENGTH xs + 1
+end
+
+theorem LENGTH_APPEND [simp] : !l m. LENGTH (APPEND l m) = LENGTH l + LENGTH m
+proof
+  fix l m
+  induction l
+  case NIL:
+    by simp then arith
+  case CONS x xs ih:
+    by simp [ih] then arith
+  end
+qed
+
+theorem LENGTH_TWICE : !l. LENGTH (APPEND l l) = LENGTH l + LENGTH l by simp
+```
+
+A name in `from`, `rewrite`, `simp`, `exact` or `apply` is looked up in the proof first, then among the
 document's own theorems and definitions, then in the library (`docs/lemmas.md`). `find` in the
 notebook searches the library by name and by shape.
 
@@ -421,10 +546,14 @@ extension for this one exists yet. `docs/adr/0076` is the decision.
 
 ## What it does not do yet
 
-`docs/adr/0070` plans the work in six increments. This file describes the first five, the fifth
-having come before the fourth. Until the sixth lands:
+`docs/adr/0070` plans the work in six increments, and this file describes all six. What is not
+there:
 
 - a published theorem is reached by importing its document; `auto`, `find` and `Ask` search the
-  chain's library and not the published one;
-- there is no `simp` set and no `datatype` declaration;
+  chain's library and not the published one, and `simp`'s set does not hold it unless the document
+  marked it;
+- a datatype is one type recursing at its own parameters: no mutual or nested datatypes, and a
+  function over one is defined by structural recursion only, not by well-founded recursion;
+- `simp` applies no conditional equation, and the notebook declares no datatype in a cell: it
+  reads the ones of the documents it imports;
 - the editor has no extension for Zed, and no completion or go-to-definition in any editor.

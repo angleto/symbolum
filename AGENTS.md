@@ -272,8 +272,9 @@ session named would be a different tool with the same name.
   hands the arguments over already split and the shell's quotes are gone by then.
 - **Checking a proof written without Scala:**
   `tools/sbt "published/runMain garden.xeno.symbolum.published.Check path/to/file.sym"`, with `--json`
-  for a program reading the report. A document holds `import`, `define` and `theorem` declarations
-  with structured proofs, and the theorem each one ends with is the kernel's. An import names a
+  for a program reading the report. A document holds `import`, `define`, `datatype` and `theorem`
+  declarations, a `define` either one term or equations recursing over a datatype, with structured
+  proofs and a `simp` set, and the theorem each one ends with is the kernel's. An import names a
   published document or a `.sym` file beside the one checked. `docs/language.md` is the
   reference and `docs/adr/0070` the decision. One failed step marks its own declaration and every
   other one is still checked, so a report lists every problem in the file with its line, the

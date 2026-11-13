@@ -79,12 +79,9 @@ object Analysis {
   def hover(checked: Checked, line: Int): Option[String] =
     outline(checked).find(span => span.from <= line && line <= span.to).flatMap { span =>
       checked.report.entries.find(_.line == span.from).map { entry =>
-        val word = entry.kind match {
-          case Elaborate.Kind.Definition => "define"
-          case Elaborate.Kind.Theorem => "theorem"
-        }
-        val head = s"$word ${entry.name}: ${entry.status.toString.toLowerCase}"
-        val shown = entry.goalAt(line).filter(_ => line != entry.line).map(_.text).getOrElse(s"|- ${entry.statement}")
+        val head = s"${entry.kind.word} ${entry.name}: ${entry.status.toString.toLowerCase}"
+        val shown = entry.goalAt(line).filter(_ => line != entry.line).map(_.text).getOrElse(
+          if (entry.kind == Elaborate.Kind.Datatype) entry.statement else s"|- ${entry.statement}")
         val price = if (line == entry.line) entry.price.toVector.flatMap(_.lines("this document")) else Vector.empty
         (Vector(head, "", "```", shown, "```") ++ (if (price.isEmpty) Vector.empty else "" +: price.map("- " + _))).mkString("\n")
       }
