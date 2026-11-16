@@ -146,7 +146,10 @@ final class Ideal private (val order: Order, val budget: Long) {
       inverses <- traverse(stated.collect { case App(Const(Real.Inverse, _), r) if nonZero.contains(r) => r })(
         r => inverseEquation(r, nonZero(r))
       )
-    } yield assemble(variables, antecedents, left, right, equations ++ inverses)
+      known = equations ++ inverses
+      unstated = stated.collect { case App(Const(Real.Inverse, _), r) if !nonZero.contains(r) => r }.distinct
+      forced = unstated.flatMap(r => forcedNonZero(known, r).flatMap(fact => inverseEquation(r, fact).toOption))
+    } yield assemble(variables, antecedents, left, right, known ++ forced)
 
   /** The problem over a set of equations: their atoms, and every side as a polynomial over them. */
   private def assemble(
@@ -184,6 +187,31 @@ final class Ideal private (val order: Order, val budget: Long) {
         }
     }
 
+  /**
+   * `G |- ~(r = 0)` when the equations leave no common zero with `r = 0`: `1` is a member of the
+   * ideal with `r` added, rebuilt as `G, r = 0 |- 1 = 0`, against `~(1 = 0)` from `0 < 1`. `None`
+   * when `1` is not a member or the search ran out, which leaves `inv r` an unknown as before.
+   */
+  private def forcedNonZero(equations: Vector[(Kernel.Thm, Term, Term)], r: Term): Option[Kernel.Thm] =
+    (for {
+      zero <- Numeral.of(reals, 0)
+      one <- Numeral.of(reals, 1)
+      assumption <- LogicError.lift(Term.eq(r, zero))
+      assumed <- LogicError.lift(Kernel.assume(assumption))
+      problem = assemble(Vector.empty, Vector.empty, one, zero, equations :+ ((assumed, r, zero)))
+      cofactors <- Groebner.membership(problem.generators, problem.target, problem.atoms.length, budget) match {
+        case Groebner.Membership.Member(found, _) => Right(found)
+        case _ => Left(NotOfForm("equations with no common zero where the denominator vanishes", assumption))
+      }
+      contradiction <- rebuild(one, zero, problem.equations, cofactors, problem.atoms)
+      prover <- linarith
+      positive <- signOf(one, strict = true)
+      oneIsPositive <- prover.prove(positive)
+      oneIsNotZero <- order.nonZero.flatMap(rules.spec(one, _)).flatMap(rules.mp(_, oneIsPositive))
+      falsity <- rules.notElim(oneIsNotZero, contradiction)
+      result <- rules.notIntro(assumption, falsity)
+    } yield result).toOption
+
   /** `G |- r * inv r = 1`, from `MUL_INVERSE` and the fact that `r` is not zero. */
   private def inverseEquation(r: Term, nonZero: Kernel.Thm): Either[LogicError, (Kernel.Thm, Term, Term)] =
     for {
@@ -198,10 +226,62 @@ final class Ideal private (val order: Order, val budget: Long) {
    * rather than as a refusal, because a search that stopped has not said the goal is outside.
    */
   private def settle(goal: Term, problem: Problem): Either[LogicError, Kernel.Thm] =
+    attempt(goal, problem) match {
+      case Left(outside: OutsideTheIdeal) => pinned(goal, problem, Set.empty).toRight(outside)
+      case other => other
+    }
+
+  /** Membership, the radical and the order, over the equations as they stand. */
+  private def attempt(goal: Term, problem: Problem): Either[LogicError, Kernel.Thm] =
     radicalOrNot(goal, problem) match {
       case Left(remainder) => ordered(goal, problem, remainder)
       case Right(settled) => settled
     }
+
+  /**
+   * The goal once one unknown is pinned to a rational value, and then the next, while the goal is
+   * still outside.
+   *
+   * `x^3 = 8` leaves `x` three complex values and one real one, and a target mixing `x` with other
+   * unknowns has a minimal polynomial whose degree is the product of every unknown's, past
+   * [[Ideal.Degree]] at once. One unknown at a time stays low: each one's minimal polynomial is
+   * asked over one basis, its rational roots are candidates, and `v = c` is proved by [[attempt]]
+   * like any goal, which is where the order picks the root. The proved equation joins the
+   * equations and the goal is asked again. Only an unknown with a minimal polynomial of degree two
+   * or more is a candidate, since one of degree one is pinned by the ideal already. `None` when no
+   * pin reaches the goal, whatever stopped it, and the caller keeps the refusal the plain goal
+   * earned: a budget run out or a refusal after a pin is about a larger ideal than the one the
+   * goal was asked of, and reporting it would change what the refusal says about the goal.
+   */
+  private def pinned(goal: Term, problem: Problem, done: Set[Term]): Option[Kernel.Thm] = {
+    val arity = problem.atoms.length
+    val candidates = problem.atoms.indices.filterNot(i => done.contains(problem.atoms(i))).toVector
+    Groebner.minimalPolynomials(problem.generators, candidates.map(Groebner.variable(_, arity)), arity, Ideal.Degree, budget)
+      .toOption
+      .flatMap { polynomials =>
+        candidates.zip(polynomials).iterator
+          .collect { case (i, Some(p)) if p.length > 2 => i -> p }
+          .flatMap((i, p) => Groebner.rationalRoots(p).iterator.map(c => (problem.atoms(i), c)))
+          .map((atom, c) => pin(goal, problem, atom, c).map(atom -> _))
+          .collectFirst { case Some(found) => found }
+      }
+      .flatMap { (atom, equation) =>
+        val larger = assemble(problem.variables, problem.antecedents, problem.left, problem.right, problem.equations :+ equation)
+        attempt(goal, larger) match {
+          case Right(theorem) => Some(theorem)
+          case Left(_: OutsideTheIdeal) => pinned(goal, larger, done + atom)
+          case Left(_) => None
+        }
+      }
+  }
+
+  /** `G |- v = c`, proved over the equations as they stand, or `None`. */
+  private def pin(goal: Term, problem: Problem, atom: Term, value: Rational): Option[(Kernel.Thm, Term, Term)] =
+    (for {
+      written <- Linarith.constant(reals, value)
+      single = assemble(problem.variables, problem.antecedents, atom, written, problem.equations)
+      proved <- attempt(goal, single)
+    } yield (proved, atom, written)).toOption
 
   /**
    * The difference or one of its squarings as a member, settled; or `Left` with the plain
@@ -269,7 +349,7 @@ final class Ideal private (val order: Order, val budget: Long) {
             case Left(exhausted) => certify(goal, problem, exhausted)
             case Right(normal) =>
               val reduced = bounds.zip(normal.tail).flatMap((bound, n) => reduce(problem, bound, n))
-              Iterator(normal.head, Groebner.negate(normal.head))
+              Vector(normal.head, Groebner.negate(normal.head), cofactor, Groebner.negate(cofactor)).distinct.iterator
                 .map(signed => signedInverse(problem, reduced, signed))
                 .collectFirst { case Some(equation) => equation }
                 .fold(outside) { equation =>

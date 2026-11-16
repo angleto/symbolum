@@ -40,8 +40,8 @@ run "1-degree-one" "$IDEAL" \
 # 2. Only the positive sign asked. Expect red at the root picked from below and nowhere else: its
 # cofactor is negative.
 run "2-one-sign" "$IDEAL" \
-  '              Iterator(normal.head, Groebner.negate(normal.head))' \
-  '              Iterator(normal.head)' \
+  '              Vector(normal.head, Groebner.negate(normal.head), cofactor, Groebner.negate(cofactor)).distinct.iterator' \
+  '              Vector(normal.head, cofactor).distinct.iterator' \
   -- ./tools/sbt -batch "$THEORIES"
 
 # 3. The order hypotheses handed to Linarith as written, as though no equation had rewritten them.

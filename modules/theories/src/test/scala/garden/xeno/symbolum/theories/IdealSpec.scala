@@ -95,6 +95,39 @@ class IdealSpec extends AnyFlatSpec with Matchers {
     )
   }
 
+  "mathd_algebra_362" should "follow once each unknown is pinned, the denominator forced non-zero by the equations" in {
+    // No hypothesis says `y * y * y` is not zero; the first equation does, since it leaves no
+    // common zero with `y * y * y = 0`. Then `x^3 = 8` pins `x` to `2`, the cofactor
+    // `x * x + 2 * x + 4` being positive, and `27 * y^3 = 8` pins `y` to `2 / 3` the same way.
+    // The target alone has a minimal polynomial of degree nine, past `Ideal.Degree`.
+    proved("!x y:real. x * x * (y * y * y) = 32 / 27 /\\ x / (y * y * y) = 27 / 4 ==> x + y = 8 / 3")
+  }
+
+  "A denominator the equations force non-zero" should "be cleared without a hypothesis saying so" in {
+    proved("!x y:real. x * y = 1 ==> x / x = 1")
+  }
+
+  "A real cube root" should "be picked by the order, its cofactor x * x + 2 * x + 4 having no real zero" in {
+    proved("!x:real. x * x * x = 8 ==> x = 2")
+  }
+
+  "Two unknowns each with one real root" should "be pinned one after the other" in {
+    // `x + y - 5` has a minimal polynomial of degree nine; `x` and `y` have one of degree three each.
+    proved("!x y:real. x * x * x = 8 ==> y * y * y = 27 ==> x + y = 5")
+  }
+
+  "A goal still outside after a pin" should "keep the refusal the plain goal earned" in {
+    // `x` pins to `2` and `y` is still free, so the goal stays outside. The remainder reported is
+    // the plain goal's, which names `x`, and not the larger ideal's, `y + -1`, which does not:
+    // the refusal is about the goal as asked.
+    refused("!x y:real. x * x * x = 8 ==> x + y = 3") match {
+      case outside: OutsideTheIdeal =>
+        outside.standing shouldBe LogicError.Standing.Unread
+        outside.remainder should include("x")
+      case other => fail(s"refused as ${other.getClass.getSimpleName}, not as outside the ideal")
+    }
+  }
+
   "A root the order picks from below" should "be proved through the cofactor's negation" in {
     // The ideal holds `(x + 1) * (x - 1)`, and `x - 1` is negative here, so its sign is proved as
     // `0 < -(x - 1)`: the second of the two the search asks.

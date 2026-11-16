@@ -149,8 +149,66 @@ object Groebner {
     degree: Int,
     budget: Long = Budget
   ): Either[Membership.Exhausted, Option[Vector[Rational]]] = {
-    val powers = Vector.iterate(one(arity), degree + 1)(multiply(_, target))
-    remainders(generators, powers, arity, budget).map(dependency)
+    minimalPolynomials(generators, Vector(target), arity, degree, budget).map(_.head)
+  }
+
+  /**
+   * [[minimalPolynomial]] for several targets over one basis, which is what makes asking it of
+   * every unknown of a problem cost one basis rather than one per unknown.
+   */
+  def minimalPolynomials(
+    generators: Vector[Poly],
+    targets: Vector[Poly],
+    arity: Int,
+    degree: Int,
+    budget: Long = Budget
+  ): Either[Membership.Exhausted, Vector[Option[Vector[Rational]]]] = {
+    val powers = targets.flatMap(target => Vector.iterate(one(arity), degree + 1)(multiply(_, target)))
+    remainders(generators, powers, arity, budget).map(_.grouped(degree + 1).map(dependency).toVector)
+  }
+
+  /**
+   * The rational roots of a polynomial given by its coefficients from the constant up, in
+   * increasing order. A root is `p / q` with `p` dividing the lowest non-zero coefficient and `q`
+   * the highest, once the coefficients are cleared to integers, and every candidate is checked by
+   * evaluating exactly.
+   *
+   * Where either of those two coefficients is beyond [[RootSearch]] the divisors are not
+   * enumerated and only zero is reported, if it is a root: a root nobody looked for is a pin the
+   * caller does not make, which costs a proof and not a wrong one.
+   */
+  def rationalRoots(coefficients: Vector[Rational]): Vector[Rational] = {
+    val lcm = coefficients.foldLeft(BigInt(1))((acc, c) => acc / acc.gcd(c.denominator) * c.denominator)
+    val integers = coefficients.map(c => c.numerator * (lcm / c.denominator))
+    val lowest = integers.indexWhere(_ != 0)
+    val highest = integers.lastIndexWhere(_ != 0)
+    val zeroRoot = if (lowest > 0) Vector(Rational.zero) else Vector.empty
+    if (lowest < 0) Vector.empty
+    else if (highest == lowest) zeroRoot
+    else {
+      val (constant, leading) = (integers(lowest).abs, integers(highest).abs)
+      if (constant > RootSearch || leading > RootSearch) zeroRoot
+      else {
+        def at(x: Rational): Rational = coefficients.foldRight(Rational.zero)((c, acc) => acc * x + c)
+        val candidates = for {
+          p <- divisors(constant)
+          q <- divisors(leading)
+          sign <- Vector(BigInt(1), BigInt(-1))
+        } yield Rational.of(sign * p, q)
+        (zeroRoot ++ candidates.distinct.filter(at(_).isZero)).sortWith(_.compare(_) < 0)
+      }
+    }
+  }
+
+  /**
+   * The largest coefficient [[rationalRoots]] enumerates the divisors of, by trial division up to
+   * its square root. Chosen, not measured: a hundred thousand trial divisions per coefficient.
+   */
+  val RootSearch: BigInt = BigInt(10000000000L)
+
+  private def divisors(n: BigInt): Vector[BigInt] = {
+    val small = Iterator.iterate(BigInt(1))(_ + 1).takeWhile(d => d * d <= n).filter(n % _ == 0).toVector
+    (small ++ small.map(n / _)).distinct
   }
 
   /**

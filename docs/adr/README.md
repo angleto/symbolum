@@ -109,4 +109,5 @@ the rejected option attractive, and they will.
 | [0076](0076-the-language-server-shows-the-goal-each-line-was-given.md) | The language server shows the goal each line was given | accepted |
 | [0077](0077-a-point-where-a-premise-fails-did-not-test-the-claim.md) | A point where a premise fails did not test the claim | accepted |
 | [0078](0078-the-object-logic-instantiates-at-any-substitutable-term.md) | The object logic instantiates at any substitutable term, not only at a closed one | accepted, extends 0040 |
+| [0079](0079-the-ideal-pins-one-unknown-at-a-time.md) | The ideal pins one unknown at a time | accepted |
 | [0080](0080-datatypes-recursion-and-simp-in-the-proof-language.md) | Datatypes, recursion and `simp` in the proof language | accepted |
