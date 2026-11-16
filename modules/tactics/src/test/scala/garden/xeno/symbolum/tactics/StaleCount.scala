@@ -50,9 +50,12 @@ import scala.util.Try
  * the same sentence, a sentence ending at a full stop, a semicolon, a question mark or an
  * exclamation mark. Not at a colon: "Seven outcomes and seven is the point: `Refutation` keeps them
  * apart" was one of the nineteen until 2026-11-13, and with the colon as a boundary it was the one
- * missed. Prose is the comments of every Scala source under `modules/`, joined into one paragraph
- * per run of comment lines and ended by a blank one, and every Markdown file outside `docs/adr/`.
- * Joining is the repair the census needed: of the nineteen, most were written across a line break.
+ * missed. Prose is the comments of every Scala and sbt source, and the `#` comments of every shell
+ * script and workflow, each joined into one paragraph per run of comment lines and ended by a blank
+ * one; and every Markdown file outside `docs/adr/`. Joining is the repair the census needed: of the
+ * nineteen, most were written across a line break. The comments outside `modules/` were not read
+ * until 2026-11-16, when four sentences in `tools/` were found still counting seven outcomes of
+ * `Refutation` three days after the count moved, three of them naming the type.
  *
  * Two kinds of sentence are photographs and are not read. A decision record keeps what was measured
  * when the decision was taken, which is why `docs/adr/` is outside. And a sentence carrying a date
@@ -191,14 +194,23 @@ object StaleCount {
 
   private val Marker = """^\s*(?:/\*\*|/\*|\*/|\*(?!/)|//+)?\s?""".r
 
-  /** The prose of a file: the comment runs of a Scala source, the paragraphs of a Markdown one. */
+  /**
+   * The prose of a file: the comment runs of a Scala or sbt source, the `#` comment runs of a shell
+   * script or a workflow, the paragraphs of a Markdown one.
+   */
   def prose(file: String, source: String): Vector[Paragraph] = {
     val pieces: Vector[(Int, String)] =
-      if (file.endsWith(".scala"))
+      if (file.endsWith(".scala") || file.endsWith(".sbt"))
         Comments.split(source).map { line =>
           val text = Marker.replaceFirstIn(line.comment, "").stripSuffix("*/").trim
           (line.number, if (line.isComment) text else "\u0000")
         }
+      else if (hashCommented(file))
+        source.linesIterator.zipWithIndex.map { case (line, at) =>
+          val text = line.trim
+          val comment = text.startsWith("#") && !text.startsWith("#!")
+          (at + 1, if (comment) text.dropWhile(_ == '#').trim else "\u0000")
+        }.toVector
       else source.linesIterator.zipWithIndex.map { case (line, at) => (at + 1, line.trim) }.toVector
     // A paragraph ends at a line with no prose on it: code, a blank comment line, a blank line.
     val (done, open) = pieces.foldLeft((Vector.empty[Vector[(Int, String)]], Vector.empty[(Int, String)])) {
@@ -258,10 +270,18 @@ object StaleCount {
     }
   }
 
-  /** Where prose is read: comments under `modules/`, and Markdown outside the decision records. */
+  /**
+   * Where prose is read: the comments of every Scala and sbt source, of every shell script and of
+   * every workflow, and Markdown outside the decision records.
+   */
   def readsProse(file: String): Boolean =
-    (file.startsWith("modules/") && file.endsWith(".scala")) ||
+    file.endsWith(".scala") || file.endsWith(".sbt") || hashCommented(file) ||
       (file.endsWith(".md") && !file.startsWith("docs/adr/"))
+
+  /** Where a comment starts with `#`: YAML, and a script by extension or under `tools/` without one. */
+  private def hashCommented(file: String): Boolean =
+    file.endsWith(".sh") || file.endsWith(".yml") || file.endsWith(".yaml") ||
+      (file.startsWith("tools/") && !file.split('/').last.contains('.'))
 
   /** What moved between two versions of each changed file: `(path, before, after)`. */
   def moved(changes: Vector[(String, Option[String], Option[String])]): Vector[Moved] =

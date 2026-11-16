@@ -36,8 +36,8 @@
 # that has no cap to ask.
 #
 # The argument that settled it is one this repository already makes about itself twice, and it is
-# stronger than the convenience it costs. `Refutation` keeps seven answers apart and
-# `LogicError.Standing` keeps three, and both say in writing that collapsing two of them turns "I
+# stronger than the convenience it costs. `Refutation` keeps its answers apart and
+# `LogicError.Standing` keeps its own, and both say in writing that collapsing two of them turns "I
 # could not ask" into "I asked and it was fine". A silent fall-through is that collapse, performed
 # by a file called `tools/sbt`: a reader who takes the name to mean the cap is not being careless,
 # they are reading it the way it is written. `tools/sbt-test.sh` asserts the line rather than the
@@ -54,8 +54,8 @@
 
 # WHY IT ALSO LOOKS AT WHAT ELSE IS RUNNING, added 2026-09-18 because the announcement below was
 # read sixteen times by somebody who then concluded the opposite of it. The line says *this build*
-# is uncapped and it gets read as *this machine* has no cap, and the two are the distinction this
-# repository keeps seven answers apart for one floor down: "I could not ask" is not "I asked and it
+# is uncapped and it gets read as *this machine* has no cap, and the two are the distinction
+# `Refutation` keeps its answers apart for one floor down: "I could not ask" is not "I asked and it
 # was fine". The session that wrote this card spent seven hours outside a queue that was running the
 # whole time, went and checked, and checked with an instrument that could not read — `find` over a
 # symlinked directory, which answers nothing and looks like an absence.

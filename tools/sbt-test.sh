@@ -106,7 +106,7 @@ run="$work/tree/tools/sbt"
 #
 #    The case for silence is that a line on every build of every clone with no such practice
 #    around it is noise. The case for the line is the repository's own doctrine one floor down:
-#    `Refutation` keeps seven answers apart and `LogicError.Standing` three, and both say in
+#    `Refutation` and `LogicError.Standing` each keep their answers apart, and both say in
 #    writing that merging two of them turns "I could not ask" into "I asked and it was fine". A
 #    silent fall-through is that merge, and the file is called `tools/sbt`, so a reader who takes
 #    the name for the cap is reading it as written. `tools/sbt` carries the argument; this carries

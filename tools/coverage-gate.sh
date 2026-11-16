@@ -13,7 +13,7 @@
 # **The absence of `Coverage is below` is not a pass, it is an instrument that did not read.** A
 # reader who greps for that line and does not find it concludes the floors held, and in both
 # shapes above the floors neither held nor fell: they were never asked. That is the distinction
-# `Refutation` keeps between seven answers one floor down, and this file is it at the build.
+# `Refutation` keeps between its answers one floor down, and this file is it at the build.
 #
 # THE THREE ANSWERS, which is the whole of what this adds:
 #

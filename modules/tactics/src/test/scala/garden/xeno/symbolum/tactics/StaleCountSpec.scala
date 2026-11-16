@@ -161,14 +161,31 @@ class StaleCountSpec extends AnyFlatSpec with Matchers {
     copies("Other.scala", comments("val s = \"`Refutation` keeps seven\"\n"), eight) shouldBe empty
   }
 
-  it should "read Markdown outside the decision records and comments under modules, and nothing else" in {
+  it should "read the comments of sources and scripts, and Markdown outside the decision records" in {
     readsProse("docs/numerics.md") shouldBe true
     readsProse("AGENTS.md") shouldBe true
     readsProse("modules/tactics/src/test/scala/X.scala") shouldBe true
+    readsProse("build.sbt") shouldBe true
+    readsProse("tools/coverage-gate.sh") shouldBe true
+    readsProse("tools/sbt") shouldBe true
+    readsProse(".github/workflows/ci.yml") shouldBe true
     readsProse("docs/adr/0077-a-point.md") shouldBe false
     readsProse("tools/verify/README.txt") shouldBe false
+    readsProse("LICENSE") shouldBe false
     val md = prose("docs/x.md", "The outcomes are kept apart the way `Refutation`\nkeeps its seven apart.\n")
     copies("docs/x.md", md, eight).map(_.line) shouldBe Vector(2)
+  }
+
+  it should "read the comment runs of a script, and neither its code nor its first line" in {
+    val script =
+      """#!/bin/sh -- `Refutation` keeps seven
+        |# That is the distinction `Refutation` keeps
+        |# between seven answers, one floor down.
+        |echo "`Refutation` keeps seven"
+        |#
+        |# seven things, in a paragraph of their own.
+        |""".stripMargin
+    copies("tools/x.sh", prose("tools/x.sh", script), eight).map(_.line) shouldBe Vector(3)
   }
 
   "Comparing two versions" should "report an enumeration whose count moved and none that did not" in {
