@@ -604,15 +604,30 @@ object Deduction {
    * `?i. s + S v_i = t` ([[Language.LessName]]), so this is [[ExistentialIntroduction]] at the
    * witness `numeral d`, where `SUC m + d = n` is what `m < n` unfolds to, and the instance is
    * [[NumeralAddition]] at `m` and `SUC d` with the successor's numeral read as `S (numeral d)`.
-   *
-   * **The other half, `~(numeral m < numeral n)` for `m >= n`, is not here, and the reason is the
-   * object logic rather than the effort.** Its body is `!z. ~(numeral m + S z = numeral n)`, a
-   * claim about a variable, and every route to it instantiates an axiom of PA at an open term:
-   * `numeral m + S z = S (numeral m + z)` is `NUM_PA_ADD_SUC` at `numeral m` and `v_z`.
-   * Specialisation and replacement are both stated for closed terms only (the docstring of
-   * `Language.ClosedName` says what that costs), so no derivation found here reaches it.
+   * The other half is [[NumeralsNotOrdered]].
    */
   val NumeralsOrdered: String = "NUM_PROV_LESS_NUMERAL"
+
+  /**
+   * `|- !i m n. n <= m ==> NUM_PROV ~(NUM_LESS i (numeral m) (numeral n))`
+   *
+   * PA refutes a false strict order between two numerals, which with [[NumeralsOrdered]] decides
+   * every one. Its body is `!v_i. ~(numeral m + S v_i = numeral n)`, a claim about a variable, so
+   * every route to it instantiates an axiom of PA at an open term; that is what waited on
+   * `docs/adr/0078` and what [[SubstitutableSpecialisation]] gives. The core is
+   * `!i d n. NUM_PROV ~(numeral (n + d) + S v_i = numeral n)`, by induction on `n` in the logic
+   * (not in PA): at zero the sum is `S (numeral d + v_i)` by [[AdditionAtSuccessor]] and that is
+   * not zero by [[SuccessorNotZero]]; at `SUC n` both sides are successors, by
+   * [[SuccessorAddition]] on the left, and [[SuccessorInjective]] contraposed carries the
+   * hypothesis up. The gap `n + d = m` that `n <= m` opens to puts the core at `numeral m`, and the
+   * variable is generalised and the result doubled into the code of `~NUM_LESS`.
+   *
+   * The hole of every replacement is `v_0` and the variable is `v_i` with `i` free, so no step
+   * compares `i` with a numeral index. Where a side condition is decided on a code holding `v_i`,
+   * `Language` leaves an index pair with a free variable undecided rather than refusing it, which
+   * is the one change this needed below `Deduction`.
+   */
+  val NumeralsNotOrdered: String = "NUM_PROV_NOT_LESS_NUMERAL"
 
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
@@ -757,7 +772,10 @@ object Deduction {
       ("!i:num t:num p:num. NUM_FORM p ==> NUM_TERM t ==> NUM_CLOSED t ==> " +
         "NUM_PROV (NUM_SUBST_FORM i t p) ==> NUM_PROV (NUM_EXISTS i p)"),
     NumeralsOrdered ->
-      "!i:num m:num n:num. m < n ==> NUM_PROV (NUM_LESS i (NUM_NUMERAL m) (NUM_NUMERAL n))"
+      "!i:num m:num n:num. m < n ==> NUM_PROV (NUM_LESS i (NUM_NUMERAL m) (NUM_NUMERAL n))",
+    NumeralsNotOrdered ->
+      ("!i:num m:num n:num. n <= m ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_LESS i (NUM_NUMERAL m) (NUM_NUMERAL n)))")
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -824,7 +842,8 @@ object Deduction {
             DeniedImplication -> builder.checked(DeniedImplication, builder.deniedImplication),
             ExistentialIntroduction ->
               builder.checked(ExistentialIntroduction, builder.existentialIntroduction),
-            NumeralsOrdered -> builder.checked(NumeralsOrdered, builder.numeralsOrdered)
+            NumeralsOrdered -> builder.checked(NumeralsOrdered, builder.numeralsOrdered),
+            NumeralsNotOrdered -> builder.checked(NumeralsNotOrdered, builder.numeralsNotOrdered)
           )
         )
       )
@@ -3895,6 +3914,209 @@ object Deduction {
             .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, existential))))
       }
       force(rules.disch(below, reached).flatMap(rules.genAll(_, List(i, m, n))))
+    }
+
+    /**
+     * [[NumeralsNotOrdered]]. The core by induction on `n` in the logic, then the gap opened.
+     *
+     * Written on concrete codes the way a reader would: each object-level step is a fact of this
+     * file specialised at the codes it is about, and each substitution is computed by `Language`
+     * and read back by rewriting, so the side conditions are discharged by deciding them.
+     */
+    lazy val numeralsNotOrdered: Kernel.Thm = {
+      val peanoTheory = language.numbering.peano
+      val known: Map[String, Kernel.Thm] = Map(
+        Provability.ModusPonens -> modusPonens,
+        Provability.Generalisation -> generalisation,
+        Provability.ProvableLogic -> logicalIsProvable,
+        "NUM_LOGIC_REPLACE" -> force(language.fact("NUM_LOGIC_REPLACE")),
+        Contraposition -> contraposition,
+        SubstitutableSpecialisation -> substitutableSpecialisation,
+        AdditionAtSuccessor -> additionAtSuccessor,
+        SuccessorNotZero -> successorNotZero,
+        SuccessorInjective -> successorInjective,
+        SuccessorAddition -> successorAddition,
+        DoubleNegationIntroduction -> doubleNegationIntroduction,
+        Language.NumeralAtZero -> force(language.fact(Language.NumeralAtZero)),
+        Language.NumeralAtSuccessor -> force(language.fact(Language.NumeralAtSuccessor)),
+        Language.LessCases -> force(language.fact(Language.LessCases)),
+        Language.ExistsCases -> force(language.fact(Language.ExistsCases)),
+        "NUM_SUC_ADD" -> pf("NUM_SUC_ADD")
+      )
+      def fact(name: String): Kernel.Thm = known(name)
+      def lifted[T](result: Either[KernelError, T]): T = force(LogicError.lift(result))
+      def proposition(text: String): Term = force(Parser.proposition(theory, notation, text))
+
+      val numeralConstant = constant(Language.NumeralName, Type.fun(numbers, numbers))
+      val tag = (0 to 8).map(k => force(Parser.term(theory, notation, k.toString, numbers))).toVector
+      def code(k: Int, payload: Term) = applied(coding, List(tag(k), payload))
+      def pair(a: Term, b: Term) = applied(pairing, List(a, b))
+      def v(index: Term) = code(0, index)
+      def suc(x: Term) = code(2, x)
+      def sum(a: Term, b: Term) = code(3, pair(a, b))
+      def eq(a: Term, b: Term) = code(5, pair(a, b))
+      def not(p: Term) = code(6, p)
+      def numeral(x: Term) = applied(numeralConstant, List(x))
+      val zeroCode = code(1, tag(0))
+      val hole = tag(0)
+
+      def provCode(held: Kernel.Thm): Term = held.conclusion match {
+        case App(head, c) if head == provableConstant => c
+        case other => throw new RefusedHere(NotOfForm("NUM_PROV of a code", other))
+      }
+      def argumentOf(held: Kernel.Thm): Term = held.conclusion match {
+        case App(_, c) => c
+        case other => throw new RefusedHere(NotOfForm("an application", other))
+      }
+      def impParts(c: Term): (Term, Term) = c match {
+        case App(App(head, t), App(App(p, a), b)) if head == coding && t == tag(7) && p == pairing => (a, b)
+        case other => throw new RefusedHere(NotOfForm("the code of an implication", other))
+      }
+      def wf(c: Term) = force(language.wellFormedIn(c))
+      def absent(index: Term, c: Term) = force(language.freeInTerm(index, c))
+
+      def detach(implication: Kernel.Thm, antecedent: Kernel.Thm): Kernel.Thm = {
+        val (p, q) = impParts(provCode(implication))
+        force(rules.specAll(fact(Provability.ModusPonens), List(p, q))
+          .flatMap(rules.mp(_, implication)).flatMap(rules.mp(_, antecedent)))
+      }
+      def contraposed(held: Kernel.Thm): Kernel.Thm = {
+        val (p, q) = impParts(provCode(held))
+        force(rules.specAll(fact(Contraposition), List(p, q))
+          .flatMap(rules.mp(_, wf(p))).flatMap(rules.mp(_, wf(q))).flatMap(rules.mp(_, held)))
+      }
+      def generalised(index: Term, held: Kernel.Thm): Kernel.Thm =
+        force(rules.specAll(fact(Provability.Generalisation), List(index, provCode(held))).flatMap(rules.mp(_, held)))
+
+      // NUM_PROV (at[from] ==> at[to]) from NUM_PROV (from = to), the substitutions computed.
+      def replacedIn(from: Term, to: Term, at: Term, held: Kernel.Thm): Kernel.Thm = {
+        val logical = force(
+          rules.specAll(fact("NUM_LOGIC_REPLACE"), List(hole, from, to, at))
+            .flatMap(rules.mp(_, wf(at))).flatMap(rules.mp(_, wf(from))).flatMap(rules.mp(_, wf(to)))
+            .flatMap(rules.mp(_, force(language.substitutableIn(hole, from, at))))
+            .flatMap(rules.mp(_, force(language.substitutableIn(hole, to, at)))))
+        val law = force(rules.spec(argumentOf(logical), fact(Provability.ProvableLogic)).flatMap(rules.mp(_, logical)))
+        val equations = Vector(
+          force(language.substituteIn(hole, from, at)),
+          force(language.substituteIn(hole, to, at)))
+        detach(force(Rewrite.Rule.all(logic, equations).flatMap(Rewrite.inTheorem(_, law))), held)
+      }
+      // NUM_PROV (!v_index. body) gives NUM_PROV body[by/index], computed.
+      def specialisedAt(index: Term, by: Term, body: Term, held: Kernel.Thm): Kernel.Thm = {
+        val raw = force(rules.specAll(fact(SubstitutableSpecialisation), List(index, by, body))
+          .flatMap(rules.mp(_, wf(body))).flatMap(rules.mp(_, wf(by)))
+          .flatMap(rules.mp(_, force(language.substitutableIn(index, by, body))))
+          .flatMap(rules.mp(_, held)))
+        val equation = force(language.substituteIn(index, by, body))
+        force(Rewrite.Rule.of(logic, equation).flatMap(rule => Rewrite.inTheorem(Vector(rule), raw)))
+      }
+      // `goal` from `built`, by rewriting the goal with `equations` until it is `built`'s.
+      def landed(goal: Term, built: Kernel.Thm, equations: Vector[Kernel.Thm]): Kernel.Thm = {
+        val toBuilt = force(Rewrite.Rule.all(logic, equations).flatMap(Rewrite.rewrite(_, goal)))
+        val result = lifted(Kernel.eqMp(force(Conv.sym(toBuilt)), built))
+        if (result.conclusion == goal) result
+        else throw new RefusedHere(NotOfForm(s"the goal ${goal}", result.conclusion))
+      }
+      // The parts of NUM_PROV ~(left + S v_i = right).
+      def parts(goal: Term): (Term, Term, Term) = goal match {
+        case App(h, App(App(c6, t6), App(App(c5, t5), App(App(pr, App(App(c3, t3),
+              App(App(pr2, left), App(App(c2, t2), App(App(c0, t0), index))))), right))))
+            if h == provableConstant && t6 == tag(6) && t5 == tag(5) && t3 == tag(3) && t2 == tag(2) &&
+              t0 == tag(0) =>
+          (left, index, right)
+        case other => throw new RefusedHere(NotOfForm("NUM_PROV ~(left + S v_i = right)", other))
+      }
+
+      val i = Term.variable("i", numbers)
+      val n = Term.variable("n", numbers)
+      val core = proposition(
+        "!i:num d:num n:num. NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR " +
+          "(NUM_NUMERAL (n + d)) (NUM_CODE 2 (NUM_CODE 0 i)))) (NUM_NUMERAL n))))")
+      val driver = Induct.overNaturals(logic, force(peanoTheory.naturals.fact(Natural.Induction)))
+      val swept = force(driver.proveBy(
+        core,
+        base => {
+          val (left, index, _) = parts(base)
+          val vi = v(index)
+          val inner = sum(left, vi)
+          val shifted = force(rules.specAll(fact(AdditionAtSuccessor), List(left, vi))
+            .flatMap(rules.mp(_, wf(left))).flatMap(rules.mp(_, absent(tag(1), left))).flatMap(rules.mp(_, wf(vi))))
+          // left + S v_i = 0 ==> S (left + v_i) = 0
+          val forward = replacedIn(sum(left, suc(vi)), suc(inner), eq(v(hole), zeroCode), shifted)
+          val notZero = force(rules.spec(inner, fact(SuccessorNotZero)).flatMap(rules.mp(_, wf(inner))))
+          Right(landed(base, detach(contraposed(forward), notZero), Vector(fact(Language.NumeralAtZero))))
+        },
+        step => {
+          val (_, index, _) = parts(step.goal)
+          val (prevLeft, _, prevRight) = parts(step.hypothesis.conclusion)
+          val vi = v(index)
+          val a = sum(prevLeft, suc(vi))
+          // S v_0 = S right' ==> v_0 = right', at v_0, then generalised and specialised at `a`:
+          // the injectivity fact asks that v_1 be absent from its first term, and `a` may hold v_i.
+          val v0 = v(tag(0))
+          val atV0 = force(rules.specAll(fact(SuccessorInjective), List(v0, prevRight))
+            .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(prevRight))))
+          val injective = specialisedAt(tag(0), a, provCode(atV0), generalised(tag(0), atV0))
+          val denied = detach(contraposed(injective), step.hypothesis) // ~(S a = S right')
+          // S prevLeft + S v_i = S (prevLeft + S v_i)
+          val successorSum = fact(SuccessorAddition)
+          val (bound, body) = provCode(successorSum) match {
+            case App(App(_, _), App(App(_, b), p)) => (b, p)
+            case other => throw new RefusedHere(NotOfForm("a universal code", other))
+          }
+          val atLeft = specialisedAt(bound, prevLeft, body, successorSum)
+          val innerBody = provCode(atLeft) match {
+            case App(App(_, _), App(App(_, _), p)) => p
+            case other => throw new RefusedHere(NotOfForm("a universal code", other))
+          }
+          val moved = specialisedAt(tag(1), suc(vi), innerBody, atLeft)
+          val forward = replacedIn(sum(suc(prevLeft), suc(vi)), suc(a), eq(v(hole), suc(prevRight)), moved)
+          val built = detach(contraposed(forward), denied)
+          val k = step.variable
+          val gapVariable: Term = (Term.freeVariables(step.goal) - k).filterNot(x => (x: Term) == index).toList match {
+            case one :: Nil => one
+            case _ => throw new RefusedHere(NotOfForm("a step with one other free variable", step.goal))
+          }
+          val equations = Vector(
+            force(rules.specAll(fact("NUM_SUC_ADD"), List(k, gapVariable))),
+            fact(Language.NumeralAtSuccessor))
+          Right(landed(step.goal, built, equations))
+        }))
+
+      // From the core to the statement: n <= m opens to a gap d with n + d = m.
+      val m = Term.variable("m", numbers)
+      val below = proposition("(n:num) <= m")
+      val gap = force(for {
+        atMost <- peanoTheory.definition(Peano.NonStrictOrder)
+        unfolded <- Conv.unfold(atMost, List(n, m))
+        opened <- LogicError.lift(Kernel.eqMp(unfolded, assumed(below)))
+      } yield opened)
+      val predicate = logic.destExistsPredicate(gap.conclusion)
+        .getOrElse(throw new RefusedHere(NotOfForm("an existential", gap.conclusion)))
+      val fresh = Conv.freshVariable("d", numbers, Term.freeVariables(gap.conclusion) + i + m + n)
+      val gapBody = force(Term.destEq(force(Conv.betaRoot(applied(predicate, List(fresh)))).conclusion)
+        .map(_._2).toRight(NotOfForm("an equation", fresh)))
+      val gapHeld = assumed(gapBody) // n + d = m
+      val atGap = force(rules.specAll(swept, List(i, fresh, n)))
+      val x = Term.variable("x", numbers)
+      def template(at: Term) = applied(provableConstant, List(not(eq(sum(numeral(at), suc(v(i))), numeral(n)))))
+      val lambda = lifted(Term.abs(x, template(x)))
+      val moved = force(for {
+        across <- Conv.apTerm(lambda, gapHeld)
+        sides <- Term.destEq(across.conclusion).toRight(NotOfForm("an equation", across.conclusion))
+        left <- Conv.betaNormalise(sides._1)
+        right <- Conv.betaNormalise(sides._2)
+        chained <- Conv.sym(left).flatMap(Conv.trans(_, across)).flatMap(Conv.trans(_, right))
+        reached <- LogicError.lift(Kernel.eqMp(chained, atGap))
+      } yield reached) // NUM_PROV ~(numeral m + S v_i = numeral n)
+      val universal = generalised(i, moved)
+      val doubled = force(rules.spec(provCode(universal), fact(DoubleNegationIntroduction))
+        .flatMap(rules.mp(_, wf(provCode(universal)))))
+      val target = proposition("NUM_PROV (NUM_CODE 6 (NUM_LESS i (NUM_NUMERAL m) (NUM_NUMERAL n)))")
+      val atTarget = landed(target, detach(doubled, universal),
+        Vector(fact(Language.LessCases), fact(Language.ExistsCases)))
+      val chosen = force(rules.existsElim(gap, fresh, atTarget))
+      force(rules.disch(below, chosen).flatMap(rules.genAll(_, List(i, m, n))))
     }
 
     def checked(name: String, theorem: Kernel.Thm): Kernel.Thm = {

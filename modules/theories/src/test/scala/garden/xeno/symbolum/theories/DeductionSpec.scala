@@ -284,6 +284,46 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * PA refutes `2 < 2` and `3 < 2` between numerals, the other half of the order above.
+   *
+   * The two instances are the boundary and one past it: at `m = n` the gap is zero, which is the
+   * base of the induction inside the derivation, and at `m = n + 1` it is one step up, so a core
+   * that only held at a zero gap, or a statement off by one into `n < m`, gets one of the two
+   * wrong. Each antecedent is derived from the naturals' order rather than assumed. The conclusion
+   * is read as `NUM_LESS`, which the fact states, and opened by `NUM_LESS_CASES` into the negated
+   * existential, which is what PA proves: `~~!5. ~(numeral m + S v5 = numeral n)`.
+   */
+  it should "refute a false strict order between numerals, at the boundary and past it" in {
+    val theorem = force(deduction.fact(Deduction.NumeralsNotOrdered))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+
+    val peano = chain.peano
+    val two = "SUC (SUC ZERO)"
+    val three = "SUC (SUC (SUC ZERO))"
+    val atBoundary = force(rules.spec(term(two), force(peano.fact(Peano.Reflexive))))
+    val pastIt = force(rules.spec(term(two), force(peano.fact(Peano.AtMostSuccessor))))
+    for ((m, held) <- Vector(two -> atBoundary, three -> pastIt)) {
+      val instance = force(rules.specAll(theorem, List(term("5"), term(m), term(two)))
+        .flatMap(rules.mp(_, held)))
+      instance.hypotheses shouldBe empty
+      instance.conclusion shouldBe proposition(
+        s"NUM_PROV (NUM_CODE 6 (NUM_LESS 5 (NUM_NUMERAL ($m)) (NUM_NUMERAL ($two))))")
+      val negation = force(LogicError.lift(Term.app(coding, term("6"))))
+      val opened = force(
+        rules
+          .specAll(force(chain.language.fact(Language.LessCases)),
+            List(term("5"), term(s"NUM_NUMERAL ($m)"), term(s"NUM_NUMERAL ($two)")))
+          .flatMap(Conv.apTerm(negation, _))
+          .flatMap(Conv.apTerm(constant(Provability.ProvableName, Type.fun(numbers, Type.Bool)), _))
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance))))
+      opened.conclusion shouldBe proposition(
+        s"NUM_PROV (NUM_CODE 6 (NUM_EXISTS 5 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR " +
+          s"(NUM_NUMERAL ($m)) (NUM_CODE 2 (NUM_CODE 0 5)))) (NUM_NUMERAL ($two))))))")
+    }
+  }
+
+  /**
    * The object theory's multiplication on numerals, which stands on the addition above it.
    *
    * The same two assertions for the same two reasons, and one more that is about the ORDER rather

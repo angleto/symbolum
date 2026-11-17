@@ -136,7 +136,10 @@ Measured on 2026-11-12, on this change over `d47d4901`:
   `m >= n` at concrete numerals, with no hypothesis and on the chain's own axioms, from
   `NUM_PROV_ADD_SUC`, `NUM_PROV_SUC_ADD`, `NUM_PROV_SUC_INJ`, `NUM_PROV_SUC_NOT_ZERO`,
   `NUM_PROV_SPECIALISE_FREE` and replacement. That is a probe and not an assertion; the fact in
-  general form is the next increment's.
+  general form is the next increment's. (It landed on 2026-11-17 as `NUM_PROV_NOT_LESS_NUMERAL`,
+  with one change below `Deduction`: `Language` leaves a pair of indices with a free variable
+  undecided rather than refusing it, and `tools/verify/perturb-not-below.sh` shows the chain does
+  not build without it.)
 - **What reads the library from outside `theories` ran too**: `ClassicalSpec` and `RewriteSpec` in
   `logic`, `EssaySpec`, and in `tactics` `ProposeSpec`, `RediscoverySpec` and the eight suites
   that read the documents. All green but the weakenings `Propose` makes, one per antecedent of

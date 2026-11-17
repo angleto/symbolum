@@ -363,25 +363,34 @@ final class Language private (
         collect(subject).distinct
       }
 
+      // Two indices are compared only where neither has a free variable, or they are the same
+      // term. An index with a free variable in it gets no decision against another: where a clause
+      // needs one the residue keeps the comparison and is refused below as undecided rather than
+      // here. Two closed indices are still decided or refused by `Successor.distinct`, whose
+      // refusal is not swallowed. Before `NUM_PROV_NOT_LESS_NUMERAL` an open index reached
+      // `Successor.distinct` and the chain did not build: "expected a numeral of num, found n",
+      // which `tools/verify/perturb-not-below.sh` shows.
       decisions <- (for { one <- indices; other <- indices } yield (one, other))
         .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
           case (carried, (one, other)) =>
-            for {
-              found <- carried
-              guard <- LogicError.lift(Term.eq(one, other))
-              decided <-
-                if (one == other) rules.eqTruthIntro(Kernel.refl(one))
+            carried.flatMap { found =>
+              LogicError.lift(Term.eq(one, other)).flatMap { guard =>
+                if (one == other) rules.eqTruthIntro(Kernel.refl(one)).map(found :+ _)
+                else if (Term.freeVariables(one).nonEmpty || Term.freeVariables(other).nonEmpty)
+                  Right(found)
                 else
-                  for {
-                    apart <- successor.distinct(one, other)
-                    assumed <- LogicError.lift(Kernel.assume(guard))
-                    toFalsity <- rules.notElim(apart, assumed)
-                    fromFalsity <- LogicError
-                      .lift(Kernel.assume(logic.falsity))
-                      .flatMap(rules.falsityElim(guard, _))
-                    equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
-                  } yield equated
-            } yield found :+ decided
+                  successor.distinct(one, other).flatMap { apart =>
+                      for {
+                        assumed <- LogicError.lift(Kernel.assume(guard))
+                        toFalsity <- rules.notElim(apart, assumed)
+                        fromFalsity <- LogicError
+                          .lift(Kernel.assume(logic.falsity))
+                          .flatMap(rules.falsityElim(guard, _))
+                        equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
+                      } yield found :+ equated
+                  }
+              }
+            }
         }
 
       conditionals <- Language.conditionalRules(logic, classical, Type.Bool)

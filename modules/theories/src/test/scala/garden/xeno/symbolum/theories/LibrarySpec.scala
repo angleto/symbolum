@@ -861,8 +861,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `NUM_FREE_FOR_CLOSED` from `Language.Statements` and nine from `Deduction.Statements`, derived
     // from the diff of `docs/lemmas.md` before the pin was read. Eleven of them bind two or more
     // leading quantifiers, all of `num`, so `AGENTS.md`'s figures move by fourteen, eleven and eleven.
-    library.entries.size shouldBe 1159
-    library.names.distinct.size shouldBe 1156
+    // 1160 and 1157 with PA refuting a false order between numerals, 2026-11-17, card `4102f131`:
+    // one fact under one new name from `Deduction.Statements`, `NUM_PROV_NOT_LESS_NUMERAL`,
+    // derived before the run. It binds three leading quantifiers of `num`, so `AGENTS.md`'s
+    // figures move by one, one and one.
+    library.entries.size shouldBe 1160
+    library.names.distinct.size shouldBe 1157
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

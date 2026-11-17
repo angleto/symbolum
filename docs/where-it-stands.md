@@ -740,12 +740,12 @@ sides. `TruthSpec` discharges both conditions at `~(0 = 0)` and gets `NUM_PROV ~
 
 **PA proves a true strict order between numerals, since 2026-11-10**, by
 `NUM_PROV_LESS_NUMERAL`: `NUM_LESS` is an existential, and `NUM_PROV_EXISTS_INTRO` introduces one
-at a closed witness, which is specialisation contraposed. The other half, refuting a false order,
-is not written, and neither is anything about a variable bounded by a numeral: every route found to
-them instantiates an axiom of PA at an open term. Specialisation and replacement took closed terms
-only until 2026-11-12 (`docs/adr/0040` has the measurement), and since `docs/adr/0078` they take any
-substitutable term, which `LanguageSpec` exercises at `S x != 0` specialised to `v_1 + v_2`. The
-derivations that use it are the next step.
+at a closed witness, which is specialisation contraposed. **The other half since 2026-11-17**:
+`NUM_PROV_NOT_LESS_NUMERAL` refutes `numeral m < numeral n` for `n <= m`, so PA decides every strict
+order between numerals. It instantiates axioms of PA at open terms, which specialisation and
+replacement allow since `docs/adr/0078` (closed terms only until 2026-11-12, `docs/adr/0040` has
+the measurement), and its core, `!i d n. NUM_PROV ~(numeral (n + d) + S v_i = numeral n)`, is an
+induction in the logic over `n`. Nothing is written yet about a variable bounded by a numeral.
 
 Not written above that: the bounded quantifiers, where PA has to prove `x < S n` splits, which is
 that open-term question; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so

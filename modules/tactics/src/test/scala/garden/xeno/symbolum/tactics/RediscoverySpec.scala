@@ -449,7 +449,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `Language.Statements` and `Deduction.Statements`, less the one `NUM_CLOSED` antecedent each of
     // `NUM_PROV_ADD_ZERO`, `NUM_PROV_MUL_ZERO`, `NUM_PROV_ADD_SUC` and `NUM_PROV_MUL_SUC` lost.
     // `ProposeSpec` carries the per-fact count beside the same figure. Plus twenty-four.
-    propose.weakenings.size shouldBe 1029
+    // 1030 with PA refuting a false order between numerals, 2026-11-17, card `4102f131`, counted
+    // before the run: the one antecedent of `NUM_PROV_NOT_LESS_NUMERAL`. Plus one.
+    propose.weakenings.size shouldBe 1030
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -483,7 +483,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the four clauses, `NUM_PROV_ZERO_ADD` and `NUM_PROV_SUC_ADD`), less the four `NUM_CLOSED`
     // antecedents `NUM_PROV_ADD_ZERO`, `NUM_PROV_MUL_ZERO`, `NUM_PROV_ADD_SUC` and
     // `NUM_PROV_MUL_SUC` lost. Plus twenty-four.
-    proposals.size shouldBe 1029
+    // 1030 with PA refuting a false order between numerals, 2026-11-17, card `4102f131`, predicted
+    // before the run: `NUM_PROV_NOT_LESS_NUMERAL` has one antecedent, `n <= m`. Plus one.
+    proposals.size shouldBe 1030
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1965,7 +1967,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // twenty-two of its twenty-four new weakenings, read off the run, which the first run did not
     // reach because `open` above was red, and equal to twenty-four less the two `open` read.
     // Plus twenty-two.
-    unreadable shouldBe 254
+    // 255 with PA refuting a false order between numerals, 2026-11-17, card `4102f131`: the one
+    // weakening of `NUM_PROV_NOT_LESS_NUMERAL`, predicted as one more across `open` and this bucket
+    // and read off the run here, `open` above not moving. Plus one.
+    unreadable shouldBe 255
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
