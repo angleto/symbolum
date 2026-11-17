@@ -54,4 +54,17 @@ Imports `Doubling`.
   EVEN_OR_ODD              !n:num. ?m:num. n = DOUBLE m \/ n = SUC (DOUBLE m)
 ```
 
+## Reproduced
+
+Imports nothing.
+
+```
+  NOT_IMP_ANY              !p:bool. !q:bool. ~q ==> q ==> p
+  NUM_PROD_MUL_BY_INDUCTION !f:num -> num. !g:num -> num. !n:num. NUM_PROD (\m:num. f m * g m) n = NUM_PROD f n * NUM_PROD g n
+  RESIDUE_MOD_ONE          !n:num. NUM_MOD n (SUC 0) = 0
+  RESIDUE_POW_DOWN         !n:num. !m:num. !k:num. NUM_MOD m (NUM_POW 2 (SUC n)) = NUM_MOD k (NUM_POW 2 (SUC n)) ==> NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n)
+  SUM_OF_ZERO_BY_INDUCTION !n:num. Sum (\m:num. 0) n = 0
+  TRIANGULAR_INJECTIVE_BY_INDUCTION !f:num -> num. (!n:num. !m:num. !k:num. NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n) ==> NUM_MOD (f m) (NUM_POW 2 n) = NUM_MOD (f k) (NUM_POW 2 n)) /\ (!n:num. !m:num. !k:num. NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n) /\ ~(NUM_MOD m (NUM_POW 2 (SUC n)) = NUM_MOD k (NUM_POW 2 (SUC n))) ==> ~(NUM_MOD (f m) (NUM_POW 2 (SUC n)) = NUM_MOD (f k) (NUM_POW 2 (SUC n)))) ==> (!n:num. !m:num. !k:num. NUM_MOD (f m) (NUM_POW 2 n) = NUM_MOD (f k) (NUM_POW 2 n) ==> NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n))
+```
+
 <!-- end generated: published -->

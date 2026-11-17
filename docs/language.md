@@ -556,4 +556,8 @@ there:
   function over one is defined by structural recursion only, not by well-founded recursion;
 - `simp` applies no conditional equation, and the notebook declares no datatype in a cell: it
   reads the ones of the documents it imports;
-- the editor has no extension for Zed, and no completion or go-to-definition in any editor.
+- the editor has no extension for Zed, and no completion or go-to-definition in any editor;
+- a document sees a constant of the chain only through the library's lemmas about it, never
+  through its definition, so an equation of a chain definition by recursion (`NUM_NUMERAL_SUC`,
+  `NUM_REAL_SUC`) can be cited, and proved again only from lemmas that were themselves proved from
+  it. `docs/adr/0070` has the sample this was found by and the measurement.

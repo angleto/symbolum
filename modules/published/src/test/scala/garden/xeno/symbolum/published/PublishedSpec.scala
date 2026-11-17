@@ -2,6 +2,7 @@ package garden.xeno.symbolum.published
 
 import garden.xeno.symbolum.kernel.Derivation
 import garden.xeno.symbolum.tactics.{Elaborate, Session}
+import garden.xeno.symbolum.theories.Library
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths}
@@ -102,6 +103,45 @@ class PublishedSpec extends AnyFlatSpec with Matchers {
     } finally { Files.deleteIfExists(copy); () }
   }
 
+  "The sample docs/adr/0070 drew" should "be proved again by induction in Reproduced, to the library's statement, without citing it" in {
+    // The rule and the draw are in the ADR, written before the draw and read off 2b2818ab: five
+    // lemmas, of which these three are reproduced. The other two, NUM_NUMERAL_SUC and NUM_REAL_SUC,
+    // are equations of a definition by recursion, and the ADR says why a document cannot reach them.
+    val drawn = Vector("SUM_OF_ZERO", "NUM_PROD_MUL", "TRIANGULAR_INJECTIVE")
+    val chain = Library.of(elaborate.chain)
+    val published = Published.standard.library
+    val text = Published.source("Reproduced").getOrElse(fail("Reproduced.sym could not be read"))
+    drawn.foreach { name =>
+      val reproduction = s"${name}_BY_INDUCTION"
+      withClue(reproduction) {
+        val lemma = chain.named(name).headOption.getOrElse(fail(s"the library holds no $name")).theorem
+        val proved = published.named(reproduction).headOption.getOrElse(fail(s"Reproduced proves no $reproduction")).theorem
+        proved.hypotheses shouldBe empty
+        proved.conclusion shouldBe lemma.conclusion
+        // By citation and not by sequent: the report's "library facts" names every lemma a proof
+        // re-derives, its own statement included, so it names the lemma here whatever the proof did.
+        Derivation.cited(proved) should not contain name
+        // Not citing the lemma is not enough: citing a fact proved from it is the same proof by
+        // another name. NUM_REAL_SUC follows from NUM_REAL_ADD and NUM_REAL_ONE, both proved from
+        // it, so this is the half that makes the 'not reachable' of the ADR a claim with a check.
+        Derivation.cited(proved).foreach { citedName =>
+          val fact = published.named(citedName).headOption.orElse(chain.named(citedName).headOption)
+            .getOrElse(fail(s"$reproduction cites $citedName, which neither library holds")).theorem
+          withClue(s"$citedName rests on $name: ") { Derivation.restingOn(fact, Set(lemma.conclusion)) shouldBe empty }
+        }
+        val from = text.indexOf(s"theorem $reproduction ")
+        from should be >= 0
+        text.substring(from, text.indexOf("\nqed", from)) should include("\n  induction ")
+      }
+    }
+    // The control for the comparison above: a reproduction of another lemma is told apart.
+    published.named("NUM_PROD_MUL_BY_INDUCTION").head.theorem.conclusion should not be chain.named("SUM_OF_ZERO").head.theorem.conclusion
+    // The control for the circularity check: it finds the case it is there for, the fact a proof of
+    // NUM_REAL_SUC would cite in its place.
+    val suc = chain.named("NUM_REAL_SUC").head.theorem.conclusion
+    Derivation.restingOn(chain.named("NUM_REAL_ADD").head.theorem, Set(suc)) shouldBe Set(suc)
+  }
+
   "The checker command" should "let a document outside the repository import a published one" in {
     // The reason the command lives in this module. The document sits in a directory of its own,
     // with no Parity.sym or Doubling.sym beside it, and cites a theorem Doubling proves, reached
@@ -135,7 +175,11 @@ class PublishedSpec extends AnyFlatSpec with Matchers {
     val claim = "theorem MINE : DOUBLE (SUC 0) = SUC (SUC (DOUBLE 0)) by exact DOUBLE_SUC"
     val imported = Notebook.session.run("import Parity")
     // Every entry carrying a theorem is a fact, the definition of DOUBLE included, as in a document.
-    val facts = Published.standard.documents.map(_.report.entries.count(_.theorem.isDefined)).sum
+    // Counted over what the import reaches, Parity and what it imports, and not over every
+    // published document: Reproduced imports nothing and is not reached.
+    val reached = Set("Doubling", "Parity")
+    val facts = Published.standard.documents.filter(document => reached(document.name))
+      .map(_.report.entries.count(_.theorem.isDefined)).sum
     facts should be > 4
     imported.entries.last.outcome shouldBe Session.Outcome.Extended(s"imported Doubling, Parity: $facts facts")
     imported.run(claim).entries.last.outcome match {

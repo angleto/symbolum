@@ -148,3 +148,59 @@ something else is a translation the reader cannot see.
 - **It is done when** a sample of the library's theorems proved by induction in Scala today
   (51 main sources in `theories` mention induction) is rewritten as documents and checks to the
   same statement. The sample is drawn by a rule written down before it is drawn, not chosen.
+
+## The sample, drawn on 2026-11-17
+
+The rule was written on card `c3806ddb` before the draw was computed. It is reproduced here and was
+read off 7.0 at `2b2818ab`.
+
+- **Population.** The entries of `Library.of(Chain.standard)` whose own proof uses induction. The
+  walk follows `Derivation.premises` from the entry and stops at a citation, and at any node whose
+  sequent is another library entry's. An entry counts if the walk reaches the sequent of
+  `NUM_INDUCTION`, which is itself left out. There were 251 such entries of 1159.
+- **Draw.** The population sorted by the SHA-256 of the name, in hex and ascending, and the first
+  five taken. A drawn entry that cannot be reproduced is reported, and no sixth one is drawn in its
+  place.
+- **What counts as reproduced.** A published document proves a theorem with no hypotheses whose
+  conclusion is the entry's, its proof uses `induction`, and `Derivation.cited` of it does not name
+  the entry.
+
+The five, and what happened to each:
+
+| drawn | reproduced as | outcome |
+|---|---|---|
+| `NUM_PROD_MUL` | `Reproduced.NUM_PROD_MUL_BY_INDUCTION` | proved |
+| `NUM_NUMERAL_SUC` | | not reachable without proving it from itself |
+| `TRIANGULAR_INJECTIVE` | `Reproduced.TRIANGULAR_INJECTIVE_BY_INDUCTION` | proved, with two lemmas on residues proved in the same document |
+| `NUM_REAL_SUC` | | not reachable without proving it from itself |
+| `SUM_OF_ZERO` | `Reproduced.SUM_OF_ZERO_BY_INDUCTION` | proved |
+
+`PublishedSpec` holds the three against the library.
+
+**The two that are not reachable are the same case, and the reason is measured rather than
+argued.** Each is an equation of a definition by recursion: `NUM_NUMERAL` in `Language` and
+`real_of_num` in `Peano` are made by `Recursion`, and the induction the walk finds is the one inside
+the recursion theorem. A document reaches a chain constant only through the library's lemmas,
+since a name in a proof resolves to the proof's own facts, the document's, its imports' and the
+library's, and a chain constant's definition is none of these. Of the library's other lemmas
+mentioning `real_of_num`, 57, every one rests on `NUM_REAL_SUC` except `NUM_REAL_ZERO`; of the 10
+mentioning `NUM_NUMERAL`, every one rests on `NUM_NUMERAL_SUC` except `NUM_NUMERAL_ZERO`. A value at
+zero does not fix a value at `SUC x`, so a document has no fact to prove either equation from that
+is not proved from the equation itself.
+
+**Not citing the lemma is weaker than that, and the rule as written above asked only for it.**
+`NUM_REAL_SUC` follows from `NUM_REAL_ADD` at one and `NUM_REAL_ONE` without naming it, and an
+`induction` whose cases are closed the same way would satisfy all three clauses of the rule. Both
+facts are proved from `NUM_REAL_SUC`, so the proof is the lemma under another name. The gate
+therefore asks one thing the rule did not: that no fact a reproduction cites rests on the drawn
+lemma, by `Derivation.restingOn` over each cited fact. The three reproductions pass it, and its
+control is `NUM_REAL_ADD`, which it finds resting on `NUM_REAL_SUC`. The draw is unchanged: the
+added clause removes no reproduction and admits no new one. What would make the two reachable is a
+document that reads a chain constant's definition the way `rewrite` reads a document's own. That
+is a change to what a document sees, which `docs/adr/0073` decides, and it is not made here.
+
+**What the report says, and what it does not.** The `library facts` line of a reproduced theorem
+names the lemma it reproduces, for example `SUM_OF_ZERO` beside `SUM_OF_ZERO_BY_INDUCTION`. That
+line is `Derivation.restingOn`, which matches by sequent on purpose: a fact re-derived by another
+route is the same fact. So it names the lemma whatever the proof did. Whether the proof cited it is
+`Derivation.cited`, and that is what the gate asks.

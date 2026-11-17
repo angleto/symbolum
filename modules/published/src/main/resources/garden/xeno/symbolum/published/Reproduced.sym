@@ -1,0 +1,147 @@
+-- Three lemmas of the library proved by induction in Scala, proved again here by induction in the
+-- language. They are the ones the rule of docs/adr/0070 drew, and each theorem below states exactly
+-- what the library's lemma of the same name without the suffix states; PublishedSpec compares them.
+
+theorem SUM_OF_ZERO_BY_INDUCTION : !n:num. Sum (\m:num. 0) n = 0
+proof
+  fix n
+  induction n
+  case zero:
+    by rewrite SUM_ZERO
+  case succ k ih:
+    rewrite SUM_SUC, ih
+    by ring
+  end
+qed
+
+theorem NUM_PROD_MUL_BY_INDUCTION : !f:num -> num. !g:num -> num. !n:num. NUM_PROD (\m:num. f m * g m) n = NUM_PROD f n * NUM_PROD g n
+proof
+  fix f g n
+  induction n
+  case zero:
+    rewrite NUM_PROD_ZERO
+    by arith
+  case succ k ih:
+    rewrite NUM_PROD_SUC, ih
+    by arith
+  end
+qed
+
+-- What the triangular lemma needs about residues: modulo one everything is zero, and residues that
+-- agree modulo 2^(n + 1) agree modulo 2^n.
+
+theorem RESIDUE_MOD_ONE : !x:num. NUM_MOD x (SUC 0) = 0
+proof
+  fix x
+  have lt : NUM_MOD x (SUC 0) < SUC 0
+  proof
+    apply NUM_MOD_LT
+    by arith
+  qed
+  by arith from lt
+qed
+
+theorem RESIDUE_POW_DOWN : !n:num. !x:num. !y:num. NUM_MOD x (NUM_POW 2 (SUC n)) = NUM_MOD y (NUM_POW 2 (SUC n)) ==> NUM_MOD x (NUM_POW 2 n) = NUM_MOD y (NUM_POW 2 n)
+proof
+  fix n x y
+  assume e
+  have pos : 0 < NUM_POW 2 n
+  proof
+    apply NUM_POW_POSITIVE
+    by arith
+  qed
+  have ps : NUM_POW 2 (SUC n) = NUM_POW 2 n * 2 by exact NUM_POW_SUC
+  have dx : NUM_POW 2 (SUC n) * NUM_DIV x (NUM_POW 2 (SUC n)) + NUM_MOD x (NUM_POW 2 (SUC n)) = x by exact NUM_DIV_MOD
+  have dy : NUM_POW 2 (SUC n) * NUM_DIV y (NUM_POW 2 (SUC n)) + NUM_MOD y (NUM_POW 2 (SUC n)) = y by exact NUM_DIV_MOD
+  have dr : NUM_POW 2 n * NUM_DIV (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) + NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) = NUM_MOD x (NUM_POW 2 (SUC n)) by exact NUM_DIV_MOD
+  have lt : NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) < NUM_POW 2 n
+  proof
+    apply NUM_MOD_LT
+    by exact pos
+  qed
+  have ux : 2 * NUM_DIV x (NUM_POW 2 (SUC n)) + NUM_DIV (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) = NUM_DIV x (NUM_POW 2 n) /\ NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) = NUM_MOD x (NUM_POW 2 n)
+  proof
+    apply NUM_DIV_MOD_UNIQUE
+    split
+    case left:
+      calc x = NUM_POW 2 (SUC n) * NUM_DIV x (NUM_POW 2 (SUC n)) + NUM_MOD x (NUM_POW 2 (SUC n)) by arith from dx
+           _ = NUM_POW 2 n * 2 * NUM_DIV x (NUM_POW 2 (SUC n)) + NUM_MOD x (NUM_POW 2 (SUC n)) by rewrite ps
+           _ = NUM_POW 2 n * 2 * NUM_DIV x (NUM_POW 2 (SUC n)) + (NUM_POW 2 n * NUM_DIV (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) + NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n)) by rewrite dr
+           _ = NUM_POW 2 n * (2 * NUM_DIV x (NUM_POW 2 (SUC n)) + NUM_DIV (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n)) + NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) by arith
+    case right:
+      by exact lt
+    end
+  qed
+  have sx : NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) = NUM_MOD x (NUM_POW 2 n) by auto from ux
+  have uy : 2 * NUM_DIV y (NUM_POW 2 (SUC n)) + NUM_DIV (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) = NUM_DIV y (NUM_POW 2 n) /\ NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) = NUM_MOD y (NUM_POW 2 n)
+  proof
+    apply NUM_DIV_MOD_UNIQUE
+    split
+    case left:
+      calc y = NUM_POW 2 (SUC n) * NUM_DIV y (NUM_POW 2 (SUC n)) + NUM_MOD y (NUM_POW 2 (SUC n)) by arith from dy
+           _ = NUM_POW 2 (SUC n) * NUM_DIV y (NUM_POW 2 (SUC n)) + NUM_MOD x (NUM_POW 2 (SUC n)) by rewrite e
+           _ = NUM_POW 2 n * 2 * NUM_DIV y (NUM_POW 2 (SUC n)) + NUM_MOD x (NUM_POW 2 (SUC n)) by rewrite ps
+           _ = NUM_POW 2 n * 2 * NUM_DIV y (NUM_POW 2 (SUC n)) + (NUM_POW 2 n * NUM_DIV (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) + NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n)) by rewrite dr
+           _ = NUM_POW 2 n * (2 * NUM_DIV y (NUM_POW 2 (SUC n)) + NUM_DIV (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n)) + NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) by arith
+    case right:
+      by exact lt
+    end
+  qed
+  have sy : NUM_MOD (NUM_MOD x (NUM_POW 2 (SUC n))) (NUM_POW 2 n) = NUM_MOD y (NUM_POW 2 n) by auto from uy
+  by arith from sx, sy
+qed
+
+theorem NOT_IMP_ANY : !p:bool. !q:bool. ~q ==> q ==> p
+proof
+  fix p q
+  by auto
+qed
+
+theorem TRIANGULAR_INJECTIVE_BY_INDUCTION : !f:num -> num. (!n:num. !m:num. !k:num. NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n) ==> NUM_MOD (f m) (NUM_POW 2 n) = NUM_MOD (f k) (NUM_POW 2 n)) /\ (!n:num. !m:num. !k:num. NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n) /\ ~(NUM_MOD m (NUM_POW 2 (SUC n)) = NUM_MOD k (NUM_POW 2 (SUC n))) ==> ~(NUM_MOD (f m) (NUM_POW 2 (SUC n)) = NUM_MOD (f k) (NUM_POW 2 (SUC n)))) ==> (!n:num. !m:num. !k:num. NUM_MOD (f m) (NUM_POW 2 n) = NUM_MOD (f k) (NUM_POW 2 n) ==> NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n))
+proof
+  fix f
+  assume h
+  have flips : !n:num. !m:num. !k:num. NUM_MOD m (NUM_POW 2 n) = NUM_MOD k (NUM_POW 2 n) /\ ~(NUM_MOD m (NUM_POW 2 (SUC n)) = NUM_MOD k (NUM_POW 2 (SUC n))) ==> ~(NUM_MOD (f m) (NUM_POW 2 (SUC n)) = NUM_MOD (f k) (NUM_POW 2 (SUC n))) by auto from h
+  fix n
+  induction n
+  case zero:
+    fix m k
+    assume a
+    by rewrite NUM_POW_ZERO, RESIDUE_MOD_ONE
+  case succ j ih:
+    fix m k
+    assume a
+    have low : NUM_MOD (f m) (NUM_POW 2 j) = NUM_MOD (f k) (NUM_POW 2 j)
+    proof
+      apply RESIDUE_POW_DOWN
+      by exact a
+    qed
+    have below : NUM_MOD m (NUM_POW 2 j) = NUM_MOD k (NUM_POW 2 j)
+    proof
+      apply ih
+      by exact low
+    qed
+    cases c : NUM_MOD m (NUM_POW 2 (SUC j)) = NUM_MOD k (NUM_POW 2 (SUC j))
+    case pos:
+      by exact c
+    case neg:
+      have apart : ~(NUM_MOD (f m) (NUM_POW 2 (SUC j)) = NUM_MOD (f k) (NUM_POW 2 (SUC j)))
+      proof
+        apply flips
+        split
+        case left:
+          by exact below
+        case right:
+          by exact c
+        end
+      qed
+      have absurd : ~(NUM_MOD (f m) (NUM_POW 2 (SUC j)) = NUM_MOD (f k) (NUM_POW 2 (SUC j))) ==> NUM_MOD (f m) (NUM_POW 2 (SUC j)) = NUM_MOD (f k) (NUM_POW 2 (SUC j)) ==> NUM_MOD m (NUM_POW 2 (SUC j)) = NUM_MOD k (NUM_POW 2 (SUC j)) by exact NOT_IMP_ANY
+      apply absurd
+      case 1:
+        by exact apart
+      case 2:
+        by exact a
+      end
+    end
+  end
+qed

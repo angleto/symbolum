@@ -77,7 +77,7 @@ object Published {
    * compares it with the files in both directions, so a document added on disk and not here, or
    * named here and not on disk, is a red run and not a document silently left out.
    */
-  val Names: Vector[String] = Vector("Doubling", "Parity")
+  val Names: Vector[String] = Vector("Doubling", "Parity", "Reproduced")
 
   /** Where the documents are, on the classpath. */
   val Resources: String = "garden/xeno/symbolum/published"
