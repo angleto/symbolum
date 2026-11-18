@@ -4015,7 +4015,7 @@ object Deduction {
         val toBuilt = force(Rewrite.Rule.all(logic, equations).flatMap(Rewrite.rewrite(_, goal)))
         val result = lifted(Kernel.eqMp(force(Conv.sym(toBuilt)), built))
         if (result.conclusion == goal) result
-        else throw new RefusedHere(NotOfForm(s"the goal ${goal}", result.conclusion))
+        else throw new RefusedHere(ProvesOther(goal, result.conclusion))
       }
       // The parts of NUM_PROV ~(left + S v_i = right).
       def parts(goal: Term): (Term, Term, Term) = goal match {
