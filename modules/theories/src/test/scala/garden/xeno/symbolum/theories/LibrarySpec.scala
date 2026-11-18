@@ -874,8 +874,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `LECAM_BOUND` and `LECAM_OVERLAP`, derived from the diff of `docs/lemmas.md` before the pin
     // was read. Each binds two or more leading quantifiers with two of one type (`num` in the first
     // two, `num -> real` in the last two), so `AGENTS.md`'s figures move by four, four and four.
-    library.entries.size shouldBe 1165
-    library.names.distinct.size shouldBe 1162
+    // 1166 and 1163 with nothing below zero, for a variable, 2026-11-18, card `4102f131`: one fact
+    // under one new name from `Deduction.Statements`, `NUM_PROV_NOT_LESS_ZERO`, derived before the
+    // run. It binds two leading quantifiers of `num`, so `AGENTS.md`'s figures move by one, one
+    // and one.
+    library.entries.size shouldBe 1166
+    library.names.distinct.size shouldBe 1163
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

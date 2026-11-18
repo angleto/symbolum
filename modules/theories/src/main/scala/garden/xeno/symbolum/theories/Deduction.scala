@@ -652,6 +652,22 @@ object Deduction {
    */
   val BelowSuccessor: String = "NUM_PROV_LESS_SUC_CASES"
 
+  /**
+   * `|- !i x. NUM_PROV ~(v_x < 0)`
+   *
+   * Nothing is below zero, for a variable: the case a bounded quantifier's unfolding ends at.
+   * `<` is `NUM_LESS i`, whose body is `!v_i. ~(v_x + S v_i = 0)`; [[AdditionAtSuccessor]] makes
+   * the sum `S (v_x + v_i)` and [[SuccessorNotZero]] refutes that, and the variable is
+   * generalised and the result doubled into the code of `~NUM_LESS`, as [[NumeralsNotOrdered]]
+   * ends.
+   *
+   * **It asks nothing of `i` and `x`**, unlike [[BelowSuccessor]]. With `i = x` the claim is
+   * `~?v_x. v_x + S v_x = 0`, still true, and no step compares the two: the substitutions meet
+   * only the hole index [[BelowSuccessor]] moves PA's axioms through, against `1` and `i`, which
+   * arithmetic separates.
+   */
+  val NotBelowZero: String = "NUM_PROV_NOT_LESS_ZERO"
+
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
     Weaken ->
@@ -802,7 +818,9 @@ object Deduction {
     BelowSuccessor ->
       ("!i:num x:num n:num. ~(i = x) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR " +
         "(NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL (SUC n))) " +
-        "(NUM_OR (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL n)) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 x) (NUM_NUMERAL n))))))")
+        "(NUM_OR (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL n)) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 x) (NUM_NUMERAL n))))))"),
+    NotBelowZero ->
+      "!i:num x:num. NUM_PROV (NUM_CODE 6 (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL 0)))"
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -871,7 +889,8 @@ object Deduction {
               builder.checked(ExistentialIntroduction, builder.existentialIntroduction),
             NumeralsOrdered -> builder.checked(NumeralsOrdered, builder.numeralsOrdered),
             NumeralsNotOrdered -> builder.checked(NumeralsNotOrdered, builder.numeralsNotOrdered),
-            BelowSuccessor -> builder.checked(BelowSuccessor, builder.belowSuccessor)
+            BelowSuccessor -> builder.checked(BelowSuccessor, builder.belowSuccessor),
+            NotBelowZero -> builder.checked(NotBelowZero, builder.notBelowZero)
           )
         )
       )
@@ -4148,15 +4167,16 @@ object Deduction {
     }
 
     /**
-     * [[BelowSuccessor]]. The case split by induction in PA, then the existential eliminated.
+     * The steps the facts about a variable `v_x` and a bound index `v_i` are written in, over the
+     * variables `i` and `x` of `num`: each object-level step is a fact of this file at the codes it
+     * is about, and each substitution is computed by `Language`.
      *
-     * Written as [[numeralsNotOrdered]] is: each object-level step is a fact of this file at the
-     * codes it is about, and each substitution is computed by `Language`. What differs is that
-     * every index is a variable, so the comparisons `Language` cannot make are handed to it in
-     * `apart`, and the axioms of PA, stated over `v_0` and `v_1`, reach `v_x` and `v_i` through a
-     * hole index none of the others can be.
+     * Every index is a variable, so the comparisons `Language` cannot make are handed to it in
+     * `apart`: the caller's `assumptions`, and three facts about a hole index two past `i + x`,
+     * through which the axioms of PA, stated over `v_0` and `v_1`, reach `v_x` and `v_i`. That
+     * index is apart from `1`, `i` and `x` by arithmetic, so the hole costs no assumption.
      */
-    lazy val belowSuccessor: Kernel.Thm = {
+    private final class OpenSteps(assumptions: Vector[Kernel.Thm]) {
       def lifted[T](result: Either[KernelError, T]): T = force(LogicError.lift(result))
       def proposition(text: String): Term = force(Parser.proposition(theory, notation, text))
       def number(text: String): Term = force(Parser.term(theory, notation, text, numbers))
@@ -4176,8 +4196,6 @@ object Deduction {
 
       val i = Term.variable("i", numbers)
       val x = Term.variable("x", numbers)
-      val n = Term.variable("n", numbers)
-      val indicesApart = proposition("~((i:num) = x)")
 
       // The hole, two past i + x, and the three comparisons that make it one.
       val hole = number("SUC (SUC ((i:num) + x))")
@@ -4208,7 +4226,7 @@ object Deduction {
       val iBelow = instance(pf(Peano.AtMostSum), "(i:num) <= i + x")
       val xBelow = rewritten(instance(pf(Peano.AtMostSum), "(x:num) <= x + i"), instance(pf(Peano.AddCommutative), "(x:num) + i = i + x"))
       val apart: Vector[Kernel.Thm] =
-        Vector(assumed(indicesApart), holeNotOne, holeAbove("i", iBelow), holeAbove("x", xBelow))
+        assumptions ++ Vector(holeNotOne, holeAbove("i", iBelow), holeAbove("x", xBelow))
 
       def provCode(held: Kernel.Thm): Term = held.conclusion match {
         case App(head, c) if head == provableConstant => c
@@ -4275,86 +4293,131 @@ object Deduction {
         else throw new RefusedHere(ProvesOther(goal, result.conclusion))
       }
 
-      val variable = v(x)
-      val bound = numeral(n)
-      val v0 = v(tag(0))
-      val v1 = v(tag(1))
-      val vi = v(i)
-      val sought = eq(variable, bound)
-      val below = not(forAll(i, not(eq(sum(variable, suc(vi)), bound)))) // v_x < numeral n
-      val disjunction = imp(not(below), sought)
-      def split(z: Term) = eq(sum(variable, suc(z)), suc(bound)) // A(z)
-      // S a = S (numeral n) ==> a = numeral n, at any term a: the axiom at v_0, then renamed.
-      val injectiveAtV0 = force(rules.specAll(successorInjective, List(v0, bound))
-        .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(bound))))
+      /** [[BelowSuccessor]], under `indicesApart`, which is among the `assumptions`. */
+      def belowSuccessor(indicesApart: Term): Kernel.Thm = {
+        val n = Term.variable("n", numbers)
 
-      // At zero: v_x + S 0 = S v_x, so the successors are equal and v_x = numeral n.
-      val zeroSum = sum(variable, zeroCode)
-      val shiftedAtZero = instantiated(tag(0), variable, force(rules.specAll(additionAtSuccessor, List(v0, zeroCode))
-        .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(zeroCode)))))
-      val emptied = force(rules.spec(variable, additionAtZero).flatMap(rules.mp(_, wf(variable))))
-      val raised = force(rules.specAll(successorCongruenceFree, List(i, zeroSum, variable))
-        .flatMap(rules.mp(_, wf(zeroSum))).flatMap(rules.mp(_, wf(variable)))
-        .flatMap(rules.mp(_, absent(i, zeroSum))).flatMap(rules.mp(_, emptied)))
-      val atZeroSum = sum(variable, suc(zeroCode))
-      val collapsed = force(rules.specAll(transitivityFree, List(i, atZeroSum, suc(zeroSum), suc(variable)))
-        .flatMap(rules.mp(_, wf(atZeroSum))).flatMap(rules.mp(_, wf(suc(zeroSum)))).flatMap(rules.mp(_, wf(suc(variable))))
-        .flatMap(rules.mp(_, absent(i, atZeroSum))).flatMap(rules.mp(_, absent(i, suc(variable))))
-        .flatMap(rules.mp(_, shiftedAtZero)).flatMap(rules.mp(_, raised)))
-      val successorsAtZero = replacedIn(i, atZeroSum, suc(variable), eq(vi, suc(bound)), collapsed)
-      val equalAtZero = chained(successorsAtZero, instantiated(tag(0), variable, injectiveAtV0))
-      val kept = logical(force(rules.specAll(weakening, List(sought, not(below)))
-        .flatMap(rules.mp(_, wf(sought))).flatMap(rules.mp(_, wf(not(below))))))
-      val atZero = chained(equalAtZero, kept) // A(0) ==> B
+        val variable = v(x)
+        val bound = numeral(n)
+        val v0 = v(tag(0))
+        val v1 = v(tag(1))
+        val vi = v(i)
+        val sought = eq(variable, bound)
+        val below = not(forAll(i, not(eq(sum(variable, suc(vi)), bound)))) // v_x < numeral n
+        val disjunction = imp(not(below), sought)
+        def split(z: Term) = eq(sum(variable, suc(z)), suc(bound)) // A(z)
+        // S a = S (numeral n) ==> a = numeral n, at any term a: the axiom at v_0, then renamed.
+        val injectiveAtV0 = force(rules.specAll(successorInjective, List(v0, bound))
+          .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(bound))))
 
-      // At S v_i: v_x + S (S v_i) = S (v_x + S v_i), so v_x + S v_i = numeral n, which is v_x < numeral n.
-      val axiomAtV0V1 = force(rules.specAll(additionAtSuccessor, List(v0, suc(v1)))
-        .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(suc(v1)))))
-      val shiftedAtSuccessor = instantiated(hole, variable, instantiated(tag(1), vi, instantiated(tag(0), v(hole), axiomAtV0V1)))
-      val inner = sum(variable, suc(vi))
-      val successorsAtSuccessor = replacedIn(i, sum(variable, suc(suc(vi))), suc(inner), eq(vi, suc(bound)), shiftedAtSuccessor)
-      val equalAtSuccessor = chained(successorsAtSuccessor, instantiated(tag(0), inner, injectiveAtV0))
-      val witnessed = eq(inner, bound)
-      val specialisedLaw = logical(force(rules.specAll(specialising, List(i, vi, not(witnessed)))
-        .flatMap(rules.mp(_, wf(not(witnessed)))).flatMap(rules.mp(_, wf(vi)))
-        .flatMap(rules.mp(_, force(language.substitutableIn(i, vi, not(witnessed), apart))))))
-      val introduced = chained(
-        force(rules.spec(witnessed, doubleNegationIntroduction).flatMap(rules.mp(_, wf(witnessed)))),
-        contraposed(rewritten(specialisedLaw, computed(i, vi, not(witnessed))))) // E ==> v_x < numeral n
-      val exFalso = chained(
-        chained(
-          force(rules.spec(below, doubleNegationIntroduction).flatMap(rules.mp(_, wf(below)))),
-          logical(force(rules.specAll(weakening, List(not(not(below)), not(sought)))
-            .flatMap(rules.mp(_, wf(not(not(below))))).flatMap(rules.mp(_, wf(not(sought))))))),
-        logical(force(rules.specAll(contraposing, List(sought, not(below)))
-          .flatMap(rules.mp(_, wf(sought))).flatMap(rules.mp(_, wf(not(below))))))) // v_x < numeral n ==> B
-      val atSuccessor = chained(chained(equalAtSuccessor, introduced), exFalso) // A(S v_i) ==> B
+        // At zero: v_x + S 0 = S v_x, so the successors are equal and v_x = numeral n.
+        val zeroSum = sum(variable, zeroCode)
+        val shiftedAtZero = instantiated(tag(0), variable, force(rules.specAll(additionAtSuccessor, List(v0, zeroCode))
+          .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(zeroCode)))))
+        val emptied = force(rules.spec(variable, additionAtZero).flatMap(rules.mp(_, wf(variable))))
+        val raised = force(rules.specAll(successorCongruenceFree, List(i, zeroSum, variable))
+          .flatMap(rules.mp(_, wf(zeroSum))).flatMap(rules.mp(_, wf(variable)))
+          .flatMap(rules.mp(_, absent(i, zeroSum))).flatMap(rules.mp(_, emptied)))
+        val atZeroSum = sum(variable, suc(zeroCode))
+        val collapsed = force(rules.specAll(transitivityFree, List(i, atZeroSum, suc(zeroSum), suc(variable)))
+          .flatMap(rules.mp(_, wf(atZeroSum))).flatMap(rules.mp(_, wf(suc(zeroSum)))).flatMap(rules.mp(_, wf(suc(variable))))
+          .flatMap(rules.mp(_, absent(i, atZeroSum))).flatMap(rules.mp(_, absent(i, suc(variable))))
+          .flatMap(rules.mp(_, shiftedAtZero)).flatMap(rules.mp(_, raised)))
+        val successorsAtZero = replacedIn(i, atZeroSum, suc(variable), eq(vi, suc(bound)), collapsed)
+        val equalAtZero = chained(successorsAtZero, instantiated(tag(0), variable, injectiveAtV0))
+        val kept = logical(force(rules.specAll(weakening, List(sought, not(below)))
+          .flatMap(rules.mp(_, wf(sought))).flatMap(rules.mp(_, wf(not(below))))))
+        val atZero = chained(equalAtZero, kept) // A(0) ==> B
 
-      // The induction, whose hypothesis the step never reads.
-      val claim = imp(split(vi), disjunction)
-      val scheme = rewritten(
-        force(rules.specAll(induction, List(i, claim)).flatMap(rules.mp(_, wf(claim)))),
-        computed(i, zeroCode, claim), computed(i, suc(vi), claim))
-      val everywhere = force(rules.mp(scheme, atZero)
-        .flatMap(rules.mp(_, generalised(i, weakened(claim, atSuccessor))))) // !v_i. A(v_i) ==> B
+        // At S v_i: v_x + S (S v_i) = S (v_x + S v_i), so v_x + S v_i = numeral n, which is v_x < numeral n.
+        val axiomAtV0V1 = force(rules.specAll(additionAtSuccessor, List(v0, suc(v1)))
+          .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(suc(v1)))))
+        val shiftedAtSuccessor = instantiated(hole, variable, instantiated(tag(1), vi, instantiated(tag(0), v(hole), axiomAtV0V1)))
+        val inner = sum(variable, suc(vi))
+        val successorsAtSuccessor = replacedIn(i, sum(variable, suc(suc(vi))), suc(inner), eq(vi, suc(bound)), shiftedAtSuccessor)
+        val equalAtSuccessor = chained(successorsAtSuccessor, instantiated(tag(0), inner, injectiveAtV0))
+        val witnessed = eq(inner, bound)
+        val specialisedLaw = logical(force(rules.specAll(specialising, List(i, vi, not(witnessed)))
+          .flatMap(rules.mp(_, wf(not(witnessed)))).flatMap(rules.mp(_, wf(vi)))
+          .flatMap(rules.mp(_, force(language.substitutableIn(i, vi, not(witnessed), apart))))))
+        val introduced = chained(
+          force(rules.spec(witnessed, doubleNegationIntroduction).flatMap(rules.mp(_, wf(witnessed)))),
+          contraposed(rewritten(specialisedLaw, computed(i, vi, not(witnessed))))) // E ==> v_x < numeral n
+        val exFalso = chained(
+          chained(
+            force(rules.spec(below, doubleNegationIntroduction).flatMap(rules.mp(_, wf(below)))),
+            logical(force(rules.specAll(weakening, List(not(not(below)), not(sought)))
+              .flatMap(rules.mp(_, wf(not(not(below))))).flatMap(rules.mp(_, wf(not(sought))))))),
+          logical(force(rules.specAll(contraposing, List(sought, not(below)))
+            .flatMap(rules.mp(_, wf(sought))).flatMap(rules.mp(_, wf(not(below))))))) // v_x < numeral n ==> B
+        val atSuccessor = chained(chained(equalAtSuccessor, introduced), exFalso) // A(S v_i) ==> B
 
-      // The existential eliminated: v_i is not free in B.
-      val denied = contraposed(specialisedAt(i, vi, claim, everywhere)) // ~B ==> ~A(v_i)
-      val notFree = force(language.freeInFormula(i, not(disjunction), apart))
-      val raisedOver = force(rules.specAll(implicationGeneralisation, List(i, not(disjunction), not(split(vi))))
-        .flatMap(rules.mp(_, wf(not(disjunction)))).flatMap(rules.mp(_, wf(not(split(vi)))))
-        .flatMap(rules.mp(_, notFree)).flatMap(rules.mp(_, denied)))
-      val eliminated = chained(contraposed(raisedOver),
-        force(rules.spec(disjunction, doubleNegationElimination).flatMap(rules.mp(_, wf(disjunction)))))
+        // The induction, whose hypothesis the step never reads.
+        val claim = imp(split(vi), disjunction)
+        val scheme = rewritten(
+          force(rules.specAll(induction, List(i, claim)).flatMap(rules.mp(_, wf(claim)))),
+          computed(i, zeroCode, claim), computed(i, suc(vi), claim))
+        val everywhere = force(rules.mp(scheme, atZero)
+          .flatMap(rules.mp(_, generalised(i, weakened(claim, atSuccessor))))) // !v_i. A(v_i) ==> B
 
-      val target = proposition(
-        "NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL (SUC n))) " +
-          "(NUM_OR (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL n)) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 x) (NUM_NUMERAL n))))))")
-      val reached = landed(target, eliminated, Vector(
-        force(language.fact(Language.LessCases)), force(language.fact(Language.ExistsCases)),
-        force(language.fact(Language.OrCases)), force(language.fact(Language.NumeralAtSuccessor))))
-      force(rules.disch(indicesApart, reached).flatMap(rules.genAll(_, List(i, x, n))))
+        // The existential eliminated: v_i is not free in B.
+        val denied = contraposed(specialisedAt(i, vi, claim, everywhere)) // ~B ==> ~A(v_i)
+        val notFree = force(language.freeInFormula(i, not(disjunction), apart))
+        val raisedOver = force(rules.specAll(implicationGeneralisation, List(i, not(disjunction), not(split(vi))))
+          .flatMap(rules.mp(_, wf(not(disjunction)))).flatMap(rules.mp(_, wf(not(split(vi)))))
+          .flatMap(rules.mp(_, notFree)).flatMap(rules.mp(_, denied)))
+        val eliminated = chained(contraposed(raisedOver),
+          force(rules.spec(disjunction, doubleNegationElimination).flatMap(rules.mp(_, wf(disjunction)))))
+
+        val target = proposition(
+          "NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL (SUC n))) " +
+            "(NUM_OR (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL n)) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 x) (NUM_NUMERAL n))))))")
+        val reached = landed(target, eliminated, Vector(
+          force(language.fact(Language.LessCases)), force(language.fact(Language.ExistsCases)),
+          force(language.fact(Language.OrCases)), force(language.fact(Language.NumeralAtSuccessor))))
+        force(rules.disch(indicesApart, reached).flatMap(rules.genAll(_, List(i, x, n))))
+      }
+
+      /** [[NotBelowZero]], with nothing assumed. */
+      def notBelowZero: Kernel.Thm = {
+
+        val variable = v(x)
+        val v0 = v(tag(0))
+        val v1 = v(tag(1))
+        val vi = v(i)
+        val inner = sum(variable, vi)
+        // v_x + S v_i = S (v_x + v_i)
+        val axiomAtV0V1 = force(rules.specAll(additionAtSuccessor, List(v0, v1))
+          .flatMap(rules.mp(_, wf(v0))).flatMap(rules.mp(_, absent(tag(1), v0))).flatMap(rules.mp(_, wf(v1))))
+        val shifted = instantiated(hole, variable, instantiated(tag(1), vi, instantiated(tag(0), v(hole), axiomAtV0V1)))
+        // v_x + S v_i = 0 ==> S (v_x + v_i) = 0, and the second is refuted.
+        val forward = replacedIn(i, sum(variable, suc(vi)), suc(inner), eq(vi, zeroCode), shifted)
+        val notZero = force(rules.spec(inner, successorNotZero).flatMap(rules.mp(_, wf(inner))))
+        val universal = generalised(i, detach(contraposed(forward), notZero)) // !v_i. ~(v_x + S v_i = 0)
+        val doubled = force(rules.spec(provCode(universal), doubleNegationIntroduction)
+          .flatMap(rules.mp(_, wf(provCode(universal)))))
+        val target = proposition("NUM_PROV (NUM_CODE 6 (NUM_LESS i (NUM_CODE 0 x) (NUM_NUMERAL 0)))")
+        val reached = landed(target, detach(doubled, universal), Vector(
+          force(language.fact(Language.LessCases)), force(language.fact(Language.ExistsCases)),
+          force(language.fact(Language.NumeralAtZero))))
+        force(rules.genAll(reached, List(i, x)))
+      }
     }
+
+    /**
+     * [[BelowSuccessor]]. The case split by induction in PA, then the existential eliminated,
+     * in the steps of `OpenSteps`, with `~(i = x)` among the comparisons supplied.
+     */
+    lazy val belowSuccessor: Kernel.Thm = {
+      val indicesApart = force(Parser.proposition(theory, notation, "~((i:num) = x)"))
+      new OpenSteps(Vector(assumed(indicesApart))).belowSuccessor(indicesApart)
+    }
+
+    /**
+     * [[NotBelowZero]], in the steps of `OpenSteps` with nothing assumed. PA's addition at a
+     * successor is taken at `v_0` and `v_1` and renamed through the hole onto `v_x` and `v_i`.
+     */
+    lazy val notBelowZero: Kernel.Thm = new OpenSteps(Vector.empty).notBelowZero
 
     def checked(name: String, theorem: Kernel.Thm): Kernel.Thm = {
       val wanted = force(

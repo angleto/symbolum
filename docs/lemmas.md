@@ -423,6 +423,7 @@ they have least appetite for working out how it is produced.
   NUM_PROV_NOT_EQ_SYMM     !n:num. !m:num. NUM_TERM n ==> NUM_TERM m ==> NUM_CLOSED n ==> NUM_CLOSED m ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m))) ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR m n)))
   NUM_PROV_NOT_IMP         !n:num. !m:num. NUM_FORM n ==> NUM_FORM m ==> NUM_PROV n ==> NUM_PROV (NUM_CODE 6 m) ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR n m)))
   NUM_PROV_NOT_LESS_NUMERAL !n:num. !m:num. !k:num. k <= m ==> NUM_PROV (NUM_CODE 6 (NUM_LESS n (NUM_NUMERAL m) (NUM_NUMERAL k)))
+  NUM_PROV_NOT_LESS_ZERO   !n:num. !m:num. NUM_PROV (NUM_CODE 6 (NUM_LESS n (NUM_CODE 0 m) (NUM_NUMERAL 0)))
   NUM_PROV_NOT_NOT_ELIM    !n:num. NUM_FORM n ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 (NUM_CODE 6 n)) n))
   NUM_PROV_NOT_NOT_INTRO   !n:num. NUM_FORM n ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n (NUM_CODE 6 (NUM_CODE 6 n))))
   NUM_PROV_NUMERAL_ADD     !n:num. !m:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL n) (NUM_NUMERAL m))) (NUM_NUMERAL (n + m))))

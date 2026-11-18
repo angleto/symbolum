@@ -754,10 +754,11 @@ hypothesis, which makes it a case split, followed by the existential eliminated.
 fact here whose indices are all variables, and `Language` meets that by taking the comparisons it
 cannot make, `x` against `i` and both against a hole two past their sum, as facts the caller
 supplies and carries as hypotheses; the comparisons with the hole are arithmetic, so the statement
-assumes `~(i = x)` and nothing else.
+assumes `~(i = x)` and nothing else. **Beside it, the same day**, `NUM_PROV_NOT_LESS_ZERO` is
+`~(v_x < 0)` inside PA at any two indices, `i = x` included, since no step of it compares them.
 
-Not written above that: the bounded quantifiers themselves, which want `~(v_x < 0)` beside the split
-and the unfolding into finite conjunctions and disjunctions; any representation other than
+Not written above that: the bounded quantifiers themselves, which want the unfolding into finite
+conjunctions and disjunctions; any representation other than
 `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in

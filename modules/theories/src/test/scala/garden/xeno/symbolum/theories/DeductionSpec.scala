@@ -354,6 +354,32 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * Nothing below zero, for a variable, and at indices that are NOT apart as well. The statement
+   * carries no `~(i = x)`, and the second instance is what makes that a claim rather than an
+   * omission: at `i = x = 3` the existential binds the variable it is about, `?v_3. v_3 + S v_3 = 0`,
+   * and the theorem still has nothing left to discharge. Opened as the one above is, so the
+   * assertion is about the body PA refutes.
+   */
+  it should "refute a strict order below zero, for a variable, at any two indices" in {
+    val theorem = force(deduction.fact(Deduction.NotBelowZero))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+
+    def opened(i: String, x: String) = force(
+      Rewrite.Rule.all(logic, Vector(Language.LessCases, Language.ExistsCases)
+        .map(name => force(chain.language.fact(name))))
+        .flatMap(Rewrite.inTheorem(_, force(rules.specAll(theorem, List(term(i), term(x)))))))
+    def refuted(i: String, x: String) = proposition(
+      s"NUM_PROV (NUM_CODE 6 (NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR $i (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR " +
+        s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 $x) (NUM_CODE 2 (NUM_CODE 0 $i)))) (NUM_NUMERAL 0))))))))")
+    for ((i, x) <- List(("5", "2"), ("3", "3"))) {
+      val instance = opened(i, x)
+      instance.hypotheses shouldBe empty
+      instance.conclusion shouldBe refuted(i, x)
+    }
+  }
+
+  /**
    * The object theory's multiplication on numerals, which stands on the addition above it.
    *
    * The same two assertions for the same two reasons, and one more that is about the ORDER rather
