@@ -149,3 +149,20 @@ discharged, and with the garbled experiment shown to be the signal alone. The tw
 states and signals `VALUE` reads and not as functions, since at a signal of eight or more no pair
 maps there and the garbled sum is zero, so the bridge is `SUM_CONGRUENCE_BELOW` and
 `MAXIMUM_CONGRUENCE_BELOW` rather than an equation between experiments.
+
+Added on 2026-11-18, at Angelo's request from the same essay, which asks when more information
+hurts. Four facts, no constant and no axiom, so the decision above is unchanged and this is a record
+of scope rather than a record of its own. `BLACKWELL_FILTER` is `BLACKWELL_GARBLING` at the
+garbling `\s t. COND (f s = t) 1 0`, with `CHANNEL` discharged from `f` mapping `[0, m)` into
+`[0, r)`: a deterministic reader of the signal adds nothing to it. `LECAM_VALUE` is the exact value
+of the two-state, two-action problem (exclude, paying nothing; include, paying `g` or `-l`):
+`phi * g - Sum (\s. min (phi * g * P s) ((1 - phi) * l * Q s)) m`, with `Sum P m = 1` the only
+hypothesis, because at each signal the maximum over the two actions is `max 0 (x - y)` and that is
+`x - min x y` for every pair of reals. `LECAM_BOUND` bounds the overlap of two scaled likelihoods
+below by the lesser scale times the overlap of the two, and `LECAM_OVERLAP` is the overlap of two
+distributions as one less half their L1 distance. Together: the regret of the best reader of the
+signal against one who knows the state is at least `min (phi g) ((1 - phi) l) * (1 - TV(P, Q))`.
+
+The link takes `Successor` since then, because `VALUE 2 m 1` sums over a bound written as a numeral
+and `SUM_SUC` and `MAXIMUM_SUC` are stated at `SUC n`; the essay's instances in the test scope
+already took it from the chain for the same reason.

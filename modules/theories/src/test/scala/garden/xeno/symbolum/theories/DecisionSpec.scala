@@ -240,6 +240,54 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * The filter and Le Cam's two-point problem, each with its hypotheses met: the filter that sends
+   * every signal to `0`, which is below `1`, and the two-state problem with both states' signals
+   * uniform on two points, at `phi = 1/3`, `g = 5`, `l = 7`. Equal distributions are the case where
+   * the signal says nothing, so the overlap is one.
+   */
+  "The filter and Le Cam's two-point problem" should "have every hypothesis met" in {
+    import steps.*
+    import steps.kit.*
+    val P = Uniform
+    val total = force(distParts("2:num", P, uniform))(1)
+    total.conclusion shouldBe proposition(s"Sum $P 2 = 1")
+
+    val belowOne = force(for {
+      each <- prop("!s:num. s < 2 ==> (0:num) < 1")
+      out <- steps.every(each) { (_, _, _) =>
+        for {
+          lt <- at(fact("NUM_ZERO_LT_SUC"), "0 < SUC 0")
+          one <- fact("NUM_ONE_SUC")
+          back <- Conv.sym(one)
+          moved <- rw(back, lt)
+        } yield moved
+      }
+    } yield out)
+    val filtered = s"VALUE 2 1 (top:num) $P (\\y:num. \\t:num. Sum (\\s:num. $UniformRows y s * COND ((\\s:num. (0:num)) s = t) (1:real) 0) 2) " +
+      s"(u:num->num->real) <= VALUE 2 2 top $P $UniformRows u"
+    discharged(Decision.BlackwellFilter,
+      s"(!s:num. s < 2 ==> (\\s:num. (0:num)) s < 1) ==> $filtered", filtered, belowOne)
+
+    val prior = "(\\t:num. COND (t = 0) ((1:real) / 3) (1 - 1 / 3))"
+    val rows = s"(\\t:num. \\s:num. COND (t = 0) ($P s) ($P s))"
+    val pay = "(\\a:num. \\t:num. COND (a = 0) (0:real) (COND (t = 0) 5 (-7)))"
+    val value = s"VALUE 2 2 1 $prior $rows $pay = (1:real) / 3 * 5 - Sum (\\s:num. min (1 / 3 * 5 * $P s) ((1 - 1 / 3) * 7 * $P s)) 2"
+    discharged(Decision.LeCamValue, s"Sum $P 2 = 1 ==> $value", value, total)
+
+    val signs = force(prop(s"!s:num. s < 2 ==> 0 <= $P s /\\ 0 <= $P s")
+      .flatMap(steps.every(_)((_, _, g) => linarith.prove(g))))
+    val third = force(lemma("(0:real) <= 1 / 3"))
+    val seventh = force(lemma("(0:real) <= 1 / 7"))
+    val bound = s"min (1 / 3) (1 / 7) * Sum (\\s:num. min ($P s) ($P s)) 2 <= Sum (\\s:num. min ((1:real) / 3 * $P s) (1 / 7 * $P s)) 2"
+    discharged(Decision.LeCamBound,
+      s"(!s:num. s < 2 ==> 0 <= $P s /\\ 0 <= $P s) ==> (0:real) <= 1 / 3 ==> (0:real) <= 1 / 7 ==> $bound",
+      bound, signs, third, seventh)
+
+    val overlap = s"Sum (\\s:num. min ($P s) ($P s)) 2 = 1 - Sum (\\s:num. abs ($P s - $P s)) 2 / 2"
+    discharged(Decision.LeCamOverlap, s"Sum $P 2 = 1 ==> Sum $P 2 = 1 ==> $overlap", overlap, total, total)
+  }
+
+  /**
    * The essay's case E5, `EssayCase`: `7/20` with the signal alone, `9/16` with the frame on
    * average, `1/8` for the same reader on new tasks, and `7/20` again at `phi = 1/10`, where the rule
    * answers `s` at every signal. Recomputed outside the kernel on 2026-10-22 at `phi = 1/2` and on

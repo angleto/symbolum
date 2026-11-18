@@ -41,6 +41,31 @@ import garden.xeno.symbolum.logic.*
  * because `g` is non-negative, and that is `sum_s max_a X a s` because each row of `g` sums to one.
  * Nothing in it reads the prior or `k`, so neither is asked to be a distribution.
  *
+ * A deterministic filter of the signal is the special case `BLACKWELL_FILTER`: the garbling whose
+ * row `s` is the indicator of `f s`, a channel exactly when `f` maps `[0, m)` into `[0, r)`, which is
+ * the one hypothesis it states. Whatever reads only the signal is worth no more than the signal.
+ *
+ * == Le Cam's two-point problem ==
+ *
+ * Two states, `0` with prior `phi` and `1` with `1 - phi`, signals distributed `P` and `Q`, and two
+ * actions, `0` paying nothing and `1` paying `g` in state `0` and `-l` in state `1`:
+ *
+ * {{{
+ *   LECAM_VALUE    Sum P m = 1 ==>
+ *                  VALUE 2 m 1 prior k u = phi * g - Sum (\s. min (phi * g * P s) ((1 - phi) * l * Q s)) m
+ *   LECAM_BOUND    P, Q >= 0 below m, 0 <= a, 0 <= b ==>
+ *                  min a b * Sum (\s. min (P s) (Q s)) m <= Sum (\s. min (a * P s) (b * Q s)) m
+ *   LECAM_OVERLAP  Sum P m = 1 ==> Sum Q m = 1 ==>
+ *                  Sum (\s. min (P s) (Q s)) m = 1 - Sum (\s. abs (P s - Q s)) m / 2
+ * }}}
+ *
+ * `phi * g` is the value of a reader who knows the state, so the first says the regret of the best
+ * reader of the signal is the overlap `Sum min`, and the other two bound it below by
+ * `min (phi g) ((1 - phi) l)` times one less the total variation between `P` and `Q`. The first
+ * assumes no sign: at each signal the maximum over the two actions is `max 0 (x - y)`, which is
+ * `x - min x y` for all reals. A numeral bound is opened through `Successor`, which is why this link
+ * is handed it.
+ *
  * == What it spends ==
  *
  * Choice, eta and infinity, as every fact about the constructed reals does. It declares six
@@ -54,6 +79,8 @@ final class Decision private (
   published: Map[String, Kernel.Thm],
   /** The steps the derivations here are written in, over this link's theory: what an instance reuses. */
   private[theories] val kit: ComplexKit,
+  /** Opens a numeral of `num` into successors: a sum or a maximum over a written bound recurses through it. */
+  private[theories] val successor: Successor,
   held: Map[String, Kernel.Thm]
 ) extends Signature {
 
@@ -64,7 +91,7 @@ final class Decision private (
   def fact(name: String): Either[LogicError, Kernel.Thm] = facts.get(name).toRight(MissingDefinition(name))
 
   /** The steps of [[Decision.Proofs]] over this link's facts, for an instance written in them. */
-  private[theories] def steps: Decision.Proofs = new Decision.Proofs(kit, held)
+  private[theories] def steps: Decision.Proofs = new Decision.Proofs(kit, successor, held)
 
   /** The equation defining `name`, as proved when the constant was introduced. */
   def definition(name: String): Either[LogicError, Kernel.Thm] =
@@ -144,6 +171,18 @@ object Decision {
   /** The value agrees with the posterior form where every signal has positive probability. */
   val ValueByPosterior: String = "VALUE_POSTERIOR"
 
+  /** A deterministic filter of the signal is a garbling: what reads only the signal cannot add to it. */
+  val BlackwellFilter: String = "BLACKWELL_FILTER"
+
+  /** The value of the two-state, two-action problem of including or excluding, exactly: Le Cam's form. */
+  val LeCamValue: String = "LECAM_VALUE"
+
+  /** The overlap of two scaled likelihoods is at least the lesser scale times the overlap of the two. */
+  val LeCamBound: String = "LECAM_BOUND"
+
+  /** The overlap of two distributions is one less half their L1 distance: one less the total variation. */
+  val LeCamOverlap: String = "LECAM_OVERLAP"
+
   /** `INDEPENDENT n m j`: the joint `j` on `[0, m * n)`, read at `m * a + b`, is the product of its marginals. */
   val IndependentName: String = "INDEPENDENT"
 
@@ -221,6 +260,23 @@ object Decision {
       ("!n:num. !m:num. !r:num. !top:num. !prior:num->real. !k:num->num->real. !g:num->num->real. " +
         "!u:num->num->real. CHANNEL m r g ==> " +
         "VALUE n r top prior (\\y:num. \\t:num. Sum (\\s:num. k y s * g s t) m) u <= VALUE n m top prior k u"),
+    BlackwellFilter ->
+      ("!n:num. !m:num. !r:num. !top:num. !prior:num->real. !k:num->num->real. !u:num->num->real. !f:num->num. " +
+        "(!s:num. s < m ==> f s < r) ==> " +
+        "VALUE n r top prior (\\y:num. \\t:num. Sum (\\s:num. k y s * COND (f s = t) (1:real) 0) m) u <= " +
+        "VALUE n m top prior k u"),
+    LeCamValue ->
+      ("!m:num. !P:num->real. !Q:num->real. !phi:real. !g:real. !l:real. Sum P m = 1 ==> " +
+        "VALUE 2 m 1 (\\t:num. COND (t = 0) phi (1 - phi)) (\\t:num. \\s:num. COND (t = 0) (P s) (Q s)) " +
+        "(\\a:num. \\t:num. COND (a = 0) (0:real) (COND (t = 0) g (-l))) = " +
+        "phi * g - Sum (\\s:num. min (phi * g * P s) ((1 - phi) * l * Q s)) m"),
+    LeCamBound ->
+      ("!m:num. !P:num->real. !Q:num->real. !a:real. !b:real. (!s:num. s < m ==> 0 <= P s /\\ 0 <= Q s) ==> " +
+        "0 <= a ==> 0 <= b ==> " +
+        "min a b * Sum (\\s:num. min (P s) (Q s)) m <= Sum (\\s:num. min (a * P s) (b * Q s)) m"),
+    LeCamOverlap ->
+      ("!m:num. !P:num->real. !Q:num->real. Sum P m = 1 ==> Sum Q m = 1 ==> " +
+        "Sum (\\s:num. min (P s) (Q s)) m = 1 - Sum (\\s:num. abs (P s - Q s)) m / 2"),
     DistributionMarginal ->
       ("!n:num. !m:num. !p:num->real. !k:num->num->real. DISTRIBUTION n p ==> CHANNEL n m k ==> " +
         "DISTRIBUTION m (\\s:num. Sum (\\y:num. p y * k y s) n)"),
@@ -264,6 +320,10 @@ object Decision {
     ArgmaxUnique -> (_.argmaxUnique),
     GarbledTerm -> (_.garbledTerm),
     Blackwell -> (_.blackwell),
+    BlackwellFilter -> (_.filter),
+    LeCamValue -> (_.leCamValue),
+    LeCamBound -> (_.leCamBound),
+    LeCamOverlap -> (_.leCamOverlap),
     ValueByPosterior -> (_.byPosterior),
     DistributionMarginal -> (_.marginal),
     ChannelCompose -> (_.compose),
@@ -287,6 +347,7 @@ object Decision {
     naturals: Natural,
     ring: Ring,
     magnitude: Magnitude,
+    successor: Successor,
     lookup: String => R[Kernel.Thm],
     reals: RealTheory,
     within: Kernel.Thm,
@@ -335,7 +396,7 @@ object Decision {
         bodies.map { case (name, equation) => (s"$name/definition", equation) }
       kit = ComplexKit(logic, classical, theory, notation, ring, linarith, driver, induction,
         name => held.get(name).toRight(MissingDefinition(name)).orElse(lookup(name)), within, reals, definitions)
-      facts <- ComplexKit.derive(Order, Statements, held)(known => new Proofs(kit, known))
+      facts <- ComplexKit.derive(Order, Statements, held)(known => new Proofs(kit, successor, known))
 
       _ <- Statements.foldLeft[R[Unit]](Right(())) { case (acc, (name, text)) =>
         for {
@@ -349,7 +410,7 @@ object Decision {
       }
     } yield new Decision(theory, notation, logic, definitions, facts,
       kit.copy(lookup = name => facts.get(name).orElse(held.get(name)).toRight(MissingDefinition(name)).orElse(lookup(name))),
-      held ++ facts)
+      successor, held ++ facts)
   }
 
   /**
@@ -358,7 +419,7 @@ object Decision {
    * a copy of them.
    */
 
-  private[theories] final class Proofs(val kit: ComplexKit, known: Map[String, Kernel.Thm]) {
+  private[theories] final class Proofs(val kit: ComplexKit, successor: Successor, known: Map[String, Kernel.Thm]) {
     import kit.*
 
     val Numbers: Type = TyApp(Natural.TypeName, Nil)
@@ -1147,6 +1208,283 @@ object Decision {
         out <- closed(discharged, ValueByPosterior)
       } yield out
     }
+
+    /* ------------------------------------------------- a filter, and Le Cam's two-point problem */
+
+    /**
+     * `goal` from `facts` by `Linarith`, called on them directly: [[ComplexKit.linT]] abstracts every
+     * quotient into an atom, which turns `x / 2` into a number nobody knows the relation of to `x`.
+     */
+    def linExact(facts: Seq[Kernel.Thm], goal: Term): R[Kernel.Thm] =
+      for {
+        implication <- facts.reverse.foldLeft[R[Term]](Right(goal))((acc, f) => acc.flatMap(logic.mkImp(f.conclusion, _)))
+        general <- linarith.prove(implication)
+        out <- facts.foldLeft[R[Kernel.Thm]](Right(general))((acc, f) => acc.flatMap(rules.mp(_, f)))
+      } yield out
+
+    /** `|- (a = b) = (b = a)` at two numbers: either orientation, one proposition. */
+    def flipped(a: String, b: String): R[Kernel.Thm] =
+      for {
+        ab <- prop(s"$a = $b")
+        ba <- prop(s"$b = $a")
+        one <- LogicError.lift(Kernel.assume(ab)).flatMap(Conv.sym)
+        two <- LogicError.lift(Kernel.assume(ba)).flatMap(Conv.sym)
+      } yield Kernel.deductAntisym(two, one)
+
+    /** `0 <= min x y` from `0 <= x` and `0 <= y`: it is one of the two. */
+    def nonnegMin(x: String, y: String, hx: Kernel.Thm, hy: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        sides <- at(fact("MIN_CASES"), s"min ($x) ($y) = $x \\/ min ($x) ($y) = $y")
+        goal <- prop(s"(0:real) <= min ($x) ($y)")
+        out <- byCases(sides)(e => linT(Seq(e, hx), goal), e => linT(Seq(e, hy), goal))
+      } yield out
+
+    /**
+     * [[BlackwellFilter]]: the row of signal `s` is the indicator of `f s`, which is a distribution
+     * on `[0, r)` because `f s < r`, so the filter is a channel and [[Blackwell]] applies to it.
+     */
+    def filter: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(BlackwellFilter))
+        out <- every(goal) { (vs, hs, _) =>
+          val N = v(vs(0)); val M = v(vs(1)); val Rn = v(vs(2)); val Top = v(vs(3))
+          val Pr = s"(${vs(4).name}:num->real)"; val Kf = s"(${vs(5).name}:num->num->real)"
+          val Uf = s"(${vs(6).name}:num->num->real)"; val Ff = s"(${vs(7).name}:num->num)"
+          val garbling = s"\\s:num. \\t:num. COND ($Ff s = t) (1:real) 0"
+          val tv = fresh("t", Numbers)
+          for {
+            rowsGoal <- prop(s"!y:num. y < $M ==> DISTRIBUTION $Rn (\\t:num. COND ($Ff y = t) (1:real) 0)")
+            rows <- every(rowsGoal) { (ys, yhs, _) =>
+              val FY = s"$Ff ${v(ys(0))}"
+              for {
+                below <- at(hs(0), s"${v(ys(0))} < $M ==> $FY < $Rn").flatMap(mp(_, yhs(0)))
+                nonnegGoal <- prop(s"!i:num. i < $Rn ==> (0:real) <= COND ($FY = i) 1 0")
+                nonneg <- every(nonnegGoal) { (is, _, g) =>
+                  val I = v(is(0))
+                  cases(s"$FY = $I")(
+                    on => at(fact("COND_TRUE"), s"$FY = $I ==> COND ($FY = $I) (1:real) 0 = 1").flatMap(mp(_, on))
+                      .flatMap(e => linAfter(Seq(e), Seq.empty, g)),
+                    off => at(fact("COND_FALSE"), s"~($FY = $I) ==> COND ($FY = $I) (1:real) 0 = 0").flatMap(mp(_, off))
+                      .flatMap(e => linAfter(Seq(e), Seq.empty, g))
+                  )
+                }
+                // the row as SUM_COND_COUNT reads it has the equation the other way round
+                pointwise <- cases(s"(t:num) = $FY")(
+                  on =>
+                    for {
+                      a <- at(fact("COND_TRUE"), s"(t:num) = $FY ==> COND (t = $FY) (1:real) 0 = 1").flatMap(mp(_, on))
+                      back <- Conv.sym(on)
+                      b <- at(fact("COND_TRUE"), s"$FY = (t:num) ==> COND ($FY = t) (1:real) 0 = 1").flatMap(mp(_, back))
+                      out <- lin(Seq(a, b), s"COND ((t:num) = $FY) (1:real) 0 = COND ($FY = t) 1 0")
+                    } yield out,
+                  off =>
+                    for {
+                      a <- at(fact("COND_FALSE"), s"~((t:num) = $FY) ==> COND (t = $FY) (1:real) 0 = 0").flatMap(mp(_, off))
+                      turned <- flipped("(t:num)", FY)
+                      apart <- rw(turned, off)
+                      b <- at(fact("COND_FALSE"), s"~($FY = (t:num)) ==> COND ($FY = t) (1:real) 0 = 0").flatMap(mp(_, apart))
+                      out <- lin(Seq(a, b), s"COND ((t:num) = $FY) (1:real) 0 = COND ($FY = t) 1 0")
+                    } yield out
+                )
+                same <- cong("Sum", tv, pointwise, Rn)
+                count <- at(k(SumCondCount),
+                  s"$FY < $Rn ==> Sum (\\t:num. COND (t = $FY) (1:real) 0) $Rn = 1 + (real_of_num $Rn - 1) * 0")
+                  .flatMap(mp(_, below))
+                total <- lin(Seq(same, count), s"Sum (\\t:num. COND ($FY = t) (1:real) 0) $Rn = 1")
+                out <- makeDist(Rn, s"\\t:num. COND ($FY = t) (1:real) 0", nonneg, total)
+              } yield out
+            }
+            opened <- unfold(ChannelName, M, Rn, garbling)
+            back <- Conv.sym(opened)
+            channel <- LogicError.lift(Kernel.eqMp(back, rows))
+            out <- at(k(Blackwell),
+              s"CHANNEL $M $Rn ($garbling) ==> " +
+                s"VALUE $N $Rn $Top $Pr (\\y:num. \\t:num. Sum (\\s:num. $Kf y s * COND ($Ff s = t) (1:real) 0) $M) $Uf <= " +
+                s"VALUE $N $M $Top $Pr $Kf $Uf").flatMap(mp(_, channel))
+          } yield out
+        }
+      } yield out
+
+    /**
+     * [[LeCamValue]]. At each signal the inner sum is `0` for excluding and `x - y` for including,
+     * with `x = phi g P s` and `y = (1 - phi) l Q s`, so the maximum over the two actions is
+     * `max 0 (x - y)`, which is `x - min x y` on either side of `y <= x`: no sign is assumed. Summed,
+     * `x` gives `phi g` because `P` sums to one.
+     */
+    def leCamValue: R[Kernel.Thm] = {
+      val sv = fresh("s", Numbers)
+      val Ph = "(phi:real)"; val Gn = "(g:real)"; val Ln = "(l:real)"
+      val Pf = "(P:num->real)"; val Qf = "(Q:num->real)"; val Mn = "(m:num)"
+      val Prior = s"(\\t:num. COND (t = 0) $Ph (1 - $Ph))"
+      val Rows = s"(\\t:num. \\s:num. COND (t = 0) ($Pf s) ($Qf s))"
+      val Pay = s"(\\a:num. \\t:num. COND (a = 0) (0:real) (COND (t = 0) $Gn (-$Ln)))"
+      def B(a: String, y: String): String =
+        s"COND ($y = (0:num)) $Ph (1 - $Ph) * COND ($y = (0:num)) ($Pf (s:num)) ($Qf s) * " +
+          s"COND ($a = (0:num)) (0:real) (COND ($y = (0:num)) $Gn (-$Ln))"
+      def S(a: String): String = s"Sum (\\y:num. ${B(a, "y")}) 2"
+      val F = s"(\\a:num. ${S("a")})"
+      val X = s"$Ph * $Gn * $Pf (s:num)"
+      val Y = s"(1 - $Ph) * $Ln * $Qf (s:num)"
+      val Exclude = "(0:num)"; val Include = "(SUC 0)"
+      for {
+        zero <- nm("0")
+        settledTrue <- at(fact("COND_TRUE"), "(0:num) = 0 ==> COND ((0:num) = 0) (x:real) (z:real) = x")
+          .flatMap(mp(_, Kernel.refl(zero)))
+        sucNotZero <- at(fact("NUM_SUC_NOT_ZERO"), "~(SUC 0 = 0)")
+        settledFalse <- at(fact("COND_FALSE"), "~(SUC 0 = 0) ==> COND (SUC 0 = 0) (x:real) (z:real) = z")
+          .flatMap(mp(_, sucNotZero))
+        conds <- Seq(settledTrue, settledFalse).foldLeft[R[Vector[Kernel.Thm]]](Right(Vector.empty)) { (acc, c) =>
+          acc.flatMap(done => rules.genAll(c, Term.freeVariables(c.conclusion).toList).map(done :+ _))
+        }
+        condRules <- Rewrite.Rule.all(logic, conds)
+        two <- nm("2").flatMap(successor.spell)
+        one <- fact("NUM_ONE_SUC")
+
+        // the inner sum at action `a`: two terms, each with its conditions settled
+        sumAt = (a: String, value: String) =>
+          for {
+            sumG <- prop0(s"Sum (\\y:num. ${B(a, "y")})")
+            spelled <- Conv.apTerm(sumG, two)
+            last <- at(fact("SUM_SUC"),
+              s"Sum (\\y:num. ${B(a, "y")}) (SUC (SUC 0)) = Sum (\\y:num. ${B(a, "y")}) (SUC 0) + ${B(a, Include)}")
+            first <- at(fact("SUM_SUC"),
+              s"Sum (\\y:num. ${B(a, "y")}) (SUC 0) = Sum (\\y:num. ${B(a, "y")}) 0 + ${B(a, Exclude)}")
+            empty <- at(fact("SUM_ZERO"), s"Sum (\\y:num. ${B(a, "y")}) 0 = 0")
+            chain <- trans(spelled, last).flatMap(rw(first, _)).flatMap(rw(empty, _))
+            rhs <- Term.destEq(chain.conclusion).map(_._2).toRight(NotOfForm("an equation", chain.conclusion))
+            settled <- Rewrite.rewrite(condRules, rhs)
+            whole <- trans(chain, settled)
+            out <- lin(Seq(whole), s"${S(a)} = $value")
+          } yield out
+
+        // the maximum over the two actions is the larger of the two sums
+        maxF <- prop0(s"Maximum $F")
+        lifted <- Conv.apTerm(maxF, one)
+        step <- at(k(MaximumAtSuccessor), s"Maximum $F (SUC 0) = max (Maximum $F 0) (${S(Include)})")
+        base <- at(k(MaximumAtZero), s"Maximum $F 0 = ${S(Exclude)}")
+        top <- trans(lifted, step).flatMap(rw(base, _))
+        excluded <- sumAt(Exclude, "(0:real)")
+        included <- sumAt(Include, s"$X - $Y")
+        halves <- at(fact("MIN_PLUS_MAX"), s"min ($X) ($Y) + max ($X) ($Y) = $X + $Y")
+        perSignal = s"Maximum $F 1 + min ($X) ($Y) = $X"
+        pointwise <- cases(s"$Y <= $X")(
+          le =>
+            for {
+              up <- lin(Seq(excluded, included, le), s"${S(Exclude)} <= ${S(Include)}")
+              larger <- maxRight(S(Exclude), S(Include), up)
+              mx <- maxLeft(X, Y, le)
+              out <- lin(Seq(top, larger, included, mx, halves), perSignal)
+            } yield out,
+          notLe =>
+            for {
+              lt <- at(fact("LT_OF_NOT_LE"), s"~($Y <= $X) ==> $X < $Y").flatMap(mp(_, notLe))
+              down <- lin(Seq(excluded, included, lt), s"${S(Include)} <= ${S(Exclude)}")
+              larger <- maxLeft(S(Exclude), S(Include), down)
+              le <- lin(Seq(lt), s"$X <= $Y")
+              mx <- maxRight(X, Y, le)
+              out <- lin(Seq(top, larger, excluded, mx, halves), perSignal)
+            } yield out
+        )
+
+        // summed over the signals
+        summed <- cong("Sum", sv, pointwise, Mn)
+        parts <- at(fact("SUM_ADD"),
+          s"Sum (\\s:num. Maximum $F 1 + min ($X) ($Y)) $Mn = Sum (\\s:num. Maximum $F 1) $Mn + Sum (\\s:num. min ($X) ($Y)) $Mn")
+        scaled <- at(fact("SUM_SCALE"), s"Sum (\\s:num. $X) $Mn = ($Ph * $Gn) * Sum $Pf $Mn")
+        total <- assume(s"Sum $Pf $Mn = 1")
+        scaledOne <- rw(total, scaled)
+        value <- unfold(ValueName, "2:num", "m:num", "1:num", Prior, Rows, Pay)
+        out <- linAfterText(Seq(value), Seq(summed, parts, scaledOne),
+          s"VALUE 2 $Mn 1 $Prior $Rows $Pay = $Ph * $Gn - Sum (\\s:num. min ($X) ($Y)) $Mn")
+        discharged <- disch(s"Sum $Pf $Mn = 1", out)
+        result <- closed(discharged, LeCamValue)
+      } yield result
+    }
+
+    /**
+     * [[LeCamBound]]: at each signal `min a b * min p q` is below both `a p` and `b q`, a product
+     * of two pairs of ordered non-negatives, and so below whichever of them is the minimum.
+     */
+    def leCamBound: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(LeCamBound))
+        out <- every(goal) { (vs, hs, conclusion) =>
+          val M = v(vs(0)); val Pf = s"(${vs(1).name}:num->real)"; val Qf = s"(${vs(2).name}:num->real)"
+          val A = s"(${vs(3).name}:real)"; val B = s"(${vs(4).name}:real)"
+          val C = s"min $A $B"
+          for {
+            each <- prop(s"!s:num. s < $M ==> $C * min ($Pf s) ($Qf s) <= min ($A * $Pf s) ($B * $Qf s)")
+            pointwise <- every(each) { (ss, shs, g) =>
+              val S = v(ss(0))
+              val Low = s"min ($Pf $S) ($Qf $S)"
+              for {
+                signs <- at(hs(0), s"$S < $M ==> 0 <= $Pf $S /\\ 0 <= $Qf $S").flatMap(mp(_, shs(0))).flatMap(split)
+                cA <- at(fact("MIN_BELOW_LEFT"), s"$C <= $A")
+                cB <- at(fact("MIN_BELOW_RIGHT"), s"$C <= $B")
+                lP <- at(fact("MIN_BELOW_LEFT"), s"$Low <= $Pf $S")
+                lQ <- at(fact("MIN_BELOW_RIGHT"), s"$Low <= $Qf $S")
+                lSign <- nonnegMin(s"$Pf $S", s"$Qf $S", signs(0), signs(1))
+                toP <- lin(Seq(cA, lSign, lP, hs(1)), s"$C * $Low <= $A * $Pf $S")
+                toQ <- lin(Seq(cB, lSign, lQ, hs(2)), s"$C * $Low <= $B * $Qf $S")
+                sides <- at(fact("MIN_CASES"),
+                  s"min ($A * $Pf $S) ($B * $Qf $S) = $A * $Pf $S \\/ min ($A * $Pf $S) ($B * $Qf $S) = $B * $Qf $S")
+                out <- byCases(sides)(e => linT(Seq(e, toP), g), e => linT(Seq(e, toQ), g))
+              } yield out
+            }
+            mono <- at(fact("SUM_MONOTONE_BELOW"),
+              s"(!s:num. s < $M ==> $C * min ($Pf s) ($Qf s) <= min ($A * $Pf s) ($B * $Qf s)) ==> " +
+                s"Sum (\\s:num. $C * min ($Pf s) ($Qf s)) $M <= Sum (\\s:num. min ($A * $Pf s) ($B * $Qf s)) $M")
+              .flatMap(mp(_, pointwise))
+            scaled <- at(fact("SUM_SCALE"),
+              s"Sum (\\s:num. $C * min ($Pf s) ($Qf s)) $M = $C * Sum (\\s:num. min ($Pf s) ($Qf s)) $M")
+            out <- linT(Seq(mono, scaled), conclusion)
+          } yield out
+        }
+      } yield out
+
+    /**
+     * [[LeCamOverlap]]: `|p - q| + 2 min p q = p + q` at each signal, on either side of `q <= p`,
+     * and summed the right side is two.
+     */
+    def leCamOverlap: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(LeCamOverlap))
+        out <- every(goal) { (vs, hs, conclusion) =>
+          val M = v(vs(0)); val Pf = s"(${vs(1).name}:num->real)"; val Qf = s"(${vs(2).name}:num->real)"
+          val sv = fresh("s", Numbers)
+          val Ps = s"$Pf (s:num)"; val Qs = s"$Qf (s:num)"
+          val perSignal = s"abs ($Ps - $Qs) + (2:real) * min ($Ps) ($Qs) = $Ps + $Qs"
+          for {
+            halves <- at(fact("MIN_PLUS_MAX"), s"min ($Ps) ($Qs) + max ($Ps) ($Qs) = $Ps + $Qs")
+            pointwise <- cases(s"$Qs <= $Ps")(
+              le =>
+                for {
+                  d <- lin(Seq(le), s"(0:real) <= $Ps - $Qs")
+                  a <- at(fact("ABS_OF_NONNEG"), s"(0:real) <= $Ps - $Qs ==> abs ($Ps - $Qs) = $Ps - $Qs").flatMap(mp(_, d))
+                  mx <- maxLeft(Ps, Qs, le)
+                  out <- lin(Seq(a, mx, halves), perSignal)
+                } yield out,
+              notLe =>
+                for {
+                  lt <- at(fact("LT_OF_NOT_LE"), s"~($Qs <= $Ps) ==> $Ps < $Qs").flatMap(mp(_, notLe))
+                  d <- lin(Seq(lt), s"$Ps - $Qs <= (0:real)")
+                  a <- at(fact("ABS_OF_NONPOS"), s"$Ps - $Qs <= (0:real) ==> abs ($Ps - $Qs) = -($Ps - $Qs)").flatMap(mp(_, d))
+                  le <- lin(Seq(lt), s"$Ps <= $Qs")
+                  mx <- maxRight(Ps, Qs, le)
+                  out <- lin(Seq(a, mx, halves), perSignal)
+                } yield out
+            )
+            summed <- cong("Sum", sv, pointwise, M)
+            left <- at(fact("SUM_ADD"),
+              s"Sum (\\s:num. abs ($Pf s - $Qf s) + (2:real) * min ($Pf s) ($Qf s)) $M = " +
+                s"Sum (\\s:num. abs ($Pf s - $Qf s)) $M + Sum (\\s:num. (2:real) * min ($Pf s) ($Qf s)) $M")
+            twice <- at(fact("SUM_SCALE"),
+              s"Sum (\\s:num. (2:real) * min ($Pf s) ($Qf s)) $M = 2 * Sum (\\s:num. min ($Pf s) ($Qf s)) $M")
+            right <- at(fact("SUM_ADD"), s"Sum (\\s:num. $Pf s + $Qf s) $M = Sum $Pf $M + Sum $Qf $M")
+            out <- linExact(Seq(summed, left, twice, right, hs(0), hs(1)), conclusion)
+          } yield out
+        }
+      } yield out
 
     /* ------------------------------------------------------------ distributions themselves */
 

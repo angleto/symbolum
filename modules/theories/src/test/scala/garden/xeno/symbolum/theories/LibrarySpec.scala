@@ -869,8 +869,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // one fact under one new name from `Deduction.Statements`, `NUM_PROV_LESS_SUC_CASES`, derived
     // before the run. It binds three leading quantifiers of `num`, so `AGENTS.md`'s figures move by
     // one, one and one.
-    library.entries.size shouldBe 1161
-    library.names.distinct.size shouldBe 1158
+    // 1165 and 1162 with a filter and Le Cam's two-point problem, 2026-11-18, `docs/adr/0063`: four
+    // facts under four new names from `Decision.Statements`, `BLACKWELL_FILTER`, `LECAM_VALUE`,
+    // `LECAM_BOUND` and `LECAM_OVERLAP`, derived from the diff of `docs/lemmas.md` before the pin
+    // was read. Each binds two or more leading quantifiers with two of one type (`num` in the first
+    // two, `num -> real` in the last two), so `AGENTS.md`'s figures move by four, four and four.
+    library.entries.size shouldBe 1165
+    library.names.distinct.size shouldBe 1162
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -786,7 +786,7 @@ object Chain {
       // are the complex numbers', taken over this link's own theory. What it reads is named, by the
       // links that hold it.
       decision <- Decision.construct(
-        classical, naturals, ring, magnitude,
+        classical, naturals, ring, magnitude, successor,
         name => complex.facts.get(name).toRight(MissingDefinition(name))
           .orElse(below.named(name).headOption.map(_.theorem).toRight(MissingDefinition(name))),
         reals, within, complex.theory, complex.notation)

@@ -487,7 +487,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // before the run: `NUM_PROV_NOT_LESS_NUMERAL` has one antecedent, `n <= m`. Plus one.
     // 1031 with PA splitting a strict order below a successor, 2026-11-18, card `4102f131`, predicted
     // before the run: `NUM_PROV_LESS_SUC_CASES` has one antecedent, `~(i = x)`. Plus one.
-    proposals.size shouldBe 1031
+    // 1038 with a filter and Le Cam's two-point problem, 2026-11-18, `docs/adr/0063`, predicted
+    // before the run and equal to it: one antecedent each on `BLACKWELL_FILTER` (`f s < r` below
+    // `m`) and `LECAM_VALUE` (`Sum P m = 1`), three on `LECAM_BOUND`, two on `LECAM_OVERLAP`. Plus seven.
+    proposals.size shouldBe 1038
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1544,7 +1547,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // procedure reads. Predicted as all nine, 865, which the run refused. Plus five.
     // 863 with instantiation at a substitutable term, 2026-11-12, card `4102f131`, read off the
     // run and not decomposed, and not predicted. Plus two.
-    open shouldBe 863
+    // 870 with a filter and Le Cam's two-point problem, 2026-11-18, `docs/adr/0063`, read off the
+    // run: as many as the seven new weakenings, claims about `VALUE`, `min` under a `Sum` or a
+    // filter of the signal that no procedure settles. The audit found none of the seven
+    // hypotheses unnecessary. Plus seven.
+    open shouldBe 870
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2340,7 +2347,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 362 with a variable bounded by a successor splitting, 2026-11-18, card `4102f131`, read off
     // the run and not predicted: the one weakening of `NUM_PROV_LESS_SUC_CASES`, which keeps
     // `SUC` and the numerals of `num`, while `after` does not move. Plus one.
-    aboutNumbers.size shouldBe 362
+    // 369 with a filter and Le Cam's two-point problem, 2026-11-18, `docs/adr/0063`, read off the
+    // run: the seven new weakenings, each keeping an index bound below `m` or a `Sum` over it.
+    // Plus seven.
+    aboutNumbers.size shouldBe 369
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

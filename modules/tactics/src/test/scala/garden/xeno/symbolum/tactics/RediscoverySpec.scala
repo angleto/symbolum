@@ -453,7 +453,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // before the run: the one antecedent of `NUM_PROV_NOT_LESS_NUMERAL`. Plus one.
     // 1031 with PA splitting a strict order below a successor, 2026-11-18, card `4102f131`, counted
     // before the run: the one antecedent of `NUM_PROV_LESS_SUC_CASES`, `~(i = x)`. Plus one.
-    propose.weakenings.size shouldBe 1031
+    // 1038 with a filter and Le Cam's two-point problem, 2026-11-18, `docs/adr/0063`, counted
+    // before the run and equal to it: one antecedent each on `BLACKWELL_FILTER` and `LECAM_VALUE`,
+    // three on `LECAM_BOUND`, two on `LECAM_OVERLAP`. Plus seven.
+    propose.weakenings.size shouldBe 1038
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

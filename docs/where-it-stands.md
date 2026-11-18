@@ -1312,7 +1312,11 @@ taking it, by recursion. Marginals, the composition of channels, the expectation
 product of two distributions and its independence, and the posterior as a distribution are facts
 beside them, and `INDEPENDENT` the sixth constant. `BLACKWELL_GARBLING` says that an experiment obtained from another through a
 channel is worth no more for any prior, any actions and any utility, and its only hypothesis is that
-the garbling is a channel. `DecisionSpec` certifies the essay's case E5
+the garbling is a channel; `BLACKWELL_FILTER` is its case where the garbling is a deterministic
+function of the signal. `LECAM_VALUE` is the exact value of the two-state problem of including or
+excluding, `phi g` less the overlap `Sum min` of the two scaled likelihoods, with no sign assumed,
+and `LECAM_BOUND` and `LECAM_OVERLAP` bound that overlap below by the lesser scale times one less the
+total variation. `DecisionSpec` certifies the essay's case E5
 (`thinktank/utitlita_e_danno`): `7/20` with the signal alone, `9/16` with the frame on average and
 `1/8` for the same reader on new tasks, and `7/20` again when the task is familiar one time in ten,
 where the rule answers `s` at every signal and never reads `g`: theorems with nothing assumed, so the

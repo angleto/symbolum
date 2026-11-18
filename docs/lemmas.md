@@ -373,6 +373,7 @@ they have least appetite for working out how it is produced.
   ARGMAX_SUC               !f:num -> real. !n:num. Argmax f (SUC n) = COND (Maximum f n < f (SUC n)) (SUC n) (Argmax f n)
   ARGMAX_UNIQUE            !f:num -> real. !n:num. !m:num. m <= n ==> (!k:num. k <= n ==> ~(k = m) ==> f k < f m) ==> Argmax f n = m
   ARGMAX_ZERO              !f:num -> real. Argmax f 0 = 0
+  BLACKWELL_FILTER         !n:num. !m:num. !k:num. !i:num. !f:num -> real. !g:num -> num -> real. !h:num -> num -> real. !f1:num -> num. (!j:num. j < m ==> f1 j < k) ==> VALUE n k i f (\j:num. \n1:num. Sum (\m1:num. g j m1 * COND (f1 m1 = n1) 1 0) m) h <= VALUE n m i f g h
   BLACKWELL_GARBLING       !n:num. !m:num. !k:num. !i:num. !f:num -> real. !g:num -> num -> real. !h:num -> num -> real. !f1:num -> num -> real. CHANNEL m k h ==> VALUE n k i f (\j:num. \n1:num. Sum (\m1:num. g j m1 * h m1 n1) m) f1 <= VALUE n m i f g f1
   CHANNEL_COMPOSE          !n:num. !m:num. !k:num. !f:num -> num -> real. !g:num -> num -> real. CHANNEL n m f ==> CHANNEL m k g ==> CHANNEL n k (\i:num. \j:num. Sum (\n1:num. f i n1 * g n1 j) m)
   DISTRIBUTION_MARGINAL    !n:num. !m:num. !f:num -> real. !g:num -> num -> real. DISTRIBUTION n f ==> CHANNEL n m g ==> DISTRIBUTION m (\k:num. Sum (\i:num. f i * g i k) n)
@@ -380,6 +381,9 @@ they have least appetite for working out how it is produced.
   EXPECTATION_CONSTANT     !n:num. !f:num -> real. !x:real. DISTRIBUTION n f ==> Sum (\m:num. f m * x) n = x
   EXPECTATION_LINEAR       !n:num. !f:num -> real. !g:num -> real. !h:num -> real. !x:real. !y:real. Sum (\m:num. f m * (x * g m + y * h m)) n = x * Sum (\m:num. f m * g m) n + y * Sum (\m:num. f m * h m) n
   EXPECTATION_MONOTONE     !n:num. !f:num -> real. !g:num -> real. !h:num -> real. DISTRIBUTION n f ==> (!m:num. m < n ==> g m <= h m) ==> Sum (\m:num. f m * g m) n <= Sum (\m:num. f m * h m) n
+  LECAM_BOUND              !n:num. !f:num -> real. !g:num -> real. !x:real. !y:real. (!m:num. m < n ==> 0 <= f m /\ 0 <= g m) ==> 0 <= x ==> 0 <= y ==> min x y * Sum (\m:num. min (f m) (g m)) n <= Sum (\m:num. min (x * f m) (y * g m)) n
+  LECAM_OVERLAP            !n:num. !f:num -> real. !g:num -> real. Sum f n = 1 ==> Sum g n = 1 ==> Sum (\m:num. min (f m) (g m)) n = 1 - Sum (\m:num. abs (f m - g m)) n / 2
+  LECAM_VALUE              !n:num. !f:num -> real. !g:num -> real. !x:real. !y:real. !z:real. Sum f n = 1 ==> VALUE 2 n 1 (\m:num. COND (m = 0) x (1 - x)) (\m:num. \k:num. COND (m = 0) (f k) (g k)) (\m:num. \k:num. COND (m = 0) 0 (COND (k = 0) y (-z))) = x * y - Sum (\m:num. min (x * y * f m) ((1 - x) * z * g m)) n
   MAXIMUM_ATTAINED         !f:num -> real. !n:num. ?m:num. m <= n /\ Maximum f n = f m
   MAXIMUM_CONGRUENCE_BELOW !f:num -> real. !g:num -> real. !n:num. (!m:num. m <= n ==> f m = g m) ==> Maximum f n = Maximum g n
   MAXIMUM_LEAST            !f:num -> real. !n:num. !x:real. (!m:num. m <= n ==> f m <= x) ==> Maximum f n <= x
