@@ -110,9 +110,10 @@ final class Language private (
    * Three kinds of rule go in. The nine clauses of the two substitutions, which are equations
    * already. `COND T a b = a` and `COND F a b = b`, derived here because `COND_TRUE` and
    * `COND_FALSE` carry their guard as a hypothesis and a rewrite rule is an equation and nothing
-   * else. And one decision per index the code mentions, `(j = i) = T` by reflexivity or
-   * `(j = i) = F` through `Successor.distinct`, which is where a code whose indices are not
-   * numerals is refused and refused by name.
+   * else. And one decision per index the code mentions, `(j = i) = T` by reflexivity, or
+   * `(j = i) = F` from `apart` where the caller supplied `~(j = i)`, or through
+   * `Successor.distinct`, which is where a code whose indices are not numerals and were not
+   * supplied is refused and refused by name.
    *
    * The result is checked for a residue rather than handed back as it comes: a right side still
    * carrying a substitution or a conditional means an index went undecided, and returning that
@@ -121,7 +122,8 @@ final class Language private (
   def substituteIn(
     index: Term,
     replacement: Term,
-    code: Term
+    code: Term,
+    apart: Seq[Kernel.Thm] = Nil
   ): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -148,6 +150,7 @@ final class Language private (
         collect(code).distinct
       }
 
+      supplied <- Language.suppliedDecisions(logic, apart)
       decisions <- indices.foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
         (carried, mentioned) =>
           for {
@@ -155,16 +158,19 @@ final class Language private (
             guard <- LogicError.lift(Term.eq(mentioned, index))
             decided <-
               if (mentioned == index) rules.eqTruthIntro(Kernel.refl(mentioned))
-              else
-                for {
-                  apart <- successor.distinct(mentioned, index)
-                  assumed <- LogicError.lift(Kernel.assume(guard))
-                  toFalsity <- rules.notElim(apart, assumed)
-                  fromFalsity <- LogicError
-                    .lift(Kernel.assume(logic.falsity))
-                    .flatMap(rules.falsityElim(guard, _))
-                  equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
-                } yield equated
+              else supplied.find(_.conclusion == equalsFalse(guard)) match {
+                case Some(known) => Right(known)
+                case None =>
+                  for {
+                    apart <- successor.distinct(mentioned, index)
+                    assumed <- LogicError.lift(Kernel.assume(guard))
+                    toFalsity <- rules.notElim(apart, assumed)
+                    fromFalsity <- LogicError
+                      .lift(Kernel.assume(logic.falsity))
+                      .flatMap(rules.falsityElim(guard, _))
+                    equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
+                  } yield equated
+              }
           } yield found :+ decided
       }
 
@@ -215,7 +221,8 @@ final class Language private (
   def substitutableIn(
     index: Term,
     replacement: Term,
-    code: Term
+    code: Term,
+    apart: Seq[Kernel.Thm] = Nil
   ): Either[LogicError, Kernel.Thm] = {
     val numbers = TyApp(Natural.TypeName, Nil)
     for {
@@ -223,7 +230,7 @@ final class Language private (
         Language.FreeForName,
         Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, Type.Bool)))))
       subject <- LogicError.lift(Term.appAll(head, List(index, replacement, code)))
-      decided <- decideSyntax(subject)
+      decided <- decideSyntax(subject, apart)
     } yield decided
   }
 
@@ -234,13 +241,27 @@ final class Language private (
    * some index not occur in a term that has to come back from a substitution untouched. The same
    * decision as [[substitutableIn]], over the five freeness clauses for terms.
    */
-  def freeInTerm(index: Term, code: Term): Either[LogicError, Kernel.Thm] = {
+  def freeInTerm(index: Term, code: Term, apart: Seq[Kernel.Thm] = Nil): Either[LogicError, Kernel.Thm] = {
     val numbers = TyApp(Natural.TypeName, Nil)
     for {
       head <- LogicError.lift(theory.constant(
         Language.FreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))))
       subject <- LogicError.lift(Term.appAll(head, List(index, code)))
-      decided <- decideSyntax(subject)
+      decided <- decideSyntax(subject, apart)
+    } yield decided
+  }
+
+  /**
+   * `|- NUM_FREE_FORM i c` or `|- ~(NUM_FREE_FORM i c)` for an index and a formula code: what a
+   * caller generalising under a hypothesis discharges, by the same decision as [[freeInTerm]].
+   */
+  def freeInFormula(index: Term, code: Term, apart: Seq[Kernel.Thm] = Nil): Either[LogicError, Kernel.Thm] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    for {
+      head <- LogicError.lift(theory.constant(
+        Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))))
+      subject <- LogicError.lift(Term.appAll(head, List(index, code)))
+      decided <- decideSyntax(subject, apart)
     } yield decided
   }
 
@@ -327,11 +348,16 @@ final class Language private (
     } yield result
   }
 
+  /** `guard = F`, the shape of a decision that two indices differ. */
+  private def equalsFalse(guard: Term): Term =
+    Term.eq(guard, logic.falsity).getOrElse(guard)
+
   /**
    * A proposition about concrete codes built from the three syntactic predicates, proved or
-   * refuted: the shared body of [[substitutableIn]] and [[freeInTerm]].
+   * refuted: the shared body of [[substitutableIn]], [[freeInTerm]] and
+   * [[freeInFormula]]. `apart` holds the comparisons the caller decided, as for [[substituteIn]].
    */
-  private def decideSyntax(subject: Term): Either[LogicError, Kernel.Thm] = {
+  private def decideSyntax(subject: Term, apart: Seq[Kernel.Thm]): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
     val numbers = TyApp(Natural.TypeName, Nil)
     val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
@@ -364,18 +390,22 @@ final class Language private (
       }
 
       // Two indices are compared only where neither has a free variable, or they are the same
-      // term. An index with a free variable in it gets no decision against another: where a clause
-      // needs one the residue keeps the comparison and is refused below as undecided rather than
-      // here. Two closed indices are still decided or refused by `Successor.distinct`, whose
-      // refusal is not swallowed. Before `NUM_PROV_NOT_LESS_NUMERAL` an open index reached
-      // `Successor.distinct` and the chain did not build: "expected a numeral of num, found n",
-      // which `tools/verify/perturb-not-below.sh` shows.
+      // term, or the caller supplied the answer. An index with a free variable in it gets no
+      // decision of its own against another: where a clause needs one and `apart` does not hold it,
+      // the residue keeps the comparison and is refused below as undecided rather than here. Two
+      // closed indices are still decided or refused by `Successor.distinct`, whose refusal is not
+      // swallowed. Before `NUM_PROV_NOT_LESS_NUMERAL` an open index reached `Successor.distinct`
+      // and the chain did not build: "expected a numeral of num, found n", which
+      // `tools/verify/perturb-not-below.sh` shows.
+      supplied <- Language.suppliedDecisions(logic, apart)
       decisions <- (for { one <- indices; other <- indices } yield (one, other))
         .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
           case (carried, (one, other)) =>
             carried.flatMap { found =>
               LogicError.lift(Term.eq(one, other)).flatMap { guard =>
                 if (one == other) rules.eqTruthIntro(Kernel.refl(one)).map(found :+ _)
+                else if (supplied.exists(_.conclusion == equalsFalse(guard)))
+                  Right(found ++ supplied.filter(_.conclusion == equalsFalse(guard)))
                 else if (Term.freeVariables(one).nonEmpty || Term.freeVariables(other).nonEmpty)
                   Right(found)
                 else
@@ -3611,6 +3641,40 @@ object Language {
           facts = published ++ found
           proved <- rule(facts, name, casesName, (binders, held) => build(facts, binders, held))
         } yield found.updated(name, proved)
+    }
+  }
+
+  /**
+   * `|- (a = b) = F` and `|- (b = a) = F` for each `|- ~(a = b)` a caller supplies.
+   *
+   * The comparisons [[Language.substituteIn]] and the decisions over codes cannot make themselves:
+   * two indices of which one has a free variable, such as the bound index `i` of `NUM_LESS i` and
+   * the index `x` of the variable it is compared with. Each keeps the hypotheses of the fact it
+   * came from, so a theorem computed with one rests on what the caller assumed and says so.
+   */
+  private[theories] def suppliedDecisions(
+    logic: Logic,
+    apart: Seq[Kernel.Thm]
+  ): Either[LogicError, Vector[Kernel.Thm]] = {
+    val rules = logic.rules
+    apart.toVector.foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, denied) =>
+      for {
+        found <- carried
+        equation <- logic.destNot(denied.conclusion).toRight(NotOfForm("a denied equation", denied.conclusion))
+        sides <- Term.destEq(equation).toRight(NotOfForm("a denied equation", denied.conclusion))
+        reversed <- LogicError.lift(Term.eq(sides._2, sides._1))
+        both <- Vector(equation, reversed).foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(found)) {
+          (inner, guard) =>
+            for {
+              done <- inner
+              assumed <- LogicError.lift(Kernel.assume(guard))
+              forward <- if (guard == equation) Right(assumed) else Conv.sym(assumed)
+              toFalsity <- rules.notElim(denied, forward)
+              fromFalsity <- LogicError.lift(Kernel.assume(logic.falsity)).flatMap(rules.falsityElim(guard, _))
+              equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
+            } yield done :+ equated
+        }
+      } yield both
     }
   }
 

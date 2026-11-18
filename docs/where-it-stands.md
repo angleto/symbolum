@@ -745,10 +745,20 @@ at a closed witness, which is specialisation contraposed. **The other half since
 order between numerals. It instantiates axioms of PA at open terms, which specialisation and
 replacement allow since `docs/adr/0078` (closed terms only until 2026-11-12, `docs/adr/0040` has
 the measurement), and its core, `!i d n. NUM_PROV ~(numeral (n + d) + S v_i = numeral n)`, is an
-induction in the logic over `n`. Nothing is written yet about a variable bounded by a numeral.
+induction in the logic over `n`.
 
-Not written above that: the bounded quantifiers, where PA has to prove `x < S n` splits, which is
-that open-term question; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so
+**A variable bounded by a successor splits, since 2026-11-18**: `NUM_PROV_LESS_SUC_CASES` is
+`v_x < S (numeral n) ==> v_x < numeral n \/ v_x = numeral n` inside PA, for any index `i` of the
+order apart from the index `x` of the variable. It is an induction in PA whose step never reads its
+hypothesis, which makes it a case split, followed by the existential eliminated. It is the first
+fact here whose indices are all variables, and `Language` meets that by taking the comparisons it
+cannot make, `x` against `i` and both against a hole two past their sum, as facts the caller
+supplies and carries as hypotheses; the comparisons with the hole are arithmetic, so the statement
+assumes `~(i = x)` and nothing else.
+
+Not written above that: the bounded quantifiers themselves, which want `~(v_x < 0)` beside the split
+and the unfolding into finite conjunctions and disjunctions; any representation other than
+`NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale

@@ -324,6 +324,36 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * The step a bounded quantifier is unfolded by: `v_x < S (numeral n)` splits, inside PA.
+   *
+   * At concrete indices the hypothesis is a fact about numerals and goes, and what is left is a
+   * theorem about the code of an open formula, resting on the naturals' two axioms and nothing
+   * else. The instance is read back through `NUM_LESS`, `NUM_EXISTS` and `NUM_OR` to the formula
+   * they abbreviate, so the assertion is about what PA proves rather than about the abbreviations,
+   * and `v_5` is bound in both existentials while `v_2` stays free.
+   */
+  it should "split a strict order below a successor, for a variable" in {
+    val theorem = force(deduction.fact(Deduction.BelowSuccessor))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+
+    val apart = force(chain.successor.distinct(term("5"), term("2")))
+    val instance = force(rules.specAll(theorem, List(term("5"), term("2"), term("SUC ZERO")))
+      .flatMap(rules.mp(_, apart)))
+    instance.hypotheses shouldBe empty
+    val opened = force(
+      Rewrite.Rule.all(logic, Vector(Language.LessCases, Language.ExistsCases, Language.OrCases)
+        .map(name => force(chain.language.fact(name))))
+        .flatMap(Rewrite.inTheorem(_, instance)))
+    def below(bound: String) =
+      "NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR 5 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR " +
+        s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 2 (NUM_CODE 0 5)))) (NUM_NUMERAL ($bound)))))))"
+    opened.conclusion shouldBe proposition(
+      s"NUM_PROV (NUM_CODE 7 (NUM_PAIR (${below("SUC (SUC ZERO)")}) (NUM_CODE 7 (NUM_PAIR " +
+        s"(NUM_CODE 6 (${below("SUC ZERO")})) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_NUMERAL (SUC ZERO))))))))")
+  }
+
+  /**
    * The object theory's multiplication on numerals, which stands on the addition above it.
    *
    * The same two assertions for the same two reasons, and one more that is about the ORDER rather

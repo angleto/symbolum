@@ -485,7 +485,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_PROV_MUL_SUC` lost. Plus twenty-four.
     // 1030 with PA refuting a false order between numerals, 2026-11-17, card `4102f131`, predicted
     // before the run: `NUM_PROV_NOT_LESS_NUMERAL` has one antecedent, `n <= m`. Plus one.
-    proposals.size shouldBe 1030
+    // 1031 with PA splitting a strict order below a successor, 2026-11-18, card `4102f131`, predicted
+    // before the run: `NUM_PROV_LESS_SUC_CASES` has one antecedent, `~(i = x)`. Plus one.
+    proposals.size shouldBe 1031
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1970,7 +1972,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 255 with PA refuting a false order between numerals, 2026-11-17, card `4102f131`: the one
     // weakening of `NUM_PROV_NOT_LESS_NUMERAL`, predicted as one more across `open` and this bucket
     // and read off the run here, `open` above not moving. Plus one.
-    unreadable shouldBe 255
+    // 256 with a variable bounded by a successor splitting, 2026-11-18, card `4102f131`: the one
+    // weakening of `NUM_PROV_LESS_SUC_CASES`, which drops `~(i = x)`, predicted as one more across
+    // `open` and this bucket and read off the run here, `open` above not moving. Plus one.
+    unreadable shouldBe 256
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2332,7 +2337,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // its nine weakenings. Predicted as all nine, 361, which the run refused. Plus seven.
     // 361 with instantiation at a substitutable term, 2026-11-12, card `4102f131`, read off the
     // run and not decomposed, and not predicted. Plus two.
-    aboutNumbers.size shouldBe 361
+    // 362 with a variable bounded by a successor splitting, 2026-11-18, card `4102f131`, read off
+    // the run and not predicted: the one weakening of `NUM_PROV_LESS_SUC_CASES`, which keeps
+    // `SUC` and the numerals of `num`, while `after` does not move. Plus one.
+    aboutNumbers.size shouldBe 362
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

@@ -538,6 +538,39 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * An index with a free variable is compared with another only as the caller says, and what the
+   * caller said stays on the answer.
+   *
+   * Putting `0` for `v_i` in `v_x = 0` needs `x` and `i` apart, which no computation over codes
+   * decides. Asked bare it is refused. Given `~(i = x)` it is answered, and the answer carries that
+   * assumption as its hypothesis, so a comparison nobody proved cannot leave the call unrecorded.
+   * Freeness is the same through the other door, and the control is that the decision reads the
+   * binder: `i` under `!v_i` is absent without any comparison, while `x` is present only once the
+   * comparison is supplied.
+   */
+  it should "compare an open index only as the caller supplies it, and keep the supply as a hypothesis" in {
+    val zero = term("NUM_CODE 1 0")
+    val formula = term("NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 x) (NUM_CODE 1 0))")
+    language.substituteIn(term("i"), zero, formula).isLeft shouldBe true
+    val apart = proposition("~((i:num) = x)")
+    val supplied = Vector(force(LogicError.lift(Kernel.assume(apart))))
+    val computed = force(language.substituteIn(term("i"), zero, formula, supplied))
+    computed.hypotheses shouldBe List(apart)
+    computed.conclusion shouldBe proposition(
+      "NUM_SUBST_FORM i (NUM_CODE 1 0) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 x) (NUM_CODE 1 0))) = " +
+        "NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 x) (NUM_CODE 1 0))")
+
+    val bound = "NUM_CODE 8 (NUM_PAIR i (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 i) (NUM_CODE 0 x))))"
+    val absent = force(language.freeInFormula(term("i"), term(bound)))
+    absent.hypotheses shouldBe empty
+    absent.conclusion shouldBe proposition(s"~(NUM_FREE_FORM i ($bound))")
+    language.freeInFormula(term("x"), term(bound)).isLeft shouldBe true
+    val present = force(language.freeInFormula(term("x"), term(bound), supplied))
+    present.hypotheses shouldBe List(apart)
+    present.conclusion shouldBe proposition(s"NUM_FREE_FORM x ($bound)")
+  }
+
+  /**
    * The three code helpers pass a numeral standing for ANY number, which is a code no clause
    * matches: `NUM_NUMERAL m` with `m` a variable.
    *
