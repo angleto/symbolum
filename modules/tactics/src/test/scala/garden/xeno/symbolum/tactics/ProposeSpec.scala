@@ -490,7 +490,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 1038 with a filter and Le Cam's two-point problem, 2026-11-18, `docs/adr/0063`, predicted
     // before the run and equal to it: one antecedent each on `BLACKWELL_FILTER` (`f s < r` below
     // `m`) and `LECAM_VALUE` (`Sum P m = 1`), three on `LECAM_BOUND`, two on `LECAM_OVERLAP`. Plus seven.
-    proposals.size shouldBe 1038
+    // 1047 with a bounded universal unfolded, 2026-11-19, card `4102f131`, predicted before the run:
+    // two antecedents each on `NUM_SUBST_TERM_SELF`, `NUM_SUBST_FORM_SELF` and `NUM_FREE_FOR_SELF`,
+    // three on `NUM_PROV_ALL_BELOW_NUMERAL`. Plus nine.
+    proposals.size shouldBe 1047
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1551,7 +1554,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // run: as many as the seven new weakenings, claims about `VALUE`, `min` under a `Sum` or a
     // filter of the signal that no procedure settles. The audit found none of the seven
     // hypotheses unnecessary. Plus seven.
-    open shouldBe 870
+    // 877 with a bounded universal unfolding into its instances, 2026-11-19, card `4102f131`,
+    // read off the run and not predicted: seven of the nine new weakenings, claims about
+    // `NUM_SUBST_TERM`, `NUM_SUBST_FORM`, `NUM_FREE_FOR` or `NUM_PROV` that no procedure reads.
+    // Plus seven.
+    open shouldBe 877
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1982,7 +1989,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 256 with a variable bounded by a successor splitting, 2026-11-18, card `4102f131`: the one
     // weakening of `NUM_PROV_LESS_SUC_CASES`, which drops `~(i = x)`, predicted as one more across
     // `open` and this bucket and read off the run here, `open` above not moving. Plus one.
-    unreadable shouldBe 256
+    // 258 with a bounded universal unfolding into its instances, 2026-11-19, card `4102f131`:
+    // the two of the nine new weakenings that `open` above did not take, read off a second run
+    // because the first stopped at `open`. Seven there and two here account for all nine. Plus two.
+    unreadable shouldBe 258
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2350,7 +2360,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 369 with a filter and Le Cam's two-point problem, 2026-11-18, `docs/adr/0063`, read off the
     // run: the seven new weakenings, each keeping an index bound below `m` or a `Sum` over it.
     // Plus seven.
-    aboutNumbers.size shouldBe 369
+    // 374 with a bounded universal unfolding into its instances, 2026-11-19, card `4102f131`, read
+    // off the run and not decomposed: five of the nine new weakenings keep a constant of the
+    // naturals, while `after` is printed at 64 and does not move. Plus five.
+    aboutNumbers.size shouldBe 374
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

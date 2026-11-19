@@ -380,6 +380,63 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * A bounded universal from its instances, used end to end at a formula that is not provable.
+   *
+   * `p` is `~(v_2 = 3)`, false at `v_2 = 3`, so PA does not prove it and cannot prove
+   * `!v_2. ~(v_2 = 3)` either; what it proves is the universal below `3`, and only from the
+   * bound. The premise about every instance is discharged here rather than assumed: for a
+   * variable `k` below `3`, the instance is computed by `Language.substituteIn` to
+   * `~(numeral k = 3)`, and `NUM_PROV_NUMERAL_DISTINCT` proves it from `~(k = 3)`, which `k < 3`
+   * gives. What is left has nothing assumed, and is read back through the abbreviations to the
+   * formula PA proves.
+   */
+  it should "prove a bounded universal from its instances below the bound" in {
+    val theorem = force(deduction.fact(Deduction.AllBelowNumeral))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+
+    val three = "SUC (SUC (SUC ZERO))"
+    val p = term(s"NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_NUMERAL ($three))))")
+    val k = Term.variable("k", numbers)
+    val numeralOfK = applied(constant(Language.NumeralName, Type.fun(numbers, numbers)), List(k))
+    val below = proposition(s"(k:num) < $three")
+    val kBelow = force(LogicError.lift(Kernel.assume(below)))
+    val equalClaim = proposition(s"(k:num) = $three")
+    val lessHead = constant(Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+    val notEqual = force(for {
+      equal <- LogicError.lift(Kernel.assume(equalClaim))
+      moved <- Conv.apTerm(lessHead, equal).flatMap(Conv.apThm(_, term(three)))
+      selfBelow <- LogicError.lift(Kernel.eqMp(moved, kBelow))
+      irreflexive <- chain.peano.fact(Peano.StrictIrreflexive).flatMap(rules.spec(term(three), _))
+      falsity <- rules.notElim(irreflexive, selfBelow)
+      denied <- rules.notIntro(equalClaim, falsity)
+    } yield denied)
+    val distinct = force(rules.specAll(force(deduction.fact(Deduction.NumeralsDistinct)), List(k, term(three)))
+      .flatMap(rules.mp(_, notEqual)))
+    val computed = force(chain.language.substituteIn(term("2"), numeralOfK, p))
+    val provable = constant(Provability.ProvableName, Type.fun(numbers, Type.Bool))
+    val instance = force(Conv.sym(computed).flatMap(Conv.apTerm(provable, _))
+      .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, distinct))))
+    val every = force(rules.disch(below, instance).flatMap(rules.gen(k, _)))
+
+    val apart = force(chain.successor.distinct(term("5"), term("2")))
+    val proved = force(rules.specAll(theorem, List(term("5"), term("2"), term(three), p))
+      .flatMap(rules.mp(_, apart))
+      .flatMap(rules.mp(_, force(chain.language.wellFormedIn(p))))
+      .flatMap(rules.mp(_, every)))
+    proved.hypotheses shouldBe empty
+    val opened = force(
+      Rewrite.Rule.all(logic, Vector(Language.AllBelowCases, Language.LessCases, Language.ExistsCases)
+        .map(name => force(chain.language.fact(name))))
+        .flatMap(Rewrite.inTheorem(_, proved)))
+    opened.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 8 (NUM_PAIR 2 (NUM_CODE 7 (NUM_PAIR " +
+        "(NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR 5 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR " +
+        s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 2 (NUM_CODE 0 5)))) (NUM_NUMERAL ($three)))))))) " +
+        s"(NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_NUMERAL ($three)))))))))")
+  }
+
+  /**
    * The object theory's multiplication on numerals, which stands on the addition above it.
    *
    * The same two assertions for the same two reasons, and one more that is about the ORDER rather

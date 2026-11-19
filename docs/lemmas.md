@@ -406,6 +406,7 @@ they have least appetite for working out how it is produced.
   NUM_PROV_ADD_CONG_RIGHT  !n:num. !m:num. !k:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TERM k ==> NUM_CLOSED k ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR k n)) (NUM_CODE 3 (NUM_PAIR k m))))
   NUM_PROV_ADD_SUC         !n:num. !m:num. NUM_TERM n ==> ~(NUM_FREE_TERM 1 n) ==> NUM_TERM m ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR n (NUM_CODE 2 m))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR n m)))))
   NUM_PROV_ADD_ZERO        !n:num. NUM_TERM n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR n (NUM_CODE 1 0))) n))
+  NUM_PROV_ALL_BELOW_NUMERAL !n:num. !m:num. !k:num. !i:num. ~(n = m) ==> NUM_FORM i ==> (!j:num. j < k ==> NUM_PROV (NUM_SUBST_FORM m (NUM_NUMERAL j) i)) ==> NUM_PROV (NUM_ALL_BELOW n m (NUM_NUMERAL k) i)
   NUM_PROV_CONTRAPOSE      !n:num. !m:num. NUM_FORM n ==> NUM_FORM m ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 m) (NUM_CODE 6 n)))
   NUM_PROV_DEDUCTION       !n:num. !m:num. NUM_FORM n ==> (!k:num. ~(NUM_FREE_FORM k n)) ==> NUM_PROV_FROM n m ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n m))
   NUM_PROV_EXISTS_INTRO    !n:num. !m:num. !k:num. NUM_FORM k ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_PROV (NUM_SUBST_FORM n m k) ==> NUM_PROV (NUM_EXISTS n k)
@@ -703,6 +704,7 @@ they have least appetite for working out how it is produced.
   NUM_FREE_FOR_EQ          !n:num. !m:num. !k:num. !i:num. NUM_FREE_FOR n m (NUM_CODE 5 (NUM_PAIR k i)) = T
   NUM_FREE_FOR_IMP         !n:num. !m:num. !k:num. !i:num. NUM_FREE_FOR n m (NUM_CODE 7 (NUM_PAIR k i)) = (NUM_FREE_FOR n m k /\ NUM_FREE_FOR n m i)
   NUM_FREE_FOR_NOT         !n:num. !m:num. !k:num. NUM_FREE_FOR n m (NUM_CODE 6 k) = NUM_FREE_FOR n m k
+  NUM_FREE_FOR_SELF        !n:num. !m:num. !k:num. NUM_FORM k ==> m = NUM_CODE 0 n ==> NUM_FREE_FOR n m k
   NUM_FREE_TERM_ADD        !n:num. !m:num. !k:num. NUM_FREE_TERM n (NUM_CODE 3 (NUM_PAIR m k)) = (NUM_FREE_TERM n m \/ NUM_FREE_TERM n k)
   NUM_FREE_TERM_MUL        !n:num. !m:num. !k:num. NUM_FREE_TERM n (NUM_CODE 4 (NUM_PAIR m k)) = (NUM_FREE_TERM n m \/ NUM_FREE_TERM n k)
   NUM_FREE_TERM_SUC        !n:num. !m:num. NUM_FREE_TERM n (NUM_CODE 2 m) = NUM_FREE_TERM n m
@@ -745,9 +747,11 @@ they have least appetite for working out how it is produced.
   NUM_SUBST_FORM_LESS      !n:num. !m:num. !k:num. !i:num. !j:num. NUM_SUBST_FORM n m (NUM_LESS k i j) = COND (k = n) (NUM_LESS k i j) (NUM_LESS k (NUM_SUBST_TERM n m i) (NUM_SUBST_TERM n m j))
   NUM_SUBST_FORM_NOT       !n:num. !m:num. !k:num. NUM_SUBST_FORM n m (NUM_CODE 6 k) = NUM_CODE 6 (NUM_SUBST_FORM n m k)
   NUM_SUBST_FORM_OR        !n:num. !m:num. !k:num. !i:num. NUM_SUBST_FORM n m (NUM_OR k i) = NUM_OR (NUM_SUBST_FORM n m k) (NUM_SUBST_FORM n m i)
+  NUM_SUBST_FORM_SELF      !n:num. !m:num. !k:num. NUM_FORM k ==> m = NUM_CODE 0 n ==> NUM_SUBST_FORM n m k = k
   NUM_SUBST_TERM_ADD       !n:num. !m:num. !k:num. !i:num. NUM_SUBST_TERM n m (NUM_CODE 3 (NUM_PAIR k i)) = NUM_CODE 3 (NUM_PAIR (NUM_SUBST_TERM n m k) (NUM_SUBST_TERM n m i))
   NUM_SUBST_TERM_MUL       !n:num. !m:num. !k:num. !i:num. NUM_SUBST_TERM n m (NUM_CODE 4 (NUM_PAIR k i)) = NUM_CODE 4 (NUM_PAIR (NUM_SUBST_TERM n m k) (NUM_SUBST_TERM n m i))
   NUM_SUBST_TERM_NOT_FREE  !n:num. !m:num. !k:num. NUM_TERM k ==> ~(NUM_FREE_TERM n k) ==> NUM_SUBST_TERM n m k = k
+  NUM_SUBST_TERM_SELF      !n:num. !m:num. !k:num. NUM_TERM k ==> m = NUM_CODE 0 n ==> NUM_SUBST_TERM n m k = k
   NUM_SUBST_TERM_SUC       !n:num. !m:num. !k:num. NUM_SUBST_TERM n m (NUM_CODE 2 k) = NUM_CODE 2 (NUM_SUBST_TERM n m k)
   NUM_SUBST_TERM_TERM      !n:num. !m:num. !k:num. NUM_TERM k ==> NUM_TERM m ==> NUM_TERM (NUM_SUBST_TERM n m k)
   NUM_SUBST_TERM_VAR       !n:num. !m:num. !k:num. NUM_SUBST_TERM n m (NUM_CODE 0 k) = COND (k = n) m (NUM_CODE 0 k)

@@ -958,6 +958,29 @@ object Language {
   val SubstituteIdle: String = "NUM_SUBST_TERM_NOT_FREE"
 
   /**
+   * `|- !i t s. NUM_TERM s ==> t = NUM_CODE 0 i ==> NUM_SUBST_TERM i t s = s`
+   *
+   * Putting `v_i` for `v_i` changes no term. Stated with the replacement as a variable equal to
+   * `v_i` rather than with `v_i` written in, because that is the shape the course-of-values
+   * induction over substitutions is proved in, the shape of [[SubstituteIdle]] beside it; a caller
+   * specialises `t` to `NUM_CODE 0 i` and discharges the equation by reflexivity. The variable case
+   * is the only one with content: when the code is `v_i` the substitution answers `t`, which the
+   * premise says is that code.
+   */
+  val SubstituteSelf: String = "NUM_SUBST_TERM_SELF"
+
+  /**
+   * `|- !i t p. NUM_FORM p ==> t = NUM_CODE 0 i ==> NUM_SUBST_FORM i t p = p`
+   *
+   * [[SubstituteSelf]] for formulas, which is what `NUM_LOGIC_REPLACE` needs to be used at a
+   * formula nobody wrote down: replacing `numeral n` by `v_i` in a formula `p` with a hole at `i`
+   * leaves the instance `p[v_i/i]`, and this says it is `p`. An equality asks the term lemma of
+   * its two sides; a quantifier binding the index comes back untouched, and any other asks the
+   * induction hypothesis of its body.
+   */
+  val FormulaSubstituteSelf: String = "NUM_SUBST_FORM_SELF"
+
+  /**
    * `|- !i t p. NUM_FORM p ==> NUM_TERM t ==> NUM_FORM (NUM_SUBST_FORM i t p)`
    *
    * Substituting a term into a formula gives a formula, which is what the induction scheme of PA
@@ -1321,6 +1344,18 @@ object Language {
    * with content: `NUM_CLOSED t` says no index occurs in `t`, the bound one included.
    */
   val FreeForClosed: String = "NUM_FREE_FOR_CLOSED"
+
+  /**
+   * `|- !i t p. NUM_FORM p ==> t = NUM_CODE 0 i ==> NUM_FREE_FOR i t p`
+   *
+   * `v_i` is substitutable for `v_i` in every formula, the companion of [[FormulaSubstituteSelf]]
+   * and wanted by the same caller: replacement at a formula with a hole at `i` asks both of its
+   * terms to be substitutable there, and one of them is `v_i`. The same induction as
+   * [[FreeForClosed]] and the quantifier is again the only case with content, decided both ways:
+   * a binder that is the index answers `T`, and any other binder `j` is not free in `v_i` because
+   * `j` is not `i`.
+   */
+  val FreeForSelf: String = "NUM_FREE_FOR_SELF"
 
   /* ------------------------------------------------------------------ the logical axioms */
 
@@ -1804,6 +1839,10 @@ object Language {
     SubstituteIdle ->
       ("!i:num t:num s:num. NUM_TERM s ==> ~(NUM_FREE_TERM i s) ==> " +
         "NUM_SUBST_TERM i t s = s"),
+    SubstituteSelf ->
+      "!i:num t:num s:num. NUM_TERM s ==> t = NUM_CODE 0 i ==> NUM_SUBST_TERM i t s = s",
+    FormulaSubstituteSelf ->
+      "!i:num t:num p:num. NUM_FORM p ==> t = NUM_CODE 0 i ==> NUM_SUBST_FORM i t p = p",
     FormulaSubstituteKeepsFormulas ->
       ("!i:num t:num p:num. NUM_FORM p ==> NUM_TERM t ==> " +
         "NUM_FORM (NUM_SUBST_FORM i t p)"),
@@ -1845,6 +1884,7 @@ object Language {
       ("!i:num t:num j:num p:num. NUM_FREE_FOR i t (NUM_CODE 8 (NUM_PAIR j p)) = " +
         "COND (j = i) T (~(NUM_FREE_FORM i p) \\/ ~(NUM_FREE_TERM j t) /\\ NUM_FREE_FOR i t p)"),
     FreeForClosed -> "!i:num t:num p:num. NUM_FORM p ==> NUM_CLOSED t ==> NUM_FREE_FOR i t p",
+    FreeForSelf -> "!i:num t:num p:num. NUM_FORM p ==> t = NUM_CODE 0 i ==> NUM_FREE_FOR i t p",
     ClosedZero -> "NUM_CLOSED (NUM_CODE 1 0)",
     ClosedSuccessor -> "!s:num. NUM_CLOSED s ==> NUM_CLOSED (NUM_CODE 2 s)",
     ClosedSum ->
@@ -2173,6 +2213,40 @@ object Language {
           )
         )
       )
+      substituteIsSelf <- keepsWellFormed(
+        freeVocabulary,
+        SubstituteSelf,
+        None,
+        freeVocabulary.substitute,
+        strong,
+        cases,
+        selfClause(
+          Map(
+            SubstituteVariable -> substituteVariable,
+            SubstituteZero -> substituteZero,
+            SubstituteSuccessor -> substituteSuccessor,
+            SubstituteSum -> substituteSum,
+            SubstituteProduct -> substituteProduct
+          )
+        )
+      )
+      formulaSubstituteIsSelf <- keepsWellFormed(
+        freeVocabulary,
+        FormulaSubstituteSelf,
+        None,
+        formulaSubstitute,
+        strong,
+        formulaCases,
+        formulaSelfClause(
+          Map(
+            FormulaSubstituteEquality -> formulaSubstituteEquality,
+            FormulaSubstituteNegation -> formulaSubstituteNegation,
+            FormulaSubstituteImplication -> formulaSubstituteImplication,
+            FormulaSubstituteUniversal -> formulaSubstituteUniversal
+          ),
+          substituteIsSelf
+        )
+      )
 
       formulaFreeEquality <- shapedAt(
         freeVocabulary, formulaFreeNamed, projections, successor,
@@ -2271,7 +2345,24 @@ object Language {
             FreeForImplication -> freeForImplication,
             FreeForUniversal -> freeForUniversal
           ),
-          closedCases
+          closedBinderAbsent(closedCases)
+        )
+      )
+      freeForSelf <- keepsWellFormed(
+        logicVocabulary,
+        FreeForSelf,
+        None,
+        freeForHead,
+        strong,
+        formulaCases,
+        substitutableClause(
+          Map(
+            FreeForEquality -> freeForEquality,
+            FreeForNegation -> freeForNegation,
+            FreeForImplication -> freeForImplication,
+            FreeForUniversal -> freeForUniversal
+          ),
+          selfBinderAbsent(freeVariable)
         )
       )
       logicHead <- LogicError.lift(
@@ -2429,6 +2520,8 @@ object Language {
         FormulaSubstituteUniversal -> formulaSubstituteUniversal,
         SubstituteKeepsTerms -> substituteKeepsTerms,
         SubstituteIdle -> substituteIsIdle,
+        SubstituteSelf -> substituteIsSelf,
+        FormulaSubstituteSelf -> formulaSubstituteIsSelf,
         FormulaSubstituteKeepsFormulas -> formulaSubstituteKeepsFormulas,
         FreeVariable -> freeVariable,
         FreeZero -> freeZero,
@@ -2443,7 +2536,8 @@ object Language {
         FreeForNegation -> freeForNegation,
         FreeForImplication -> freeForImplication,
         FreeForUniversal -> freeForUniversal,
-        FreeForClosed -> freeForClosed
+        FreeForClosed -> freeForClosed,
+        FreeForSelf -> freeForSelf
       ) ++ axiomFacts
         .updated(AxiomCases, axiomCases)
         .updated(AxiomFormula, axiomFormula)
@@ -5726,7 +5820,8 @@ object Language {
   }
 
   /**
-   * The four clauses of [[FreeForClosed]]: a closed term is substitutable anywhere.
+   * The four clauses of a claim that a term is substitutable everywhere: [[FreeForClosed]] and
+   * [[FreeForSelf]].
    *
    * The claim is not about what a substitution gives, so the site's substitution slot holds the
    * head `NUM_FREE_FOR` instead, and [[Site.valueAt]] then reads the clause of THAT recursion at
@@ -5734,13 +5829,15 @@ object Language {
    * the case proves that.
    *
    * Equality is `T`. Negation and implication ask the hypothesis. The quantifier is the case with
-   * content and needs no case split on whether the binder is the index: its second branch holds
-   * outright, because closedness says the binder does not occur in the term and the hypothesis says
-   * the body accepts it, so both branches are proved and the conditional goes whichever way.
+   * content, and the two lemmas differ only there, in how they show the binder `j` absent from the
+   * term, which is `binderAbsent`. The conditional's first branch is `T`; its second needs that
+   * absence and the hypothesis at the body. [[closedBinderAbsent]] has the absence outright, from
+   * closedness; [[selfBinderAbsent]] has it under `~(j = i)`, the assumption the second branch is
+   * proved under, so the split discharges it.
    */
   private def substitutableClause(
     clauses: Map[String, Kernel.Thm],
-    closedCases: Kernel.Thm
+    binderAbsent: (Site, Term) => Either[LogicError, Kernel.Thm]
   )(site: Site, which: Int): Either[LogicError, Kernel.Thm] = {
     val rules = site.rules
     val logic = site.logic
@@ -5818,14 +5915,7 @@ object Language {
                 instance <- rules.specAll(
                   clauses(FreeForUniversal), List(site.index, site.replacement, bound, inner))
                 value <- site.valueAt(shape, instance)
-
-                // `~(NUM_FREE_TERM j t)`, from closedness at the binder.
-                opened <- rules
-                  .spec(site.replacement, closedCases)
-                  .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, site.sideCondition)))
-                binderAbsent <- rules.spec(bound, opened)
                 body <- site.inductive(inner, shape, innerIsFormula)
-                both <- rules.conjIntro(binderAbsent, body)
                 done <- site.bothWays(
                   value,
                   (moved, _) => rules.truth.flatMap(settled(moved, _)),
@@ -5836,6 +5926,8 @@ object Language {
                         .map(_._2)
                         .flatMap(logic.destDisj)
                         .toRight(NotOfForm("a disjunction", moved.conclusion))
+                      absent <- binderAbsent(site, bound)
+                      both <- rules.conjIntro(absent, body)
                       widened <- rules.disjIntro2(notFree._1, both)
                       result <- settled(moved, widened)
                     } yield result,
@@ -5846,6 +5938,251 @@ object Language {
           } yield reached
       }
     } yield result
+  }
+
+  /** `~(NUM_FREE_TERM j t)` from the site's `NUM_CLOSED t`: [[FreeForClosed]]'s binder. */
+  private def closedBinderAbsent(closedCases: Kernel.Thm)(
+    site: Site, bound: Term
+  ): Either[LogicError, Kernel.Thm] =
+    site.rules
+      .spec(site.replacement, closedCases)
+      .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, site.sideCondition)))
+      .flatMap(site.rules.spec(bound, _))
+
+  /**
+   * `~(NUM_FREE_TERM j t)` from the site's `t = NUM_CODE 0 i`, under `~(j = i)`: [[FreeForSelf]]'s
+   * binder. Freeness of `j` in `v_i` is `i = j`, and the assumption denies it; the assumption is
+   * the one the conditional's second branch is proved under, which is where this is called.
+   */
+  private def selfBinderAbsent(freeVariable: Kernel.Thm)(
+    site: Site, bound: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = site.rules
+    for {
+      guard <- LogicError.lift(Term.eq(bound, site.index))
+      denial <- site.logic.mkNot(guard).flatMap(term => LogicError.lift(Kernel.assume(term)))
+      flipped <- LogicError.lift(Term.eq(site.index, bound))
+      reversed <- LogicError
+        .lift(Kernel.assume(flipped))
+        .flatMap(Conv.sym)
+        .flatMap(rules.notElim(denial, _))
+        .flatMap(rules.notIntro(flipped, _)) // ~(i = j)
+      free <- LogicError.lift(site.vocabulary.theory.constant(
+        FreeName, Type.fun(site.vocabulary.numbers, Type.fun(site.vocabulary.numbers, Type.Bool))))
+      atBound <- LogicError.lift(Term.app(free, bound))
+      carried <- Conv.apTerm(atBound, site.sideCondition) // NUM_FREE_TERM j t = NUM_FREE_TERM j v_i
+      clause <- rules.specAll(freeVariable, List(bound, site.index)) // ... = (i = j)
+      joined <- Conv.trans(carried, clause)
+      result <- Conv.sym(joined).flatMap(site.forwardNot(_, reversed))
+    } yield result
+  }
+
+  /**
+   * The four clauses of [[SubstituteSelf]]. The variable case splits on whether it is `v_i`: if
+   * so the substitution answers `t`, which the site's premise makes `v_i`, which the case's guard
+   * makes the code; if not it answers the code. Zero stays; a successor and a binary constructor
+   * ask the hypothesis at their sub-codes, under the same premise, and rebuild.
+   */
+  private def selfClause(
+    equations: Map[String, Kernel.Thm]
+  )(site: Site, which: Int): Either[LogicError, Kernel.Thm] = {
+    val rules = site.rules
+
+    for {
+      assumed <- LogicError.lift(Kernel.assume(site.parts(which)))
+      result <- which match {
+        case 0 =>
+          for {
+            shape <- site.atLiteral(assumed)
+            equation <- rules.specAll(
+              equations(SubstituteVariable), List(site.index, site.replacement, site.payload))
+            value <- site.valueAt(shape, equation)
+            literal <- Term.destEq(shape.conclusion).map(_._2) match {
+              case Some(App(head, _)) => Right(head)
+              case _ => Left(NotOfForm("a variable's code", shape.conclusion))
+            }
+            settled <- site.bothWays(
+              value,
+              (moved, _) =>
+                for {
+                  guard <- LogicError.lift(Term.eq(site.payload, site.index))
+                  held <- LogicError.lift(Kernel.assume(guard))
+                  back <- Conv.sym(held).flatMap(Conv.apTerm(literal, _)) // v_i = v_payload
+                  toVariable <- Conv.trans(moved, site.sideCondition)
+                  reached <- Conv.trans(toVariable, back)
+                  settled <- site.itself(reached, shape)
+                } yield settled,
+              (moved, _) => site.itself(moved, shape)
+            )
+          } yield settled
+
+        case 1 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            payloadIs <- rules.conjElim2(assumed)
+            shape <- site.atLiteralPair(tagIs, payloadIs)
+            equation <- rules.specAll(
+              equations(SubstituteZero), List(site.index, site.replacement))
+            value <- site.valueAt(shape, equation)
+            settled <- site.itself(value, shape)
+          } yield settled
+
+        case 2 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            payloadIsTerm <- rules.conjElim2(assumed)
+            shape <- site.atLiteral(tagIs)
+            equation <- rules.specAll(
+              equations(SubstituteSuccessor),
+              List(site.index, site.replacement, site.payload))
+            value <- site.valueAt(shape, equation)
+            shorter <- site.inductive(site.payload, shape, payloadIsTerm)
+            rebuilt <- site.underConstructor(value, shorter)
+            settled <- site.itself(rebuilt, shape)
+          } yield settled
+
+        case _ =>
+          for {
+            tags <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            split <- site.logic
+              .destDisj(tags.conclusion)
+              .toRight(NotOfForm("a disjunction", tags.conclusion))
+            byHypothesis = (argument: Term, shape: Kernel.Thm, isTerm: Kernel.Thm) =>
+              site.inductive(argument, shape, isTerm)
+            three <- LogicError
+              .lift(Kernel.assume(split._1))
+              .flatMap(binarySelfClause(site, arguments, _, equations(SubstituteSum), byHypothesis))
+            four <- LogicError
+              .lift(Kernel.assume(split._2))
+              .flatMap(binarySelfClause(site, arguments, _, equations(SubstituteProduct), byHypothesis))
+            settled <- rules.disjElim(tags, three, four)
+          } yield settled
+      }
+    } yield result
+  }
+
+  /**
+   * The four clauses of [[FormulaSubstituteSelf]]. An equality asks [[SubstituteSelf]] of its two
+   * sides rather than the hypothesis, since they are terms; a negation and an implication ask the
+   * hypothesis; a quantifier binding the index comes back as it was, and any other asks the
+   * hypothesis of its body.
+   */
+  private def formulaSelfClause(
+    equations: Map[String, Kernel.Thm],
+    termSelf: Kernel.Thm
+  )(site: Site, which: Int): Either[LogicError, Kernel.Thm] = {
+    val rules = site.rules
+    val avoid = Set(site.code, site.tag, site.payload) ++ Term.freeVariables(site.index) ++
+      Term.freeVariables(site.replacement)
+    val byHypothesis = (argument: Term, shape: Kernel.Thm, isFormula: Kernel.Thm) =>
+      site.inductive(argument, shape, isFormula)
+
+    for {
+      assumed <- LogicError.lift(Kernel.assume(site.parts(which)))
+      result <- which match {
+        case 0 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            settled <- binarySelfClause(site, arguments, tagIs, equations(FormulaSubstituteEquality),
+              (argument, _, isTerm) =>
+                rules
+                  .specAll(termSelf, List(site.index, site.replacement, argument))
+                  .flatMap(rules.mp(_, isTerm))
+                  .flatMap(rules.mp(_, site.sideCondition)))
+          } yield settled
+
+        case 1 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            payloadIsFormula <- rules.conjElim2(assumed)
+            shape <- site.atLiteral(tagIs)
+            equation <- rules.specAll(
+              equations(FormulaSubstituteNegation), List(site.index, site.replacement, site.payload))
+            value <- site.valueAt(shape, equation)
+            shorter <- site.inductive(site.payload, shape, payloadIsFormula)
+            rebuilt <- site.underConstructor(value, shorter)
+            settled <- site.itself(rebuilt, shape)
+          } yield settled
+
+        case 2 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            settled <- binarySelfClause(
+              site, arguments, tagIs, equations(FormulaSubstituteImplication), byHypothesis)
+          } yield settled
+
+        case _ =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            reached <- withWitnesses(site.vocabulary, arguments, avoid) { (bound, inner, atInner) =>
+              for {
+                isPair <- rules.conjElim1(atInner)
+                innerIsFormula <- rules.conjElim2(atInner)
+                shape <- site.atLiteralPair(tagIs, isPair)
+                instance <- rules.specAll(
+                  equations(FormulaSubstituteUniversal),
+                  List(site.index, site.replacement, bound, inner))
+                value <- site.valueAt(shape, instance)
+                done <- site.bothWays(
+                  value,
+                  (moved, _) => site.itself(moved, shape),
+                  (moved, _) =>
+                    for {
+                      shorter <- site.inductive(inner, shape, innerIsFormula)
+                      pairHead <- LogicError.lift(Term.app(site.vocabulary.pair, bound))
+                      inPair <- Conv.apTerm(pairHead, shorter)
+                      rebuilt <- site.underConstructor(moved, inPair)
+                      settled <- site.itself(rebuilt, shape)
+                    } yield settled
+                )
+              } yield done
+            }
+          } yield reached
+      }
+    } yield result
+  }
+
+  /**
+   * A constructor over a pair whose two components each come back unchanged, by `unchanged` at
+   * the component: the hypothesis for a sum, a product or an implication, the term lemma for the
+   * two sides of an equality.
+   */
+  private def binarySelfClause(
+    site: Site,
+    arguments: Kernel.Thm,
+    tagIs: Kernel.Thm,
+    equation: Kernel.Thm,
+    unchanged: (Term, Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = site.rules
+
+    withWitnesses(
+      site.vocabulary,
+      arguments,
+      Set(site.code, site.tag, site.payload) ++ Term.freeVariables(site.index) ++
+        Term.freeVariables(site.replacement)
+    ) { (left, right, atRight) =>
+      for {
+        isPair <- rules.conjElim1(atRight)
+        both <- rules.conjElim2(atRight)
+        leftIsWellFormed <- rules.conjElim1(both)
+        rightIsWellFormed <- rules.conjElim2(both)
+        shape <- site.atLiteralPair(tagIs, isPair)
+        instance <- rules.specAll(equation, List(site.index, site.replacement, left, right))
+        value <- site.valueAt(shape, instance)
+        leftDone <- unchanged(left, shape, leftIsWellFormed)
+        rightDone <- unchanged(right, shape, rightIsWellFormed)
+        paired <- Conv
+          .apTerm(site.vocabulary.pair, leftDone)
+          .flatMap(half => LogicError.lift(Kernel.mkComb(half, rightDone)))
+        rebuilt <- site.underConstructor(value, paired)
+        settled <- site.itself(rebuilt, shape)
+      } yield settled
+    }
   }
 
   /* ----------------------------------------------------------- the axioms of the theory */

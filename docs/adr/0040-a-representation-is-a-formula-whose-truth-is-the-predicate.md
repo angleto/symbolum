@@ -140,3 +140,23 @@ taken before completeness for bounded formulas is attempted again, not inside it
 
 The decision was taken on 2026-11-12 and is `docs/adr/0078`: both schemes ask that the term be
 substitutable.
+
+## The two pieces named above, 2026-11-19
+
+Both pieces the section on what was not measured names now exist, and so does the universal half
+of the unfolding. PA splits the order below a successor for a variable (`NUM_PROV_LESS_SUC_CASES`)
+and refutes it below zero (`NUM_PROV_NOT_LESS_ZERO`). From those two, `NUM_PROV_ALL_BELOW_NUMERAL`
+proves a bounded universal below a numeral from a proof of each instance under the bound. The
+finite conjunction is the meta level's `!k. k < n ==>`, which is the form the completeness
+induction consumes one instance at a time. Each costs the naturals' two axioms.
+
+What it needed below `Deduction` was not an order fact. The equality case replaces a numeral by the
+variable in a formula nobody wrote down, so `Language` now proves that putting `v_i` for `v_i`
+changes no term and no formula and is always allowed (`NUM_SUBST_TERM_SELF`,
+`NUM_SUBST_FORM_SELF`, `NUM_FREE_FOR_SELF`). `tools/verify/perturb-all-below.sh` records that the
+proof does not build without them.
+
+The existential half is not here. A bounded existential refuted from a refutation of every
+instance is the universal of the negation read through `NUM_AND` and `NUM_EXISTS`, and one proved
+from one instance is `NUM_PROV_EXISTS_INTRO` at a closed witness. Neither is written, and neither
+is completeness for bounded formulas, which is still the claim in this record to doubt first.

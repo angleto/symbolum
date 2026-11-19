@@ -538,6 +538,56 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * `v_2` for `v_2` changes nothing and is always allowed, read against an independent reckoning.
+   *
+   * The three lemmas are proved once for every code; here they are specialised at codes where
+   * the substitution meets each case that could go wrong: `v_2` itself, another variable, a
+   * quantifier over another index with `v_2` free under it, and a quantifier over `2` itself.
+   * What each lemma says at the code is then compared with what `Language.substituteIn` and
+   * `Language.substitutableIn` compute by rewriting the clauses, which is a second derivation that
+   * does not go through the induction.
+   *
+   * The control is that the premise is load-bearing: the same codes with `v_3` put for `v_2` do
+   * move, except the one whose quantifier binds `2`, so a lemma that held because substitution
+   * never moved anything would be caught by the computation disagreeing rather than by nothing.
+   */
+  it should "leave every code alone when v_i is put for v_i, and accept it everywhere" in {
+    val index = term("2")
+    val itself = term("NUM_CODE 0 2")
+    val reflexive = Kernel.refl(itself)
+    val sum = "NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 2 (NUM_CODE 0 5)))"
+    val termSelf = force(rules.specAll(force(language.fact(Language.SubstituteSelf)), List(index, itself, term(sum)))
+      .flatMap(rules.mp(_, force(language.wellFormedIn(term(sum))))).flatMap(rules.mp(_, reflexive)))
+    termSelf.hypotheses shouldBe empty
+    termSelf.conclusion shouldBe proposition(s"NUM_SUBST_TERM 2 (NUM_CODE 0 2) ($sum) = $sum")
+
+    val equation = s"NUM_CODE 5 (NUM_PAIR ($sum) (NUM_CODE 0 3))"
+    val codes = Vector(
+      equation,
+      s"NUM_CODE 8 (NUM_PAIR 3 (NUM_CODE 7 (NUM_PAIR ($equation) (NUM_CODE 6 ($equation)))))",
+      s"NUM_CODE 8 (NUM_PAIR 2 ($equation))"
+    )
+    codes.foreach { text =>
+      val code = term(text)
+      val formed = force(language.wellFormedIn(code))
+      val unchanged = force(rules.specAll(force(language.fact(Language.FormulaSubstituteSelf)), List(index, itself, code))
+        .flatMap(rules.mp(_, formed)).flatMap(rules.mp(_, reflexive)))
+      val accepted = force(rules.specAll(force(language.fact(Language.FreeForSelf)), List(index, itself, code))
+        .flatMap(rules.mp(_, formed)).flatMap(rules.mp(_, reflexive)))
+      val reckoned = force(language.substituteIn(index, itself, code))
+      withClue(s"$text: ") {
+        unchanged.hypotheses shouldBe empty
+        accepted.hypotheses shouldBe empty
+        unchanged.conclusion shouldBe proposition(s"NUM_SUBST_FORM 2 (NUM_CODE 0 2) ($text) = $text")
+        Term.destEq(reckoned.conclusion).map(_._2) shouldBe Some(code)
+        accepted.conclusion shouldBe force(language.substitutableIn(index, itself, code)).conclusion
+        val moved = force(language.substituteIn(index, term("NUM_CODE 0 3"), code))
+        if (text != codes.last) Term.destEq(moved.conclusion).map(_._2) should not be Some(code)
+      }
+    }
+  }
+
+  /**
    * An index with a free variable is compared with another only as the caller says, and what the
    * caller said stays on the answer.
    *

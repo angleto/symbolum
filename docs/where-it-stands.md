@@ -757,8 +757,14 @@ supplies and carries as hypotheses; the comparisons with the hole are arithmetic
 assumes `~(i = x)` and nothing else. **Beside it, the same day**, `NUM_PROV_NOT_LESS_ZERO` is
 `~(v_x < 0)` inside PA at any two indices, `i = x` included, since no step of it compares them.
 
-Not written above that: the bounded quantifiers themselves, which want the unfolding into finite
-conjunctions and disjunctions; any representation other than
+**A bounded universal unfolds into its instances, since 2026-11-19**: `NUM_PROV_ALL_BELOW_NUMERAL`
+proves `!v_x. v_x < numeral n ==> p` from a proof of `p[numeral k/x]` for every `k < n`, for any
+formula `p`. It is an induction in the logic over `n` on the two facts above, with the equality case
+closed by replacement at `p` itself, which is why `Language` now proves that `v_i` put for `v_i`
+moves nothing and is always allowed (`NUM_SUBST_FORM_SELF`, `NUM_FREE_FOR_SELF`).
+
+Not written above that: the bounded existential's unfolding into a finite disjunction, and with
+it completeness for bounded formulas; any representation other than
 `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
