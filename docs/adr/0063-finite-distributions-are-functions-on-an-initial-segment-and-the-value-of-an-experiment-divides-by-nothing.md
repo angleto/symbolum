@@ -166,3 +166,21 @@ signal against one who knows the state is at least `min (phi g) ((1 - phi) l) * 
 The link takes `Successor` since then, because `VALUE 2 m 1` sums over a bound written as a numeral
 and `SUM_SUC` and `MAXIMUM_SUC` are stated at `SUC n`; the essay's instances in the test scope
 already took it from the chain for the same reason.
+
+Added on 2026-11-19, at Angelo's request from the same essay, two more instances in the test scope,
+no fact, no constant and no axiom. `EssayCase.Revealed` is E5 with the kind of task observed: the
+signal `2 (8 s + g) + tau`, with `(g, tau)` given `y` written as its joint likelihood, `phi` at
+`(y, 1)`, nothing at `(g, 1)` for `g <> y` and `(1 - phi) / 8` at every `(g, 0)`. At `phi = 1/10` the
+value is `phi + (1 - phi) 7/20 = 83/200`, and `EssayCase.NoveltyBit` subtracts `EssayCase.Ignored`:
+the bit is worth `13/200`. The derivation splits the hundred and twenty-eight signals into the two
+blocks of `tau` by `SUM_GROUPS` at width two and `SUM_ADD`, and each block is the pair argument of
+`Average` or of `Ignored` at other weights: on a familiar task the maximum is at `a = g`, on a new
+one at `a = s`, strictly. At `phi = 1/2` the same derivation gives `27/40` (`EssayCase.RevealedHalf`),
+which `EssayMemory` reaches at `r = 1` in its own encoding; the two agree. `EssaySynergy` is the
+XOR of two uniform bits: with nothing, with either bit alone, the value is `1/2`, with both it is
+`1`, and `XOR_SYNERGY` states that each piece alone is worth what nothing is and the two together
+more. Its values are computed rather than argued: the sums over four states and at most four signals
+are opened by their recurrences, and the quotients and remainders of numerals by two are
+`NUM_DIV_MOD_UNIQUE` at identities `NaturalLinear` settles. Recounted outside the kernel first, with
+exact fractions from the model rather than from the encoding: `83/200`, `27/40`, no tie at any
+signal, and `1/2, 1/2, 1/2, 1`.

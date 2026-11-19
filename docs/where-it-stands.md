@@ -1325,7 +1325,10 @@ monotonicity holds on average over the tasks and not conditioned on the task. Th
 is `BLACKWELL_GARBLING` itself, at the garbling that drops `g`. And its case E6a, a memory that keeps the
 condition beside the frame with reliability `r`: at `r = 1` the reader is right always on familiar
 tasks, `7/20` of the time on new ones and `27/40` on average, and at `r = 9/10` `187/200`, `131/400`
-and `101/160`, six theorems with nothing assumed. **What is not here**: the converse,
+and `101/160`, six theorems with nothing assumed. When the reader also sees whether the task is
+familiar, the value at `phi = 1/10` is `83/200`, so that bit is worth `13/200` over the frame read
+without it; and two uniform bits whose XOR is the answer are worth `1/2` with nothing, with either bit
+alone, and `1` together, which is synergy rather than a quantity of information. **What is not here**: the converse,
 Blackwell–Sherman–Stein, which needs a separating hyperplane in the simplex of posteriors; and any
 distribution not on an initial segment of `num`.
 

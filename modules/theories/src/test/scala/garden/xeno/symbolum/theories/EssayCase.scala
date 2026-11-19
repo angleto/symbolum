@@ -84,13 +84,47 @@ private[theories] object EssayCase {
    */
   val Garbled: String = s"VALUE 8 8 7 $Prior $Signal $Utility <= VALUE 8 (8 * 8) 7 $Prior $Full $Utility"
 
+  /**
+   * The reader also sees `tau`, whether the task is familiar (`tau = 1`) or new (`tau = 0`): one
+   * signal `t = 2 (8 s + g) + tau` of the hundred and twenty-eight. Given the answer `y`, the pair
+   * `(g, tau)` has probability `phi` at `(y, 1)`, nothing at `(g, 1)` for `g <> y`, and
+   * `(1 - phi) / 8` at every `(g, 0)`, which is the frame of [[EssayCase.Full]] with the kind of task
+   * kept rather than summed out. Written at `phi`, with `nu = (1 - phi) / 8`.
+   */
+  def revealed(phi: String, nu: String): String =
+    "(\\y:num. \\t:num. COND (NUM_DIV (NUM_DIV t 2) 8 = y) ((7:real) / 20) (13 / 140) * " +
+      s"COND (NUM_MOD (NUM_DIV t 2) 8 = y) (COND (NUM_MOD t 2 = 1) $phi $nu) (COND (NUM_MOD t 2 = 1) 0 $nu))"
+
+  val Phi: String = "((1:real) / 10)"
+  val Nu: String = "((9:real) / 80)"
+
+  /** The experiment at `phi = 1/10`, where without `tau` the frame is [[EssayCase.Rare]] and worth nothing. */
+  val Revealing: String = revealed(Phi, Nu)
+
+  /**
+   * `V(1; tau)` at `phi = 1/10`: `phi * 1 + (1 - phi) * 7/20`. On a familiar task the reader knows
+   * `g` is the answer and follows it; on a new one it knows `g` is noise and follows `s`.
+   */
+  val Revealed: String = s"VALUE 8 (2 * (8 * 8)) 7 $Prior $Revealing $Utility = (83:real) / 200"
+
+  /** What `tau` is worth at `phi = 1/10`: the value with it less the value without it, [[EssayCase.Ignored]]. */
+  val NoveltyBit: String =
+    s"VALUE 8 (2 * (8 * 8)) 7 $Prior $Revealing $Utility - VALUE 8 (8 * 8) 7 $Prior $Rare $Utility = (13:real) / 200"
+
+  /** The same at `phi = 1/2`, a cross-check against `E6A_AVERAGE_R1` of `EssayMemory`, which is `27/40` too. */
+  val RevealedHalf: String =
+    s"VALUE 8 (2 * (8 * 8)) 7 $Prior ${revealed("((1:real) / 2)", "((1:real) / 16)")} $Utility = (27:real) / 40"
+
   final case class Values(
     empty: Kernel.Thm,
     average: Kernel.Thm,
     newTask: Kernel.Thm,
     ignored: Kernel.Thm,
     ignoredRule: Kernel.Thm,
-    garbled: Kernel.Thm
+    garbled: Kernel.Thm,
+    revealed: Kernel.Thm,
+    noveltyBit: Kernel.Thm,
+    revealedHalf: Kernel.Thm
   )
 
   def derive(decision: Decision, successor: Successor): R[Values] = {
@@ -185,14 +219,14 @@ private[theories] object EssayCase {
       } yield out
 
     /** Away from `g` the score is strictly below the score at `g`: `49/17920 < 117/17920` and the like. */
-    def strictlyBelow(S: String, G: String, A: String, other: Kernel.Thm): R[Kernel.Thm] =
+    def strictlyBelow(S: String, G: String, A: String, other: Kernel.Thm, h: String = H, hr: String = Hr): R[Kernel.Thm] =
       for {
-        goal <- prop(s"${score(S, G, A)} < ${score(S, G, G)}")
+        goal <- prop(s"${score(S, G, A, h, hr)} < ${score(S, G, G, h, hr)}")
         gT <- prop0(G)
         turned <- flip(A, G)
         gOther <- rw(turned, other)
-        frameOff <- condOff(s"$G = $A", H, Hr, gOther)
-        frameOn <- condOn(s"$G = $G", H, Hr, Kernel.refl(gT))
+        frameOff <- condOff(s"$G = $A", h, hr, gOther)
+        frameOn <- condOn(s"$G = $G", h, hr, Kernel.refl(gT))
         out <- cases(s"$S = $A")(
           hit =>
             for {
@@ -219,28 +253,28 @@ private[theories] object EssayCase {
       } yield out
 
     /** `Maximum (\a. inner a) 7 = score g`, at a pair with `g <= 7`. */
-    def maximum(S: String, G: String, gLe: Kernel.Thm): R[Kernel.Thm] =
+    def maximum(S: String, G: String, gLe: Kernel.Thm, h: String = H, hr: String = Hr): R[Kernel.Thm] =
       for {
-        pointwise <- collapsed(S, G)
+        pointwise <- collapsed(S, G, h, hr)
         same <- at(k(Decision.MaximumCongruenceBelow),
-          s"(!a:num. a <= 7 ==> (\\a:num. ${inner(S, G, "a")}) a = (\\a:num. ${score(S, G, "a")}) a) ==> " +
-            s"Maximum (\\a:num. ${inner(S, G, "a")}) 7 = Maximum (\\a:num. ${score(S, G, "a")}) 7")
+          s"(!a:num. a <= 7 ==> (\\a:num. ${inner(S, G, "a", h, hr)}) a = (\\a:num. ${score(S, G, "a", h, hr)}) a) ==> " +
+            s"Maximum (\\a:num. ${inner(S, G, "a", h, hr)}) 7 = Maximum (\\a:num. ${score(S, G, "a", h, hr)}) 7")
           .flatMap(mp(_, pointwise))
-        fT <- prop0(s"\\a:num. ${score(S, G, "a")}")
+        fT <- prop0(s"\\a:num. ${score(S, G, "a", h, hr)}")
         sevenT <- nm("7")
         gV <- numVar(G)
         upper <- spec(k(Decision.MaximumUpper), fT, sevenT, gV).flatMap(mp(_, gLe))
-        bound <- prop(s"!a:num. a <= 7 ==> (\\a:num. ${score(S, G, "a")}) a <= ${score(S, G, G)}")
+        bound <- prop(s"!a:num. a <= 7 ==> (\\a:num. ${score(S, G, "a", h, hr)}) a <= ${score(S, G, G, h, hr)}")
         bounded <- every(bound) { (as, _, g) =>
           val A = num(as(0))
           cases(s"$A = $G")(
             equal => exact(Seq(equal), Seq.empty, g),
-            other => strictlyBelow(S, G, A, other).flatMap(lt => exact(Seq.empty, Seq(lt), g))
+            other => strictlyBelow(S, G, A, other, h, hr).flatMap(lt => exact(Seq.empty, Seq(lt), g))
           )
         }
-        cT <- prop0(score(S, G, G))
+        cT <- prop0(score(S, G, G, h, hr))
         least <- spec(k(Decision.MaximumLeast), fT, sevenT, cT).flatMap(mp(_, bounded))
-        goal <- prop(s"Maximum (\\a:num. ${inner(S, G, "a")}) 7 = ${score(S, G, G)}")
+        goal <- prop(s"Maximum (\\a:num. ${inner(S, G, "a", h, hr)}) 7 = ${score(S, G, G, h, hr)}")
         out <- exact(Seq(same), Seq(upper, least), goal)
       } yield out
 
@@ -375,9 +409,9 @@ private[theories] object EssayCase {
      * Away from `s` the score at `phi = 1/10` is strictly below the score at `s`: the closest is
      * `221/11200 < 441/11200`, `a = g` against `a = s`, between the products `P(s | a) P(g | a)`.
      */
-    def belowSignal(S: String, G: String, A: String, other: Kernel.Thm): R[Kernel.Thm] =
+    def belowSignal(S: String, G: String, A: String, other: Kernel.Thm, h: String = h10, hr: String = hr10): R[Kernel.Thm] =
       for {
-        goal <- prop(s"${score(S, G, A, h10, hr10)} < ${score(S, G, S, h10, hr10)}")
+        goal <- prop(s"${score(S, G, A, h, hr)} < ${score(S, G, S, h, hr)}")
         sT <- prop0(S)
         turned <- flip(A, S)
         sOther <- rw(turned, other)
@@ -386,7 +420,7 @@ private[theories] object EssayCase {
         out <- cases(s"$G = $A")(
           hit =>
             for {
-              frameOn <- condOn(s"$G = $A", h10, hr10, hit)
+              frameOn <- condOn(s"$G = $A", h, hr, hit)
               // g = a and a <> s, so g <> s
               gs <- prop(s"$G = $S")
               assumed <- LogicError.lift(Kernel.assume(gs))
@@ -394,43 +428,43 @@ private[theories] object EssayCase {
               as <- trans(back, assumed)
               absurd <- rules.notElim(other, as)
               gOther <- rules.notIntro(gs, absurd)
-              frameAtS <- condOff(s"$G = $S", h10, hr10, gOther)
+              frameAtS <- condOff(s"$G = $S", h, hr, gOther)
               out <- exact(Seq(signalOff, signalOn, frameOn, frameAtS), Seq.empty, goal)
             } yield out,
           miss =>
             for {
-              frameOff <- condOff(s"$G = $A", h10, hr10, miss)
+              frameOff <- condOff(s"$G = $A", h, hr, miss)
               out <- cases(s"$G = $S")(
-                same => condOn(s"$G = $S", h10, hr10, same).flatMap(e => exact(Seq(signalOff, signalOn, frameOff, e), Seq.empty, goal)),
-                apart => condOff(s"$G = $S", h10, hr10, apart).flatMap(e => exact(Seq(signalOff, signalOn, frameOff, e), Seq.empty, goal))
+                same => condOn(s"$G = $S", h, hr, same).flatMap(e => exact(Seq(signalOff, signalOn, frameOff, e), Seq.empty, goal)),
+                apart => condOff(s"$G = $S", h, hr, apart).flatMap(e => exact(Seq(signalOff, signalOn, frameOff, e), Seq.empty, goal))
               )
             } yield out
         )
       } yield out
 
     /** `Maximum (\a. inner a) 7 = score s` at `phi = 1/10`, at a pair with `s <= 7`. */
-    def maximumAtSignal(S: String, G: String, sLe: Kernel.Thm): R[Kernel.Thm] =
+    def maximumAtSignal(S: String, G: String, sLe: Kernel.Thm, h: String = h10, hr: String = hr10): R[Kernel.Thm] =
       for {
-        pointwise <- collapsed(S, G, h10, hr10)
+        pointwise <- collapsed(S, G, h, hr)
         same <- at(k(Decision.MaximumCongruenceBelow),
-          s"(!a:num. a <= 7 ==> (\\a:num. ${inner(S, G, "a", h10, hr10)}) a = (\\a:num. ${score(S, G, "a", h10, hr10)}) a) ==> " +
-            s"Maximum (\\a:num. ${inner(S, G, "a", h10, hr10)}) 7 = Maximum (\\a:num. ${score(S, G, "a", h10, hr10)}) 7")
+          s"(!a:num. a <= 7 ==> (\\a:num. ${inner(S, G, "a", h, hr)}) a = (\\a:num. ${score(S, G, "a", h, hr)}) a) ==> " +
+            s"Maximum (\\a:num. ${inner(S, G, "a", h, hr)}) 7 = Maximum (\\a:num. ${score(S, G, "a", h, hr)}) 7")
           .flatMap(mp(_, pointwise))
-        fT <- prop0(s"\\a:num. ${score(S, G, "a", h10, hr10)}")
+        fT <- prop0(s"\\a:num. ${score(S, G, "a", h, hr)}")
         sevenT <- nm("7")
         sV <- numVar(S)
         upper <- spec(k(Decision.MaximumUpper), fT, sevenT, sV).flatMap(mp(_, sLe))
-        bound <- prop(s"!a:num. a <= 7 ==> (\\a:num. ${score(S, G, "a", h10, hr10)}) a <= ${score(S, G, S, h10, hr10)}")
+        bound <- prop(s"!a:num. a <= 7 ==> (\\a:num. ${score(S, G, "a", h, hr)}) a <= ${score(S, G, S, h, hr)}")
         bounded <- every(bound) { (as, _, g) =>
           val A = num(as(0))
           cases(s"$A = $S")(
             equal => exact(Seq(equal), Seq.empty, g),
-            other => belowSignal(S, G, A, other).flatMap(lt => exact(Seq.empty, Seq(lt), g))
+            other => belowSignal(S, G, A, other, h, hr).flatMap(lt => exact(Seq.empty, Seq(lt), g))
           )
         }
-        cT <- prop0(score(S, G, S, h10, hr10))
+        cT <- prop0(score(S, G, S, h, hr))
         least <- spec(k(Decision.MaximumLeast), fT, sevenT, cT).flatMap(mp(_, bounded))
-        goal <- prop(s"Maximum (\\a:num. ${inner(S, G, "a", h10, hr10)}) 7 = ${score(S, G, S, h10, hr10)}")
+        goal <- prop(s"Maximum (\\a:num. ${inner(S, G, "a", h, hr)}) 7 = ${score(S, G, S, h, hr)}")
         out <- exact(Seq(same), Seq(upper, least), goal)
       } yield out
 
@@ -672,6 +706,88 @@ private[theories] object EssayCase {
         out <- if (moved.conclusion == wanted) Right(moved) else Left(NotOfForm(Garbled, moved.conclusion))
       } yield out
 
+    /* ------------------------------------------- V(1) with the kind of task revealed, `tau` */
+
+    /** The term of `VALUE`'s sum at signal `t` of [[EssayCase.revealed]]. */
+    def revealedAt(phi: String, nu: String)(t: String): String =
+      s"Maximum (\\a:num. Sum (\\y:num. (1:real) / 8 * (COND (NUM_DIV (NUM_DIV $t 2) 8 = y) $Q $Qr * " +
+        s"COND (NUM_MOD (NUM_DIV $t 2) 8 = y) (COND (NUM_MOD $t 2 = 1) $phi $nu) (COND (NUM_MOD $t 2 = 1) 0 $nu)) * " +
+        s"COND (y = a) (1:real) 0) 8) 7"
+
+    /**
+     * The value at `phi`, as the sum of its two blocks of sixty-four signals. With `tau` read and
+     * settled, the familiar block is [[EssayCase.Full]]'s pair with the frame `COND (g = y) phi 0`,
+     * whose maximum is at `a = g`, and the new block is the pair with the frame `nu` whatever `g`
+     * says, whose maximum is at `a = s`: the two arguments of `average` and `ignored` above, at other
+     * weights. The blocks are worth `phi` and `(1 - phi) 7/20`.
+     */
+    def revealedValue(phi: String, nu: String, familiarTotal: String, newTotal: String, text: String): R[Kernel.Thm] = {
+      val term = revealedAt(phi, nu)
+      def block(c: String): String => String = t => term(s"(2 * $t + $c)")
+      def decoded(S: String, G: String, gBelow: Kernel.Thm, c: String): R[Seq[Kernel.Thm]] =
+        for {
+          h <- halves(s"8 * $S + $G", c)
+          co <- coordinates(S, G, gBelow)
+          tau <- settled(c)
+        } yield h ++ co :+ tau
+      for {
+        whole <- unfold(Decision.ValueName, "8:num", "2 * ((8:num) * 8)", "7:num", Prior, revealed(phi, nu), Utility)
+        paired <- inPairs(term, "(8 * 8)")
+        apart <- at(fact("SUM_ADD"),
+          s"Sum (\\u:num. ${block("0")("u")} + ${block("1")("u")}) (8 * 8) = " +
+            s"Sum (\\u:num. ${block("0")("u")}) (8 * 8) + Sum (\\u:num. ${block("1")("u")}) (8 * 8)")
+        familiar <- overPairs(
+          block("1"),
+          (s, g, _, gBelow) => {
+            val (sT, gT) = (num(s), num(g))
+            for {
+              codes <- decoded(sT, gT, gBelow, "1")
+              moved <- rewritten(codes, block("1")(s"(8 * $sT + $gT)"))
+              gLe <- atMostSeven(gT, gBelow)
+              top <- maximum(sT, gT, gLe, phi, "0")
+              turned <- flip(sT, gT)
+              onG <- condOn(s"$gT = $gT", phi, "0", Kernel.refl(g))
+              goal <- prop(s"${block("1")(s"(8 * $sT + $gT)")} = (\\g:num. ((1:real) / 8 * $phi) * COND (g = $sT) $Q $Qr) $gT")
+              out <- exact(Seq(moved, top, onG, turned), Seq.empty, goal)
+            } yield out
+          },
+          s"(1:real) / 8 * $phi",
+          Seq.empty,
+          s"Sum (\\t:num. ${block("1")("t")}) (8 * 8) = $familiarTotal"
+        )
+        novel <- overPairs(
+          block("0"),
+          (s, g, sBelow, gBelow) => {
+            val (sT, gT) = (num(s), num(g))
+            for {
+              codes <- decoded(sT, gT, gBelow, "0")
+              moved <- rewritten(codes, block("0")(s"(8 * $sT + $gT)"))
+              sLe <- atMostSeven(sT, sBelow)
+              top <- maximumAtSignal(sT, gT, sLe, nu, nu)
+              onS <- condOn(s"$sT = $sT", Q, Qr, Kernel.refl(s))
+              goal <- prop(s"${block("0")(s"(8 * $sT + $gT)")} = (\\g:num. ((1:real) / 8 * $Q) * COND (g = $sT) $nu $nu) $gT")
+              out <- exact(Seq(moved, top, onS), Seq.empty, goal)
+            } yield out
+          },
+          s"(1:real) / 8 * $Q",
+          Seq.empty,
+          s"Sum (\\t:num. ${block("0")("t")}) (8 * 8) = $newTotal",
+          nu,
+          nu
+        )
+        goal <- prop(text)
+        out <- exact(Seq(whole, paired, apart, familiar, novel), Seq.empty, goal)
+      } yield out
+    }
+
+    val revealedTenth: R[Kernel.Thm] = revealedValue(Phi, Nu, "(1:real) / 10", "(63:real) / 200", Revealed)
+
+    def noveltyBit(withTau: Kernel.Thm, without: Kernel.Thm): R[Kernel.Thm] =
+      prop(NoveltyBit).flatMap(exact(Seq(withTau, without), Seq.empty, _))
+
+    val revealedHalf: R[Kernel.Thm] =
+      revealedValue("((1:real) / 2)", "((1:real) / 16)", "(1:real) / 2", "(7:real) / 40", RevealedHalf)
+
     for {
       e <- empty
       a <- average
@@ -679,7 +795,10 @@ private[theories] object EssayCase {
       i <- ignored
       r <- ignoredRule
       g <- garbled
-    } yield Values(e, a, n, i, r, g)
+      v <- revealedTenth
+      b <- noveltyBit(v, i)
+      h <- revealedHalf
+    } yield Values(e, a, n, i, r, g, v, b, h)
   }
 }
 
@@ -803,5 +922,91 @@ private[theories] final class EssaySteps(decision: Decision, successor: Successo
       set <- Rewrite.Rule.all(logic, equations.toVector)
       out <- Rewrite.rewrite(set, t)
     } yield out
+
+  /* ------------------------------------------- a last bit beside the pair: `t = 2 u + c` */
+
+  val zeroIsNotOne: R[Kernel.Thm] = for { z <- nm("0"); o <- nm("1"); out <- successor.distinct(z, o) } yield out
+
+  /** `|- c < 2` at the literal `c`. */
+  def belowTwo(c: String): R[Kernel.Thm] =
+    for {
+      two <- nm("2").flatMap(successor.spell)
+      one <- nm("1").flatMap(successor.spell)
+      lt <- if (c == "1") at(fact("NUM_LT_SUC"), "SUC (0:num) < SUC (SUC 0)")
+            else for {
+              a <- at(fact("NUM_LT_SUC"), "(0:num) < SUC 0")
+              b <- at(fact("NUM_LT_SUC"), "SUC (0:num) < SUC (SUC 0)")
+              both <- conj(a, b)
+              out <- at(fact("NUM_LT_TRANS"), "(0:num) < SUC 0 /\\ SUC 0 < SUC (SUC 0) ==> 0 < SUC (SUC 0)").flatMap(mp(_, both))
+            } yield out
+      backTwo <- Conv.sym(two)
+      backOne <- Conv.sym(one)
+      moved <- rw(backTwo, lt)
+      out <- rw(backOne, moved)
+    } yield out
+
+  /** `NUM_DIV (2 * u + c) 2 = u` and `NUM_MOD (2 * u + c) 2 = c`. */
+  def halves(u: String, c: String): R[Seq[Kernel.Thm]] =
+    for {
+      t <- nm(s"2 * ($u) + $c")
+      lt <- belowTwo(c)
+      both <- conj(Kernel.refl(t), lt)
+      unique <- at(fact("NUM_DIV_MOD_UNIQUE"),
+        s"2 * ($u) + $c = 2 * ($u) + $c /\\ ($c:num) < 2 ==> $u = NUM_DIV (2 * ($u) + $c) 2 /\\ $c = NUM_MOD (2 * ($u) + $c) 2")
+        .flatMap(mp(_, both))
+      parts <- split(unique)
+      div <- Conv.sym(parts(0))
+      mod <- Conv.sym(parts(1))
+    } yield Seq(div, mod)
+
+  /** `|- !x z. COND (c = 1) x z = x` at `c = 1`, and `= z` at `c = 0`: a rule that reaches under binders. */
+  def settled(c: String): R[Kernel.Thm] =
+    for {
+      x <- prop0("x:real").flatMap { case v: FVar => Right(v); case o => Left(NotOfForm("a variable", o)) }
+      z <- prop0("z:real").flatMap { case v: FVar => Right(v); case o => Left(NotOfForm("a variable", o)) }
+      one <- nm("1")
+      at <- if (c == "1") condOn("(1:num) = 1", "(x:real)", "(z:real)", Kernel.refl(one))
+            else zeroIsNotOne.flatMap(ne => condOff("(0:num) = 1", "(x:real)", "(z:real)", ne))
+      out <- rules.genAll(at, List(x, z))
+    } yield out
+
+  /**
+   * `|- Sum (\t. term t) (2 * j) = Sum (\u. term (2 u + 0) + term (2 u + 1)) j`: a sum over signals
+   * whose last bit is a coordinate of its own, read two at a time, by `SUM_GROUPS` and the recurrence
+   * at `SUC (SUC 0)` with the spellings put back.
+   */
+  def inPairs(term: String => String, j: String): R[Kernel.Thm] = {
+    val pair = (u: String) => s"${term(s"(2 * $u + 0)")} + ${term(s"(2 * $u + 1)")}"
+    for {
+      outer <- at(k(Decision.SumGroups),
+        s"Sum (\\t:num. ${term("t")}) (2 * $j) = Sum (\\u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2) $j")
+      twoEach <- prop(s"!u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2 = ${pair("u")}")
+      opened <- every(twoEach) { (us, _, goal) =>
+        val U = num(us(0))
+        for {
+          two <- nm("2").flatMap(successor.spell)
+          one <- nm("1").flatMap(successor.spell)
+          backOne <- Conv.sym(one)
+          s2 <- at(fact("SUM_SUC"), s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC (SUC 0)) = " +
+            s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC 0) + ${term(s"(2 * $U + SUC 0)")}")
+          s1 <- at(fact("SUM_SUC"), s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC 0) = " +
+            s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) 0 + ${term(s"(2 * $U + 0)")}")
+          s0 <- fact("SUM_ZERO")
+          unrolled <- prop(s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC (SUC 0)) = " +
+            s"${term(s"(2 * $U + 0)")} + ${term(s"(2 * $U + SUC 0)")}")
+          raw <- exact(Seq(s2, s1, s0), Seq.empty, unrolled)
+          back2 <- Conv.sym(two)
+          numerals2 <- rw(back2, raw)
+          out <- rw(backOne, numerals2)
+        } yield out
+      }
+      spread <- at(fact("SUM_CONGRUENCE"),
+        s"(!u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2 = (\\u:num. ${pair("u")}) u) ==> " +
+          s"(!n:num. Sum (\\u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2) n = Sum (\\u:num. ${pair("u")}) n)")
+        .flatMap(mp(_, opened)).flatMap(t => at(t, s"Sum (\\u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2) $j = " +
+          s"Sum (\\u:num. ${pair("u")}) $j"))
+      out <- trans(outer, spread)
+    } yield out
+  }
 
 }

@@ -294,6 +294,13 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
    * 2026-11-10 at `phi = 1/10`, with exact fractions; no tie for the optimal action at any of the
    * sixty-four signals at either.
    *
+   * When the reader also sees whether the task is familiar, `EssayCase.Revealed`, the value at
+   * `phi = 1/10` is `phi + (1 - phi) 7/20 = 83/200`, and `EssayCase.NoveltyBit` says the bit is worth
+   * `13/200` over the `7/20` of the frame without it. At `phi = 1/2` the same derivation gives `27/40`,
+   * the value `EssayMemory` finds at `r = 1` in another encoding. Recomputed outside the kernel on
+   * 2026-11-19 with exact fractions, from the model rather than the encoding: `83/200` and `27/40`, no
+   * tie at any of the hundred and twenty-eight signals at either.
+   *
    * The comparison Blackwell's theorem makes is read off `BLACKWELL_GARBLING` rather than off the
    * numbers: `EssayCase.Garbled` is that theorem at the garbling that drops `g`, and `7/20 <= 9/16`
    * is what it says once the two values are put in. The comparison it does not make, on new tasks,
@@ -307,7 +314,10 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
       values.newTask -> EssayCase.NewTask,
       values.ignored -> EssayCase.Ignored,
       values.ignoredRule -> EssayCase.IgnoredRule,
-      values.garbled -> EssayCase.Garbled
+      values.garbled -> EssayCase.Garbled,
+      values.revealed -> EssayCase.Revealed,
+      values.noveltyBit -> EssayCase.NoveltyBit,
+      values.revealedHalf -> EssayCase.RevealedHalf
     ).foreach { case (theorem, text) =>
       withClue(s"$text: ") {
         // read with its redexes contracted: the new-task value applies the model's lambdas to the
@@ -337,6 +347,25 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
     val values = force(EssayMemory.derive(decision, chain.successor))
     values.keySet shouldBe EssayMemory.Statements.map(_._1).toSet
     EssayMemory.Statements.foreach { case (name, text) =>
+      withClue(s"$name: ") {
+        values(name).conclusion shouldBe force(steps.kit.prop(text))
+        values(name).hypotheses shouldBe empty
+        Derivation.axiomsOf(values(name)) shouldBe threeAxioms
+      }
+    }
+  }
+
+  /**
+   * Synergy, `EssaySynergy`: two uniform independent bits and the reader paid for naming their XOR.
+   * With nothing, with the first bit alone or with the second alone the value is `1/2`, and with both
+   * it is `1`. Recomputed outside the kernel on 2026-11-19 with exact fractions. What the essay reads
+   * off them is `XOR_SYNERGY`: each piece alone is worth what nothing is worth, the two together more.
+   */
+  "Two bits whose XOR is the answer" should "be worth nothing apart and everything together, each value a theorem with nothing assumed" in {
+    val natural = force(NaturalLinear.of(chain))
+    val values = force(EssaySynergy.derive(decision, chain.successor, natural))
+    values.keySet shouldBe EssaySynergy.Statements.map(_._1).toSet
+    EssaySynergy.Statements.foreach { case (name, text) =>
       withClue(s"$name: ") {
         values(name).conclusion shouldBe force(steps.kit.prop(text))
         values(name).hypotheses shouldBe empty

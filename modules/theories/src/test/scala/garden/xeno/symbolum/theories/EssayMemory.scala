@@ -89,53 +89,6 @@ private[theories] object EssayMemory {
     import shared.steps.*
     import shared.steps.kit.*
 
-    /* ------------------------------------------------------------ the condition's two values */
-
-    val zeroIsNotOne: R[Kernel.Thm] = for { z <- nm("0"); o <- nm("1"); out <- successor.distinct(z, o) } yield out
-
-    /** `|- c < 2` at the literal `c`. */
-    def belowTwo(c: String): R[Kernel.Thm] =
-      for {
-        two <- nm("2").flatMap(successor.spell)
-        one <- nm("1").flatMap(successor.spell)
-        lt <- if (c == "1") at(fact("NUM_LT_SUC"), "SUC (0:num) < SUC (SUC 0)")
-              else for {
-                a <- at(fact("NUM_LT_SUC"), "(0:num) < SUC 0")
-                b <- at(fact("NUM_LT_SUC"), "SUC (0:num) < SUC (SUC 0)")
-                both <- conj(a, b)
-                out <- at(fact("NUM_LT_TRANS"), "(0:num) < SUC 0 /\\ SUC 0 < SUC (SUC 0) ==> 0 < SUC (SUC 0)").flatMap(mp(_, both))
-              } yield out
-        backTwo <- Conv.sym(two)
-        backOne <- Conv.sym(one)
-        moved <- rw(backTwo, lt)
-        out <- rw(backOne, moved)
-      } yield out
-
-    /** `NUM_DIV (2 * u + c) 2 = u` and `NUM_MOD (2 * u + c) 2 = c`. */
-    def halves(u: String, c: String): R[Seq[Kernel.Thm]] =
-      for {
-        t <- nm(s"2 * ($u) + $c")
-        lt <- belowTwo(c)
-        both <- conj(Kernel.refl(t), lt)
-        unique <- at(fact("NUM_DIV_MOD_UNIQUE"),
-          s"2 * ($u) + $c = 2 * ($u) + $c /\\ ($c:num) < 2 ==> $u = NUM_DIV (2 * ($u) + $c) 2 /\\ $c = NUM_MOD (2 * ($u) + $c) 2")
-          .flatMap(mp(_, both))
-        parts <- split(unique)
-        div <- Conv.sym(parts(0))
-        mod <- Conv.sym(parts(1))
-      } yield Seq(div, mod)
-
-    /** `|- !x z. COND (c = 1) x z = x` at `c = 1`, and `= z` at `c = 0`: a rule that reaches under binders. */
-    def settled(c: String): R[Kernel.Thm] =
-      for {
-        x <- prop0("x:real").flatMap { case v: FVar => Right(v); case o => Left(NotOfForm("a variable", o)) }
-        z <- prop0("z:real").flatMap { case v: FVar => Right(v); case o => Left(NotOfForm("a variable", o)) }
-        one <- nm("1")
-        at <- if (c == "1") condOn("(1:num) = 1", "(x:real)", "(z:real)", Kernel.refl(one))
-              else zeroIsNotOne.flatMap(ne => condOff("(0:num) = 1", "(x:real)", "(z:real)", ne))
-        out <- rules.genAll(at, List(x, z))
-      } yield out
-
     /* -------------------------------------------- the score, the strict maximum, the rule */
 
     def score(r: String, c: String, S: String, G: String, A: String): String =
@@ -346,34 +299,7 @@ private[theories] object EssayMemory {
     ): R[Kernel.Thm] = {
       val pair = (u: String) => s"${term(s"(2 * $u + 0)")} + ${term(s"(2 * $u + 1)")}"
       for {
-        outer <- at(k(Decision.SumGroups),
-          s"Sum (\\t:num. ${term("t")}) (2 * (8 * 8)) = Sum (\\u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2) (8 * 8)")
-        // the two conditions of each pair, by the recurrence at `SUC (SUC 0)` and the spellings back
-        twoEach <- prop(s"!u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2 = ${pair("u")}")
-        opened <- every(twoEach) { (us, _, goal) =>
-          val U = num(us(0))
-          for {
-            two <- nm("2").flatMap(successor.spell)
-            one <- nm("1").flatMap(successor.spell)
-            backOne <- Conv.sym(one)
-            s2 <- at(fact("SUM_SUC"), s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC (SUC 0)) = " +
-              s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC 0) + ${term(s"(2 * $U + SUC 0)")}")
-            s1 <- at(fact("SUM_SUC"), s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC 0) = " +
-              s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) 0 + ${term(s"(2 * $U + 0)")}")
-            s0 <- fact("SUM_ZERO")
-            unrolled <- prop(s"Sum (\\c:num. ${term(s"(2 * $U + c)")}) (SUC (SUC 0)) = " +
-              s"${term(s"(2 * $U + 0)")} + ${term(s"(2 * $U + SUC 0)")}")
-            raw <- exact(Seq(s2, s1, s0), Seq.empty, unrolled)
-            back2 <- Conv.sym(two)
-            numerals2 <- rw(back2, raw)
-            out <- rw(backOne, numerals2)
-          } yield out
-        }
-        spread <- at(fact("SUM_CONGRUENCE"),
-          s"(!u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2 = (\\u:num. ${pair("u")}) u) ==> " +
-            s"(!n:num. Sum (\\u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2) n = Sum (\\u:num. ${pair("u")}) n)")
-          .flatMap(mp(_, opened)).flatMap(t => at(t, s"Sum (\\u:num. Sum (\\c:num. ${term("(2 * u + c)")}) 2) (8 * 8) = " +
-            s"Sum (\\u:num. ${pair("u")}) (8 * 8)"))
+        paired <- inPairs(term, "(8 * 8)")
         blocks <- at(k(Decision.SumGroups),
           s"Sum (\\u:num. ${pair("u")}) (8 * 8) = Sum (\\s:num. Sum (\\g:num. ${pair("(8 * s + g)")}) 8) 8")
         row = s"($x + (real_of_num 8 - 1) * $z)"
@@ -401,7 +327,7 @@ private[theories] object EssayMemory {
         goal <- prop(total)
         // the steps meet end to end, so they compose by transitivity rather than by rewriting a goal
         // the size of the hundred and twenty-eight terms; only the last line is arithmetic
-        chained <- trans(outer, (Seq(spread, blocks, collect, flat))*)
+        chained <- trans(paired, (Seq(blocks, collect, flat))*)
         joined <- whole.headOption.fold[R[Kernel.Thm]](Right(chained))(trans(_, chained))
         out <- rewriting(Seq(joined), goal)(g => exact(numerals, Seq.empty, g))
       } yield out
