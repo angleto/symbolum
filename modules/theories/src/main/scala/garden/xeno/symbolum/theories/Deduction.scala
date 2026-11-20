@@ -693,6 +693,47 @@ object Deduction {
    */
   val AllBelowNumeral: String = "NUM_PROV_ALL_BELOW_NUMERAL"
 
+  /**
+   * `|- !i x n k p. ~(i = x) ==> NUM_FORM p ==> k < n ==> NUM_PROV (p[numeral k/x]) ==>`
+   * `NUM_PROV (?v_x. v_x < numeral n /\ p)`
+   *
+   * A bounded existential is provable from one instance below the bound, which is the witness half
+   * of the finite disjunction it unfolds to. The bounded existential is
+   * `NUM_EXISTS_BELOW i x t p` ([[Language.ExistsBelowName]]), `?v_x. v_x < t /\ p` with `<` read
+   * through `NUM_LESS i` and `/\` through [[Language.AndName]], which is `~(a ==> ~b)`.
+   *
+   * [[ExistentialIntroduction]] at the witness `numeral k`, which is closed. What it asks for is
+   * the body with `numeral k` put for `v_x`, and that is a conjunction of the two things at hand:
+   * `numeral k < numeral n`, which [[NumeralsOrdered]] proves from `k < n`, and `p[numeral k/x]`,
+   * which is the hypothesis. [[DeniedImplication]] joins them, with the second doubled by
+   * [[DoubleNegationIntroduction]]. The substitution is pushed through the conjunction by the
+   * clauses for negation and implication and computed in the order, where the guard is the
+   * comparison of `i` with `x`; under `p` it is left standing, which is what the hypothesis says.
+   *
+   * `~(i = x)` is for the same reason as in [[AllBelowNumeral]]: with `i = x` the order binds the
+   * variable it is about, the substitution does not enter it, and the witness proves nothing.
+   */
+  val ExistsBelowNumeral: String = "NUM_PROV_EXISTS_BELOW_NUMERAL"
+
+  /**
+   * `|- !i x n p. ~(i = x) ==> NUM_FORM p ==>`
+   * `(!k. k < n ==> NUM_PROV ~(p[numeral k/x])) ==> NUM_PROV ~(?v_x. v_x < numeral n /\ p)`
+   *
+   * A bounded existential is refuted when every instance below the bound is, which with
+   * [[ExistsBelowNumeral]] is what completeness for bounded formulas needs of an existential, in
+   * the form its induction hypothesis hands over.
+   *
+   * [[AllBelowNumeral]] at `~p` gives `!v_x. v_x < numeral n ==> ~p`, since putting `numeral k`
+   * for `v_x` commutes with negation, which is the hypothesis. Call the body `B`. The existential's
+   * denial is `~~!v_x. ~(v_x < numeral n /\ p)`, and `~(a /\ b)` is `~~(a ==> ~b)`, so the body
+   * wanted is `~~B`. Under the universal: specialisation at `v_x` itself, which moves nothing by
+   * `Language.FormulaSubstituteSelf` and `Language.FreeForSelf`, gives `(!v_x. B) ==> B`;
+   * [[DoubleNegationIntroduction]] continues it to `~~B`; [[ImplicationGeneralisation]] puts the
+   * quantifier back, since `v_x` is not free in `!v_x. B`. A last
+   * [[DoubleNegationIntroduction]] makes the universal the denial of the existential.
+   */
+  val NotExistsBelowNumeral: String = "NUM_PROV_NOT_EXISTS_BELOW_NUMERAL"
+
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
     Weaken ->
@@ -849,7 +890,15 @@ object Deduction {
     AllBelowNumeral ->
       ("!i:num x:num n:num p:num. ~(i = x) ==> NUM_FORM p ==> " +
         "(!k:num. k < n ==> NUM_PROV (NUM_SUBST_FORM x (NUM_NUMERAL k) p)) ==> " +
-        "NUM_PROV (NUM_ALL_BELOW i x (NUM_NUMERAL n) p)")
+        "NUM_PROV (NUM_ALL_BELOW i x (NUM_NUMERAL n) p)"),
+    ExistsBelowNumeral ->
+      ("!i:num x:num n:num k:num p:num. ~(i = x) ==> NUM_FORM p ==> k < n ==> " +
+        "NUM_PROV (NUM_SUBST_FORM x (NUM_NUMERAL k) p) ==> " +
+        "NUM_PROV (NUM_EXISTS_BELOW i x (NUM_NUMERAL n) p)"),
+    NotExistsBelowNumeral ->
+      ("!i:num x:num n:num p:num. ~(i = x) ==> NUM_FORM p ==> " +
+        "(!k:num. k < n ==> NUM_PROV (NUM_CODE 6 (NUM_SUBST_FORM x (NUM_NUMERAL k) p))) ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_EXISTS_BELOW i x (NUM_NUMERAL n) p))")
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -920,7 +969,10 @@ object Deduction {
             NumeralsNotOrdered -> builder.checked(NumeralsNotOrdered, builder.numeralsNotOrdered),
             BelowSuccessor -> builder.checked(BelowSuccessor, builder.belowSuccessor),
             NotBelowZero -> builder.checked(NotBelowZero, builder.notBelowZero),
-            AllBelowNumeral -> builder.checked(AllBelowNumeral, builder.allBelowNumeral)
+            AllBelowNumeral -> builder.checked(AllBelowNumeral, builder.allBelowNumeral),
+            ExistsBelowNumeral -> builder.checked(ExistsBelowNumeral, builder.existsBelowNumeral),
+            NotExistsBelowNumeral ->
+              builder.checked(NotExistsBelowNumeral, builder.notExistsBelowNumeral)
           )
         )
       )
@@ -4277,11 +4329,13 @@ object Deduction {
         constant(Language.LessName, Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers))))
       private val keepsFormulas = force(language.fact(Language.FormulaSubstituteKeepsFormulas))
       private val lessIsFormula = force(language.fact(Language.LessFormula))
+      private val universalIsFormula = force(language.fact(Language.FormulaUniversal))
 
       /**
        * `NUM_FORM c` or `NUM_TERM c`. A concrete code is walked by `Language`; where `formulas`
        * names a code that is not concrete, its well-formedness is that entry, and the code around
-       * it is walked here, through negation, implication, `NUM_LESS` and a substitution into it.
+       * it is walked here, through negation, implication, a universal, `NUM_LESS` and a
+       * substitution into it.
        */
       def wf(c: Term): Kernel.Thm =
         if (formulas.isEmpty) force(language.wellFormedIn(c))
@@ -4297,6 +4351,8 @@ object Deduction {
           case App(App(head, t7), App(App(join, a), b)) if head == coding && t7 == tag(7) && join == pairing =>
             force(rules.specAll(formulaOfImplication, List(a, b))
               .flatMap(rules.mp(_, wf(a))).flatMap(rules.mp(_, wf(b))))
+          case App(App(head, t8), App(App(join, bound), body)) if head == coding && t8 == tag(8) && join == pairing =>
+            force(rules.specAll(universalIsFormula, List(bound, body)).flatMap(rules.mp(_, wf(body))))
           case other => force(language.wellFormedIn(other))
         })
       def absent(index: Term, c: Term) = force(language.freeInTerm(index, c, apart))
@@ -4601,6 +4657,106 @@ object Deduction {
           .flatMap(rules.disch(indicesApart, _))
           .flatMap(rules.genAll(_, List(i, x, n, p))))
       }
+
+      /** [[ExistsBelowNumeral]], under `indicesApart` and `isFormula`, both among the `assumptions`. */
+      def existsBelow(indicesApart: Term, isFormula: Term): Kernel.Thm = {
+        val n = Term.variable("n", numbers)
+        val k = Term.variable("k", numbers)
+        val p = Term.variable("p", numbers)
+        val witness = numeral(k)
+        val kBelowN = proposition("(k:num) < n")
+        val instanceHeld = proposition("NUM_PROV (NUM_SUBST_FORM x (NUM_NUMERAL k) p)")
+        val instance = provCode(assumed(instanceHeld)) // p[numeral k/x]
+
+        // numeral k < numeral n, with NUM_LESS and NUM_EXISTS opened into codes.
+        val ordered = rewritten(
+          force(rules.specAll(Builder.this.numeralsOrdered, List(i, k, n)).flatMap(rules.mp(_, assumed(kBelowN)))),
+          force(language.fact(Language.LessCases)), force(language.fact(Language.ExistsCases)))
+        val orderedCode = provCode(ordered)
+
+        // The conjunction ~(numeral k < numeral n ==> ~p[numeral k/x]).
+        val doubled = detach(
+          force(rules.spec(instance, doubleNegationIntroduction).flatMap(rules.mp(_, wf(instance)))),
+          assumed(instanceHeld))
+        val joined = force(rules.specAll(deniedImplication, List(orderedCode, not(instance)))
+          .flatMap(rules.mp(_, wf(orderedCode))).flatMap(rules.mp(_, wf(not(instance))))
+          .flatMap(rules.mp(_, ordered)).flatMap(rules.mp(_, doubled)))
+
+        // It is the body with numeral k put for v_x: negation and implication push the
+        // substitution down, the order is computed, and under p it stays.
+        val order = forAll(i, not(eq(sum(v(x), suc(v(i))), numeral(n))))
+        val body = not(imp(not(order), not(p)))
+        val substituted = landed(
+          applied(provableConstant, List(applied(substituting, List(x, witness, body)))),
+          joined,
+          Vector(
+            force(language.fact(Language.FormulaSubstituteNegation)),
+            force(language.fact(Language.FormulaSubstituteImplication)),
+            computed(x, witness, order)))
+        val introduced = force(rules.specAll(existentialIntroduction, List(x, witness, body))
+          .flatMap(rules.mp(_, wf(body))).flatMap(rules.mp(_, wf(witness)))
+          .flatMap(rules.mp(_, force(rules.spec(k, force(language.fact(Language.NumeralIsClosed))))))
+          .flatMap(rules.mp(_, substituted)))
+
+        val exists = force(language.fact(Language.ExistsCases))
+        val target = proposition("NUM_PROV (NUM_EXISTS_BELOW i x (NUM_NUMERAL n) p)")
+        val reached = landed(target, rewritten(introduced, exists), Vector(
+          force(language.fact(Language.ExistsBelowCases)), force(language.fact(Language.AndCases)),
+          force(language.fact(Language.LessCases)), exists))
+        force(rules.disch(instanceHeld, reached)
+          .flatMap(rules.disch(kBelowN, _))
+          .flatMap(rules.disch(isFormula, _))
+          .flatMap(rules.disch(indicesApart, _))
+          .flatMap(rules.genAll(_, List(i, x, n, k, p))))
+      }
+
+      /** [[NotExistsBelowNumeral]], under `indicesApart` and `isFormula`, both among the `assumptions`. */
+      def notExistsBelow(indicesApart: Term, isFormula: Term): Kernel.Thm = {
+        val n = Term.variable("n", numbers)
+        val p = Term.variable("p", numbers)
+        val variable = v(x)
+        val every = proposition(
+          "!k:num. k < n ==> NUM_PROV (NUM_CODE 6 (NUM_SUBST_FORM x (NUM_NUMERAL k) p))")
+
+        // !v_x. v_x < numeral n ==> ~p, from the universal half at ~p.
+        val atDenial = force(rules.specAll(Builder.this.allBelowNumeral, List(i, x, n, not(p)))
+          .flatMap(rules.mp(_, assumed(indicesApart))).flatMap(rules.mp(_, wf(not(p)))))
+        val universal = rewritten(
+          force(rules.mp(rewritten(atDenial, force(language.fact(Language.FormulaSubstituteNegation))), assumed(every))),
+          force(language.fact(Language.AllBelowCases)))
+
+        // (!v_x. B) ==> ~~B, by specialisation at v_x itself, then the quantifier put back.
+        val b = imp(applied(lessConstant, List(i, variable, numeral(n))), not(p))
+        val whole = forAll(x, b)
+        val variableItself = Kernel.refl(variable)
+        val substitutesItself = force(rules.specAll(force(language.fact(Language.FormulaSubstituteSelf)), List(x, variable, b))
+          .flatMap(rules.mp(_, wf(b))).flatMap(rules.mp(_, variableItself)))
+        val selfSubstitutable = force(rules.specAll(force(language.fact(Language.FreeForSelf)), List(x, variable, b))
+          .flatMap(rules.mp(_, wf(b))).flatMap(rules.mp(_, variableItself)))
+        val specialised = rewritten(
+          logical(force(rules.specAll(specialising, List(x, variable, b))
+            .flatMap(rules.mp(_, wf(b))).flatMap(rules.mp(_, wf(variable))).flatMap(rules.mp(_, selfSubstitutable)))),
+          substitutesItself) // (!v_x. B) ==> B
+        val toDoubled = chained(specialised,
+          force(rules.spec(b, doubleNegationIntroduction).flatMap(rules.mp(_, wf(b))))) // (!v_x. B) ==> ~~B
+        val raised = force(rules.specAll(implicationGeneralisation, List(x, whole, not(not(b))))
+          .flatMap(rules.mp(_, wf(whole))).flatMap(rules.mp(_, wf(not(not(b)))))
+          .flatMap(rules.mp(_, force(language.freeInFormula(x, whole, apart))))
+          .flatMap(rules.mp(_, toDoubled))) // (!v_x. B) ==> !v_x. ~~B
+        val denialsHeld = detach(raised, universal)
+        val denied = detach(
+          force(rules.spec(provCode(denialsHeld), doubleNegationIntroduction).flatMap(rules.mp(_, wf(provCode(denialsHeld))))),
+          denialsHeld) // ~~!v_x. ~(v_x < numeral n /\ p)
+
+        val target = proposition("NUM_PROV (NUM_CODE 6 (NUM_EXISTS_BELOW i x (NUM_NUMERAL n) p))")
+        val reached = landed(target, denied, Vector(
+          force(language.fact(Language.ExistsBelowCases)), force(language.fact(Language.ExistsCases)),
+          force(language.fact(Language.AndCases))))
+        force(rules.disch(every, reached)
+          .flatMap(rules.disch(isFormula, _))
+          .flatMap(rules.disch(indicesApart, _))
+          .flatMap(rules.genAll(_, List(i, x, n, p))))
+      }
     }
 
     /**
@@ -4627,6 +4783,28 @@ object Deduction {
       val isFormula = force(Parser.proposition(theory, notation, "NUM_FORM (p:num)"))
       new OpenSteps(Vector(assumed(indicesApart)), Map(Term.variable("p", numbers) -> assumed(isFormula)))
         .allBelow(indicesApart, isFormula)
+    }
+
+    /**
+     * [[ExistsBelowNumeral]], in the steps of `OpenSteps` under the same two assumptions as
+     * [[AllBelowNumeral]].
+     */
+    lazy val existsBelowNumeral: Kernel.Thm = {
+      val indicesApart = force(Parser.proposition(theory, notation, "~((i:num) = x)"))
+      val isFormula = force(Parser.proposition(theory, notation, "NUM_FORM (p:num)"))
+      new OpenSteps(Vector(assumed(indicesApart)), Map(Term.variable("p", numbers) -> assumed(isFormula)))
+        .existsBelow(indicesApart, isFormula)
+    }
+
+    /**
+     * [[NotExistsBelowNumeral]], in the steps of `OpenSteps` under the same two assumptions as
+     * [[AllBelowNumeral]], which it is built on.
+     */
+    lazy val notExistsBelowNumeral: Kernel.Thm = {
+      val indicesApart = force(Parser.proposition(theory, notation, "~((i:num) = x)"))
+      val isFormula = force(Parser.proposition(theory, notation, "NUM_FORM (p:num)"))
+      new OpenSteps(Vector(assumed(indicesApart)), Map(Term.variable("p", numbers) -> assumed(isFormula)))
+        .notExistsBelow(indicesApart, isFormula)
     }
 
     def checked(name: String, theorem: Kernel.Thm): Kernel.Thm = {

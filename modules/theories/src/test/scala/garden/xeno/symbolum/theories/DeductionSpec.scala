@@ -436,6 +436,106 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
         s"(NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_NUMERAL ($three)))))))))")
   }
 
+  private val provable = constant(Provability.ProvableName, Type.fun(numbers, Type.Bool))
+  private val numeralHead = constant(Language.NumeralName, Type.fun(numbers, numbers))
+
+  /**
+   * `held`, which is `NUM_PROV` of the computed substitution (negated when `negated`), read back as
+   * `NUM_PROV (NUM_SUBST_FORM index by code)` with the substitution standing, or under `~`.
+   */
+  private def asSubstitution(index: String, by: Term, code: Term, negated: Boolean, held: Kernel.Thm) = {
+    val computed = force(chain.language.substituteIn(term(index), by, code))
+    val wrapped =
+      if (negated) Conv.apTerm(applied(coding, List(term("6"))), computed) else Right(computed)
+    force(wrapped.flatMap(Conv.sym).flatMap(Conv.apTerm(provable, _))
+      .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, held))))
+  }
+
+  /** The bounded existential `?v_2. v_2 < bound /\ body`, at `NUM_LESS 5`, opened into codes. */
+  private def boundedExistsCode(bound: String, body: String): String =
+    "NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR 2 (NUM_CODE 6 (NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR " +
+      "(NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR 5 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR " +
+      s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 2 (NUM_CODE 0 5)))) (NUM_NUMERAL ($bound)))))))) " +
+      s"(NUM_CODE 6 ($body))))))))"
+
+  private def openedExists(held: Kernel.Thm): Kernel.Thm = force(
+    Rewrite.Rule.all(logic, Vector(Language.ExistsBelowCases, Language.AndCases, Language.LessCases, Language.ExistsCases)
+      .map(name => force(chain.language.fact(name))))
+      .flatMap(Rewrite.inTheorem(_, held)))
+
+  /**
+   * Both halves of the bounded existential on ONE formula, `v_2 = 1`, where the bound is what
+   * decides: below `3` PA proves `?v_2. v_2 < 3 /\ v_2 = 1` from the witness `1`, and below `1` it
+   * refutes `?v_2. v_2 < 1 /\ v_2 = 1` from every instance refuted. A fact that ignored its bound,
+   * or swapped the halves, would get one of the two wrong, and `?v_2. v_2 = 1` without a bound is
+   * provable, so the refutation is about the bound and nothing else.
+   *
+   * Every premise is discharged rather than assumed: the instance at the witness is reflexivity at
+   * `numeral 1`, the order `1 < 3` comes from the naturals, and for a variable `k` below `1` the
+   * instance `~(numeral k = numeral 1)` is `NUM_PROV_NUMERAL_DISTINCT` from `~(k = 1)`. Both
+   * conclusions have nothing assumed and are read back through the abbreviations to the formula
+   * PA proves, with `v_2` bound and not replaced by the witness.
+   */
+  it should "prove a bounded existential from a witness and refute it from every instance refuted" in {
+    val witnessed = force(deduction.fact(Deduction.ExistsBelowNumeral))
+    val refuted = force(deduction.fact(Deduction.NotExistsBelowNumeral))
+    for (theorem <- Vector(witnessed, refuted)) {
+      theorem.hypotheses shouldBe empty
+      Derivation.axiomsOf(theorem) should have size 2
+    }
+
+    val one = "SUC ZERO"
+    val two = "SUC (SUC ZERO)"
+    val three = "SUC (SUC (SUC ZERO))"
+    val body = s"NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_NUMERAL ($one)))"
+    val p = term(body)
+    val apart = force(chain.successor.distinct(term("5"), term("2")))
+    val isFormula = force(chain.language.wellFormedIn(p))
+
+    // The witness: 1 < 3, and numeral 1 = numeral 1 read as the instance at it.
+    val peano = chain.peano
+    val oneThree = force(
+      rules
+        .specAll(force(peano.fact(Peano.StrictTransitive)), List(term(one), term(two), term(three)))
+        .flatMap(implication => rules.conjIntro(
+          force(rules.spec(term(one), force(peano.fact(Peano.BelowSuccessor)))),
+          force(rules.spec(term(two), force(peano.fact(Peano.BelowSuccessor))))).flatMap(rules.mp(implication, _))))
+    val numeralOne = term(s"NUM_NUMERAL ($one)")
+    val reflexive = force(rules.spec(numeralOne, force(deduction.fact(Deduction.Reflexivity)))
+      .flatMap(rules.mp(_, force(chain.language.wellFormedIn(numeralOne)))))
+    val atWitness = asSubstitution("2", numeralOne, p, negated = false, reflexive)
+    val proved = force(rules.specAll(witnessed, List(term("5"), term("2"), term(three), term(one), p))
+      .flatMap(rules.mp(_, apart)).flatMap(rules.mp(_, isFormula))
+      .flatMap(rules.mp(_, oneThree)).flatMap(rules.mp(_, atWitness)))
+    proved.hypotheses shouldBe empty
+    openedExists(proved).conclusion shouldBe proposition(s"NUM_PROV (${boundedExistsCode(three, body)})")
+
+    // The refutation below 1: for k < 1, ~(k = 1), so PA refutes numeral k = numeral 1.
+    val k = Term.variable("k", numbers)
+    val below = proposition(s"(k:num) < $one")
+    val equalClaim = proposition(s"(k:num) = $one")
+    val lessHead = constant(Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+    val notEqual = force(for {
+      kBelow <- LogicError.lift(Kernel.assume(below))
+      equal <- LogicError.lift(Kernel.assume(equalClaim))
+      moved <- Conv.apTerm(lessHead, equal).flatMap(Conv.apThm(_, term(one)))
+      selfBelow <- LogicError.lift(Kernel.eqMp(moved, kBelow))
+      irreflexive <- peano.fact(Peano.StrictIrreflexive).flatMap(rules.spec(term(one), _))
+      falsity <- rules.notElim(irreflexive, selfBelow)
+      denied <- rules.notIntro(equalClaim, falsity)
+    } yield denied)
+    val distinct = force(rules.specAll(force(deduction.fact(Deduction.NumeralsDistinct)), List(k, term(one)))
+      .flatMap(rules.mp(_, notEqual)))
+    val numeralOfK = applied(numeralHead, List(k))
+    val instance = asSubstitution("2", numeralOfK, p, negated = true, distinct)
+    val every = force(rules.disch(below, instance).flatMap(rules.gen(k, _)))
+    val denied = force(rules.specAll(refuted, List(term("5"), term("2"), term(one), p))
+      .flatMap(rules.mp(_, apart)).flatMap(rules.mp(_, isFormula)).flatMap(rules.mp(_, every)))
+    denied.hypotheses shouldBe empty
+    openedExists(denied).conclusion shouldBe
+      proposition(s"NUM_PROV (NUM_CODE 6 (${boundedExistsCode(one, body)}))")
+  }
+
   /**
    * The object theory's multiplication on numerals, which stands on the addition above it.
    *

@@ -160,3 +160,20 @@ The existential half is not here. A bounded existential refuted from a refutatio
 instance is the universal of the negation read through `NUM_AND` and `NUM_EXISTS`, and one proved
 from one instance is `NUM_PROV_EXISTS_INTRO` at a closed witness. Neither is written, and neither
 is completeness for bounded formulas, which is still the claim in this record to doubt first.
+
+## The existential half, 2026-11-20
+
+The section above ends by naming the existential half as not written. It is written now, as two
+facts in `Deduction`, and it needed nothing new below `Deduction`. `NUM_PROV_EXISTS_BELOW_NUMERAL`
+proves a bounded existential from one instance under the bound: `NUM_PROV_EXISTS_INTRO` at the
+witness `numeral k`, whose body is the conjunction of `numeral k < numeral n`, from
+`NUM_PROV_LESS_NUMERAL`, and the instance. `NUM_PROV_NOT_EXISTS_BELOW_NUMERAL` refutes one from a
+refutation of every instance under the bound: `NUM_PROV_ALL_BELOW_NUMERAL` at `~p`, with a double
+negation put under the quantifier, because `NUM_AND` is `~(a ==> ~b)`. Each costs the naturals' two
+axioms. `tools/verify/perturb-exists-below.sh` records what each one depends on.
+
+Completeness for bounded formulas asks four things of a quantifier below a numeral: a universal
+that holds is proved, one that fails is refuted, and the same for an existential. Three are here.
+The fourth, a bounded universal refuted from one instance under the bound that PA refutes, is not
+written; it is the dual of the witness half. Completeness itself is not written either, and it is
+still the claim in this record to doubt first.
