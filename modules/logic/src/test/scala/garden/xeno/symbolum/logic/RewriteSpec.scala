@@ -801,8 +801,8 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "contains no `1`. What would catch a short walk even so is `OrderSpec`, which pins the " +
         "printed form of every fact this file publishes"),
     "Truth.scala" ->
-      ("seven, and none of them is read as a normal form. One is `inTheorem` taking the three " +
-        "projections off a recursion equation at a code, and what follows it settles every shape " +
+      ("nine, and one of them is read as a normal form. Two are `inTheorem` taking the three " +
+        "projections off a recursion equation at a code, one per reader of a clause, and what follows it settles every shape " +
         "test and compares the clause with its published statement, so a walk that stopped with " +
         "a projection standing is refused there by name. Five unfold the triangle and products " +
         "with a successor in them and hand both sides to the semiring, which refuses an identity " +
@@ -810,7 +810,13 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "seventh evaluates the triangle's graph, and its result is destructured as an equation " +
         "between a sum and a product and ends in the same comparison with the published " +
         "statement. Every rule strictly unfolds a constant or a projection, so a short walk " +
-        "leaves one standing and is refused rather than read"),
+        "leaves one standing and is refused rather than read. The ninth, since 2026-11-21, is the " +
+        "one read as a normal form, and it is read twice: it unfolds BOTH sides of an equation " +
+        "about a numeral put into a code, by the clauses of the substitution, the value or the " +
+        "truth and an induction hypothesis at a smaller code, and the two normal forms have to " +
+        "MEET, joined by `trans` and compared with the goal, so a walk that stopped short on " +
+        "either side is a refusal rather than a weaker theorem. No rule's right side holds its own " +
+        "left side, so each firing removes a clause's head or a hypothesis's substitution"),
     "Positivity.scala" ->
       ("two, one rule each, `0 + y = y` and an assumed `x = 0`, both strictly reducing. Neither " +
         "result is read as a normal form: one goes to `mp` against an instance of transitivity " +

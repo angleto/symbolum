@@ -771,6 +771,10 @@ moves nothing and is always allowed (`NUM_SUBST_FORM_SELF`, `NUM_FREE_FOR_SELF`)
 **The same day**, `NUM_PROV_NOT_ALL_BELOW_NUMERAL` refutes the bounded universal from `k < n` and a
 refutation of `p[numeral k/x]`, which is specialisation inside PA at `numeral k` and contraposition.
 That is all four cases completeness for bounded formulas consumes of a quantifier below a numeral.
+**And since 2026-11-21 the truth reads a numeral put for a variable**: `NUM_TRUE_SUBST_NUMERAL` says
+`NUM_TRUE (p[numeral k/x]) e = NUM_TRUE p e[x := k]` for every formula, with
+`NUM_VALUE_SUBST_NUMERAL` the same for a term, which is what turns the instances those four cases
+speak of into the values of `x` the truth of a bounded quantifier speaks of.
 
 Not written above that: completeness for bounded formulas itself; any
 representation other than

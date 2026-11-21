@@ -1345,9 +1345,11 @@ they have least appetite for working out how it is produced.
   NUM_TRUE_EQ              !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f = (NUM_VALUE n f = NUM_VALUE m f)
   NUM_TRUE_IMP             !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 7 (NUM_PAIR n m)) f = (NUM_TRUE n f ==> NUM_TRUE m f)
   NUM_TRUE_NOT             !f:num -> num. !n:num. NUM_TRUE (NUM_CODE 6 n) f = (~(NUM_TRUE n f))
+  NUM_TRUE_SUBST_NUMERAL   !n:num. !m:num. !k:num. NUM_FORM k ==> (!f:num -> num. NUM_TRUE (NUM_SUBST_FORM n (NUM_NUMERAL m) k) f = NUM_TRUE k (\i:num. COND (i = n) m (f i)))
   NUM_VALUE_ADD            !f:num -> num. !n:num. !m:num. NUM_VALUE (NUM_CODE 3 (NUM_PAIR n m)) f = NUM_VALUE n f + NUM_VALUE m f
   NUM_VALUE_MUL            !f:num -> num. !n:num. !m:num. NUM_VALUE (NUM_CODE 4 (NUM_PAIR n m)) f = NUM_VALUE n f * NUM_VALUE m f
   NUM_VALUE_NUMERAL        !f:num -> num. !n:num. NUM_VALUE (NUM_NUMERAL n) f = n
+  NUM_VALUE_SUBST_NUMERAL  !n:num. !m:num. !k:num. NUM_TERM k ==> (!f:num -> num. NUM_VALUE (NUM_SUBST_TERM n (NUM_NUMERAL m) k) f = NUM_VALUE k (\i:num. COND (i = n) m (f i)))
   NUM_VALUE_SUC            !f:num -> num. !n:num. NUM_VALUE (NUM_CODE 2 n) f = SUC (NUM_VALUE n f)
   NUM_VALUE_VAR            !f:num -> num. !n:num. NUM_VALUE (NUM_CODE 0 n) f = f n
   NUM_VALUE_ZERO           !f:num -> num. NUM_VALUE (NUM_CODE 1 0) f = 0

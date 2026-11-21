@@ -188,3 +188,20 @@ records what it depends on.
 
 All four cases are here. Completeness for bounded formulas, the induction over a formula that
 consumes them, is not written, and it is still the claim in this record to doubt first.
+
+## The truth of an instance, 2026-11-21
+
+The four cases speak of instances `p[numeral k/x]` and the truth of a bounded quantifier speaks of
+`p` at every value of `x`, so the induction needs the two read as one thing. `Truth` now proves it:
+`NUM_VALUE_SUBST_NUMERAL` for a term and `NUM_TRUE_SUBST_NUMERAL` for a formula, each by strong
+induction on the code. The update at `x` survives a quantifier over another index and is overwritten
+by one over `x`, where the substitution stops. The two environments under a quantifier are
+abstractions on both sides, so they are equated by the kernel's abstraction rule over a case split
+on the argument and not by extensionality; the first version used `FUNCTION_EXTENSIONALITY`, spent
+`ETA`, and `TruthSpec`'s per-fact cost refused it. Both cost choice and infinity.
+
+What is left of completeness for bounded formulas is a decision before it is a proof: the class of
+bounded formulas as a predicate on codes, which an induction over it must be able to read through a
+substitution, and a measure that a numeral put for a variable does not raise, since the code of
+`p[numeral k/x]` can be larger than the code of `p` and so strong induction on the code does not
+reach it.

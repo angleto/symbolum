@@ -498,7 +498,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_PROV_NOT_EXISTS_BELOW_NUMERAL`. Plus seven.
     // 1058 with a bounded universal refuted from one instance, 2026-11-20, card `4102f131`,
     // predicted before the run: four antecedents on `NUM_PROV_NOT_ALL_BELOW_NUMERAL`. Plus four.
-    proposals.size shouldBe 1058
+    // 1060 with a numeral put for a variable, read by the truth, 2026-11-21, card `4102f131`,
+    // predicted before the run: one antecedent each on `NUM_VALUE_SUBST_NUMERAL` and
+    // `NUM_TRUE_SUBST_NUMERAL`. Plus two.
+    proposals.size shouldBe 1060
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -2009,7 +2012,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 266 with a bounded universal refuted from one instance, 2026-11-20, card `4102f131`: the
     // three of the four new weakenings that `open` above did not take, derived from the first run
     // (`open` plus one, `decidedFalse` unmoved) and read off a second. Plus three.
-    unreadable shouldBe 266
+    // 268 with a numeral put for a variable in the truth, 2026-11-21, card `4102f131`: both new
+    // weakenings, `open` above not moving, read off the first run and confirmed on a second. Plus
+    // two.
+    unreadable shouldBe 268
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

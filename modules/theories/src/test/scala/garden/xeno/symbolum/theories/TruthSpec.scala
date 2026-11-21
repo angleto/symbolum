@@ -152,6 +152,64 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     proved.conclusion shouldBe claim
   }
 
+  "A numeral put for a variable" should "change the truth as sending the variable to it does" in {
+    // Two universals at `x = 0` and the numeral of two. Under `!v_1` the substitution goes in and
+    // the update at `0` survives the quantifier's own at `1`, so both sides say `!n. 2 = n`. Under
+    // `!v_0` the substitution stops at the binder and the quantifier's update at `0` overwrites the
+    // one at `0`, so both sides say `!n. n = e 1`. A lemma that let the substitution in under `!v_0`,
+    // or kept the outer update there, would make the second pair disagree.
+    val environment = Term.variable("e", Type.fun(numbers, numbers))
+    val two = term("SUC (SUC ZERO)")
+    val lemma = fact(Truth.TrueAtNumeral)
+    lemma.hypotheses shouldBe empty
+    val language = chain.language
+    // The guards the two environments and the substitution leave are between the indices 0 and
+    // 1, and they are decided here as equations with T and F, as the quantifier test above does.
+    def decided(held: Kernel.Thm): Kernel.Thm = force(rules.eqTruthIntro(held))
+    def refuted(claim: Term, denied: Kernel.Thm): Kernel.Thm = {
+      val falsity = force(LogicError.lift(Kernel.assume(claim)).flatMap(rules.notElim(denied, _)))
+      val fromFalsity = force(LogicError.lift(Kernel.assume(falsity.conclusion)).flatMap(rules.falsityElim(claim, _)))
+      Kernel.deductAntisym(fromFalsity, falsity)
+    }
+    val oneIsSuccessor = force(chain.peano.fact(Peano.NumeralOneIsSuccessorOfZero))
+    val oneNotZero = force(chain.naturals.fact(Natural.SuccessorNotZero).flatMap(rules.spec(term("ZERO"), _))
+      .flatMap(Rewrite.inTheorem(force(Conv.sym(oneIsSuccessor).flatMap(e => Rewrite.Rule.all(truth.logic, Vector(e)))), _)))
+    val zeroNotOne = force(rules.notIntro(proposition("(ZERO:num) = NUM_ONE"),
+      force(rules.notElim(oneNotZero, force(LogicError.lift(Kernel.assume(proposition("(ZERO:num) = NUM_ONE")))
+        .flatMap(Conv.sym))))))
+    val guards = Vector(
+      decided(Kernel.refl(term("ZERO"))),
+      decided(Kernel.refl(term("NUM_ONE"))),
+      refuted(proposition("NUM_ONE = ZERO"), oneNotZero),
+      refuted(proposition("(ZERO:num) = NUM_ONE"), zeroNotOne))
+    val unfolding = guards ++ Vector(
+      fact(Truth.TrueUniversal), fact(Truth.TrueEquality), fact(Truth.ValueVariable), fact(Truth.ValueNumeral),
+      force(language.fact(Language.FormulaSubstituteUniversal)),
+      force(language.fact(Language.FormulaSubstituteEquality)),
+      force(language.fact(Language.SubstituteVariable)))
+    def bothSides(code: String): (Term, Term) = {
+      val p = term(code)
+      val instance = force(rules.specAll(lemma, List(term("0:num"), two, p))
+        .flatMap(rules.mp(_, force(language.wellFormedIn(p))))
+        .flatMap(rules.spec(environment, _)))
+      instance.hypotheses shouldBe empty
+      val (left, right) = force(Term.destEq(instance.conclusion).toRight("an equation"))
+      (rightOf(evaluate(left, unfolding)), rightOf(evaluate(right, unfolding)))
+    }
+
+    val (inLeft, inRight) =
+      bothSides("NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))")
+    inLeft shouldBe proposition("!n:num. SUC (SUC ZERO) = n")
+    inRight shouldBe inLeft
+
+    val (stopLeft, stopRight) =
+      bothSides("NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))")
+    val atOne = force(LogicError.lift(Term.appAll(environment, List(term("1:num")))))
+    stopLeft shouldBe force(LogicError.lift(Term.eq(term("n:num"), atOne)).flatMap(body =>
+      truth.logic.mkForall(Term.variable("n", numbers), body)))
+    stopRight shouldBe stopLeft
+  }
+
   "The graph of the triangle" should "hold where the value is the triangle, fail elsewhere" in {
     val graph = fact(Truth.TriangleGraphTrue)
     val arithmetic = Vector(
