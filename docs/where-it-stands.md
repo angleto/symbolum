@@ -768,9 +768,11 @@ moves nothing and is always allowed (`NUM_SUBST_FORM_SELF`, `NUM_FREE_FOR_SELF`)
 `p[numeral k/x]`, which is existential introduction at the witness `numeral k`.
 `NUM_PROV_NOT_EXISTS_BELOW_NUMERAL` refutes it from a refutation of `p[numeral k/x]` for every
 `k < n`, which is the universal above taken at `~p` and read through `NUM_AND` and `NUM_EXISTS`.
+**The same day**, `NUM_PROV_NOT_ALL_BELOW_NUMERAL` refutes the bounded universal from `k < n` and a
+refutation of `p[numeral k/x]`, which is specialisation inside PA at `numeral k` and contraposition.
+That is all four cases completeness for bounded formulas consumes of a quantifier below a numeral.
 
-Not written above that: a bounded universal refuted from one refuted instance, the last of the
-four quantifier cases completeness for bounded formulas consumes, and completeness itself; any
+Not written above that: completeness for bounded formulas itself; any
 representation other than
 `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own

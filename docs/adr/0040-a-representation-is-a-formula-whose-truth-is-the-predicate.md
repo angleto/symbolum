@@ -173,7 +173,18 @@ negation put under the quantifier, because `NUM_AND` is `~(a ==> ~b)`. Each cost
 axioms. `tools/verify/perturb-exists-below.sh` records what each one depends on.
 
 Completeness for bounded formulas asks four things of a quantifier below a numeral: a universal
-that holds is proved, one that fails is refuted, and the same for an existential. Three are here.
-The fourth, a bounded universal refuted from one instance under the bound that PA refutes, is not
-written; it is the dual of the witness half. Completeness itself is not written either, and it is
-still the claim in this record to doubt first.
+that holds is proved, one that fails is refuted, and the same for an existential. Three were here
+that day, and the fourth followed it, below.
+
+## The fourth case, 2026-11-20
+
+`NUM_PROV_NOT_ALL_BELOW_NUMERAL` refutes a bounded universal from one instance under the bound
+that PA refutes, the dual of the witness half and, like it, without an induction: the logical
+axiom of specialisation at the closed witness `numeral k` gives `(!v_x. B) ==> B[numeral k/x]`,
+the order in `B[numeral k/x]` is `numeral k < numeral n` from `NUM_PROV_LESS_NUMERAL` and is
+detached under the universal, and contraposition with the refuted instance refutes the universal.
+It costs the naturals' two axioms, as the other three do, and `tools/verify/perturb-not-all-below.sh`
+records what it depends on.
+
+All four cases are here. Completeness for bounded formulas, the induction over a formula that
+consumes them, is not written, and it is still the claim in this record to doubt first.

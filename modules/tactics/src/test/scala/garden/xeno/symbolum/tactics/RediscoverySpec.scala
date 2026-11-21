@@ -462,7 +462,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 1054 with the existential half of a bounded quantifier, 2026-11-20, card `4102f131`, counted
     // before the run: four antecedents on `NUM_PROV_EXISTS_BELOW_NUMERAL`, three on
     // `NUM_PROV_NOT_EXISTS_BELOW_NUMERAL`. Plus seven.
-    propose.weakenings.size shouldBe 1054
+    // 1058 with a bounded universal refuted from one instance, 2026-11-20, card `4102f131`,
+    // counted before the run: four antecedents on `NUM_PROV_NOT_ALL_BELOW_NUMERAL`. Plus four.
+    propose.weakenings.size shouldBe 1058
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -734,6 +734,29 @@ object Deduction {
    */
   val NotExistsBelowNumeral: String = "NUM_PROV_NOT_EXISTS_BELOW_NUMERAL"
 
+  /**
+   * `|- !i x n k p. ~(i = x) ==> NUM_FORM p ==> k < n ==> NUM_PROV ~(p[numeral k/x]) ==>`
+   * `NUM_PROV ~(!v_x. v_x < numeral n ==> p)`
+   *
+   * A bounded universal is refuted by one instance below the bound refuted, which is the dual of
+   * [[ExistsBelowNumeral]] and the last of the four cases completeness for bounded formulas asks
+   * of a bounded quantifier: with [[AllBelowNumeral]] the universal is settled either way, and
+   * with the two existential facts the existential is.
+   *
+   * No induction. Specialisation inside PA at the closed witness `numeral k` gives
+   * `(!v_x. B) ==> B[numeral k/x]`, and the substitution is pushed through `B`, which is
+   * `v_x < numeral n ==> p`, by the clauses for implication and negation and computed in the
+   * order, where the guard is the comparison of `i` with `x`; under `p` it is left standing. The
+   * antecedent of the instance is `numeral k < numeral n`, which [[NumeralsOrdered]] proves from
+   * `k < n`, so it is detached under the universal, leaving `(!v_x. B) ==> p[numeral k/x]`, and
+   * contraposition with the refuted instance refutes the universal.
+   *
+   * `~(i = x)` is for the reason of [[ExistsBelowNumeral]]: with `i = x` the order binds the
+   * variable it is about, the substitution does not enter it, and the instance is not the one
+   * [[NumeralsOrdered]] proves.
+   */
+  val NotAllBelowNumeral: String = "NUM_PROV_NOT_ALL_BELOW_NUMERAL"
+
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
     Weaken ->
@@ -898,7 +921,11 @@ object Deduction {
     NotExistsBelowNumeral ->
       ("!i:num x:num n:num p:num. ~(i = x) ==> NUM_FORM p ==> " +
         "(!k:num. k < n ==> NUM_PROV (NUM_CODE 6 (NUM_SUBST_FORM x (NUM_NUMERAL k) p))) ==> " +
-        "NUM_PROV (NUM_CODE 6 (NUM_EXISTS_BELOW i x (NUM_NUMERAL n) p))")
+        "NUM_PROV (NUM_CODE 6 (NUM_EXISTS_BELOW i x (NUM_NUMERAL n) p))"),
+    NotAllBelowNumeral ->
+      ("!i:num x:num n:num k:num p:num. ~(i = x) ==> NUM_FORM p ==> k < n ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_SUBST_FORM x (NUM_NUMERAL k) p)) ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_ALL_BELOW i x (NUM_NUMERAL n) p))")
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -972,7 +999,8 @@ object Deduction {
             AllBelowNumeral -> builder.checked(AllBelowNumeral, builder.allBelowNumeral),
             ExistsBelowNumeral -> builder.checked(ExistsBelowNumeral, builder.existsBelowNumeral),
             NotExistsBelowNumeral ->
-              builder.checked(NotExistsBelowNumeral, builder.notExistsBelowNumeral)
+              builder.checked(NotExistsBelowNumeral, builder.notExistsBelowNumeral),
+            NotAllBelowNumeral -> builder.checked(NotAllBelowNumeral, builder.notAllBelowNumeral)
           )
         )
       )
@@ -4757,6 +4785,47 @@ object Deduction {
           .flatMap(rules.disch(indicesApart, _))
           .flatMap(rules.genAll(_, List(i, x, n, p))))
       }
+
+      /** [[NotAllBelowNumeral]], under `indicesApart` and `isFormula`, both among the `assumptions`. */
+      def notAllBelow(indicesApart: Term, isFormula: Term): Kernel.Thm = {
+        val n = Term.variable("n", numbers)
+        val k = Term.variable("k", numbers)
+        val p = Term.variable("p", numbers)
+        val witness = numeral(k)
+        val kBelowN = proposition("(k:num) < n")
+        val refutedHeld = proposition("NUM_PROV (NUM_CODE 6 (NUM_SUBST_FORM x (NUM_NUMERAL k) p))")
+
+        // (!v_x. B) ==> B[numeral k/x], B being v_x < numeral n ==> p with the order opened, and
+        // the substitution pushed down to p, where it stays.
+        val order = forAll(i, not(eq(sum(v(x), suc(v(i))), numeral(n))))
+        val b = imp(not(order), p)
+        val specialised = rewritten(
+          logical(force(rules.specAll(specialising, List(x, witness, b))
+            .flatMap(rules.mp(_, wf(b))).flatMap(rules.mp(_, wf(witness)))
+            .flatMap(rules.mp(_, force(rules.specAll(closedIsSubstitutable, List(x, witness, b))
+              .flatMap(rules.mp(_, wf(b)))
+              .flatMap(rules.mp(_, force(rules.spec(k, force(language.fact(Language.NumeralIsClosed))))))))))),
+          force(language.fact(Language.FormulaSubstituteImplication)),
+          force(language.fact(Language.FormulaSubstituteNegation)),
+          computed(x, witness, order)) // (!v_x. B) ==> (numeral k < numeral n ==> p[numeral k/x])
+
+        // numeral k < numeral n, opened the same way, detached under the universal.
+        val ordered = rewritten(
+          force(rules.specAll(Builder.this.numeralsOrdered, List(i, k, n)).flatMap(rules.mp(_, assumed(kBelowN)))),
+          force(language.fact(Language.LessCases)), force(language.fact(Language.ExistsCases)))
+        val toInstance = collapsed(specialised, ordered) // (!v_x. B) ==> p[numeral k/x]
+        val refuted = detach(contraposed(toInstance), assumed(refutedHeld)) // ~!v_x. B
+
+        val target = proposition("NUM_PROV (NUM_CODE 6 (NUM_ALL_BELOW i x (NUM_NUMERAL n) p))")
+        val reached = landed(target, refuted, Vector(
+          force(language.fact(Language.AllBelowCases)), force(language.fact(Language.LessCases)),
+          force(language.fact(Language.ExistsCases))))
+        force(rules.disch(refutedHeld, reached)
+          .flatMap(rules.disch(kBelowN, _))
+          .flatMap(rules.disch(isFormula, _))
+          .flatMap(rules.disch(indicesApart, _))
+          .flatMap(rules.genAll(_, List(i, x, n, k, p))))
+      }
     }
 
     /**
@@ -4805,6 +4874,17 @@ object Deduction {
       val isFormula = force(Parser.proposition(theory, notation, "NUM_FORM (p:num)"))
       new OpenSteps(Vector(assumed(indicesApart)), Map(Term.variable("p", numbers) -> assumed(isFormula)))
         .notExistsBelow(indicesApart, isFormula)
+    }
+
+    /**
+     * [[NotAllBelowNumeral]], in the steps of `OpenSteps` under the same two assumptions as
+     * [[AllBelowNumeral]].
+     */
+    lazy val notAllBelowNumeral: Kernel.Thm = {
+      val indicesApart = force(Parser.proposition(theory, notation, "~((i:num) = x)"))
+      val isFormula = force(Parser.proposition(theory, notation, "NUM_FORM (p:num)"))
+      new OpenSteps(Vector(assumed(indicesApart)), Map(Term.variable("p", numbers) -> assumed(isFormula)))
+        .notAllBelow(indicesApart, isFormula)
     }
 
     def checked(name: String, theorem: Kernel.Thm): Kernel.Thm = {

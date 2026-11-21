@@ -458,6 +458,50 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
       s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 2 (NUM_CODE 0 5)))) (NUM_NUMERAL ($bound)))))))) " +
       s"(NUM_CODE 6 ($body))))))))"
 
+  private val oneCode = "SUC ZERO"
+  private val twoCode = "SUC (SUC ZERO)"
+  private val threeCode = "SUC (SUC (SUC ZERO))"
+
+  /** `1 < 3`, from the naturals. */
+  private def oneBelowThree: Kernel.Thm = {
+    val peano = chain.peano
+    force(
+      rules
+        .specAll(force(peano.fact(Peano.StrictTransitive)), List(term(oneCode), term(twoCode), term(threeCode)))
+        .flatMap(implication => rules.conjIntro(
+          force(rules.spec(term(oneCode), force(peano.fact(Peano.BelowSuccessor)))),
+          force(rules.spec(term(twoCode), force(peano.fact(Peano.BelowSuccessor))))).flatMap(rules.mp(implication, _))))
+  }
+
+  /**
+   * `k < 1 |- NUM_PROV ~(numeral k = numeral 1)`: `~(k = 1)` through irreflexivity, then
+   * `NUM_PROV_NUMERAL_DISTINCT`, with `k < 1` the one hypothesis.
+   */
+  private def distinctBelowOne: Kernel.Thm = {
+    val k = Term.variable("k", numbers)
+    val below = proposition(s"(k:num) < $oneCode")
+    val equalClaim = proposition(s"(k:num) = $oneCode")
+    val lessHead = constant(Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+    val notEqual = force(for {
+      kBelow <- LogicError.lift(Kernel.assume(below))
+      equal <- LogicError.lift(Kernel.assume(equalClaim))
+      moved <- Conv.apTerm(lessHead, equal).flatMap(Conv.apThm(_, term(oneCode)))
+      selfBelow <- LogicError.lift(Kernel.eqMp(moved, kBelow))
+      irreflexive <- chain.peano.fact(Peano.StrictIrreflexive).flatMap(rules.spec(term(oneCode), _))
+      falsity <- rules.notElim(irreflexive, selfBelow)
+      denied <- rules.notIntro(equalClaim, falsity)
+    } yield denied)
+    force(rules.specAll(force(deduction.fact(Deduction.NumeralsDistinct)), List(k, term(oneCode)))
+      .flatMap(rules.mp(_, notEqual)))
+  }
+
+  /** `NUM_PROV (numeral 1 = numeral 1)`. */
+  private def oneIsOne: Kernel.Thm = {
+    val numeralOne = term(s"NUM_NUMERAL ($oneCode)")
+    force(rules.spec(numeralOne, force(deduction.fact(Deduction.Reflexivity)))
+      .flatMap(rules.mp(_, force(chain.language.wellFormedIn(numeralOne)))))
+  }
+
   private def openedExists(held: Kernel.Thm): Kernel.Thm = force(
     Rewrite.Rule.all(logic, Vector(Language.ExistsBelowCases, Language.AndCases, Language.LessCases, Language.ExistsCases)
       .map(name => force(chain.language.fact(name))))
@@ -484,56 +528,92 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
       Derivation.axiomsOf(theorem) should have size 2
     }
 
-    val one = "SUC ZERO"
-    val two = "SUC (SUC ZERO)"
-    val three = "SUC (SUC (SUC ZERO))"
+    val (one, three) = (oneCode, threeCode)
     val body = s"NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_NUMERAL ($one)))"
     val p = term(body)
     val apart = force(chain.successor.distinct(term("5"), term("2")))
     val isFormula = force(chain.language.wellFormedIn(p))
 
     // The witness: 1 < 3, and numeral 1 = numeral 1 read as the instance at it.
-    val peano = chain.peano
-    val oneThree = force(
-      rules
-        .specAll(force(peano.fact(Peano.StrictTransitive)), List(term(one), term(two), term(three)))
-        .flatMap(implication => rules.conjIntro(
-          force(rules.spec(term(one), force(peano.fact(Peano.BelowSuccessor)))),
-          force(rules.spec(term(two), force(peano.fact(Peano.BelowSuccessor))))).flatMap(rules.mp(implication, _))))
     val numeralOne = term(s"NUM_NUMERAL ($one)")
-    val reflexive = force(rules.spec(numeralOne, force(deduction.fact(Deduction.Reflexivity)))
-      .flatMap(rules.mp(_, force(chain.language.wellFormedIn(numeralOne)))))
-    val atWitness = asSubstitution("2", numeralOne, p, negated = false, reflexive)
+    val atWitness = asSubstitution("2", numeralOne, p, negated = false, oneIsOne)
     val proved = force(rules.specAll(witnessed, List(term("5"), term("2"), term(three), term(one), p))
       .flatMap(rules.mp(_, apart)).flatMap(rules.mp(_, isFormula))
-      .flatMap(rules.mp(_, oneThree)).flatMap(rules.mp(_, atWitness)))
+      .flatMap(rules.mp(_, oneBelowThree)).flatMap(rules.mp(_, atWitness)))
     proved.hypotheses shouldBe empty
     openedExists(proved).conclusion shouldBe proposition(s"NUM_PROV (${boundedExistsCode(three, body)})")
 
     // The refutation below 1: for k < 1, ~(k = 1), so PA refutes numeral k = numeral 1.
     val k = Term.variable("k", numbers)
     val below = proposition(s"(k:num) < $one")
-    val equalClaim = proposition(s"(k:num) = $one")
-    val lessHead = constant(Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
-    val notEqual = force(for {
-      kBelow <- LogicError.lift(Kernel.assume(below))
-      equal <- LogicError.lift(Kernel.assume(equalClaim))
-      moved <- Conv.apTerm(lessHead, equal).flatMap(Conv.apThm(_, term(one)))
-      selfBelow <- LogicError.lift(Kernel.eqMp(moved, kBelow))
-      irreflexive <- peano.fact(Peano.StrictIrreflexive).flatMap(rules.spec(term(one), _))
-      falsity <- rules.notElim(irreflexive, selfBelow)
-      denied <- rules.notIntro(equalClaim, falsity)
-    } yield denied)
-    val distinct = force(rules.specAll(force(deduction.fact(Deduction.NumeralsDistinct)), List(k, term(one)))
-      .flatMap(rules.mp(_, notEqual)))
     val numeralOfK = applied(numeralHead, List(k))
-    val instance = asSubstitution("2", numeralOfK, p, negated = true, distinct)
+    val instance = asSubstitution("2", numeralOfK, p, negated = true, distinctBelowOne)
     val every = force(rules.disch(below, instance).flatMap(rules.gen(k, _)))
     val denied = force(rules.specAll(refuted, List(term("5"), term("2"), term(one), p))
       .flatMap(rules.mp(_, apart)).flatMap(rules.mp(_, isFormula)).flatMap(rules.mp(_, every)))
     denied.hypotheses shouldBe empty
     openedExists(denied).conclusion shouldBe
       proposition(s"NUM_PROV (NUM_CODE 6 (${boundedExistsCode(one, body)}))")
+  }
+
+  /**
+   * The bounded universal settled both ways on ONE formula, `~(v_2 = 1)`, where the bound is what
+   * decides: below `1` PA proves `!v_2. v_2 < 1 ==> ~(v_2 = 1)` from every instance, and below `3`
+   * the new fact refutes `!v_2. v_2 < 3 ==> ~(v_2 = 1)` from the one instance at `1` refuted. A
+   * fact that ignored its bound would refute the first as well, which PA would then prove and
+   * refute at once; and the unbounded `!v_2. ~(v_2 = 1)` is refutable too, so the first half is
+   * what makes the bound visible.
+   *
+   * The refuted instance is `~~(numeral 1 = numeral 1)`, reflexivity doubled inside PA, and the
+   * order `1 < 3` comes from the naturals. The conclusion has nothing assumed, rests on the same
+   * two axioms as the other three cases, and is read back with `v_2` bound.
+   */
+  it should "refute a bounded universal from one instance refuted, where the bound decides" in {
+    val refuting = force(deduction.fact(Deduction.NotAllBelowNumeral))
+    refuting.hypotheses shouldBe empty
+    Derivation.axiomsOf(refuting) should have size 2
+
+    val (one, three) = (oneCode, threeCode)
+    val equation = s"NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 2) (NUM_NUMERAL ($one)))"
+    val body = s"NUM_CODE 6 ($equation)"
+    val p = term(body)
+    val apart = force(chain.successor.distinct(term("5"), term("2")))
+    val isFormula = force(chain.language.wellFormedIn(p))
+    def opened(held: Kernel.Thm): Kernel.Thm = force(
+      Rewrite.Rule.all(logic, Vector(Language.AllBelowCases, Language.LessCases, Language.ExistsCases)
+        .map(name => force(chain.language.fact(name))))
+        .flatMap(Rewrite.inTheorem(_, held)))
+    def universalCode(bound: String): String =
+      "NUM_CODE 8 (NUM_PAIR 2 (NUM_CODE 7 (NUM_PAIR " +
+        "(NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR 5 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR " +
+        s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 2) (NUM_CODE 2 (NUM_CODE 0 5)))) (NUM_NUMERAL ($bound)))))))) " +
+        s"($body))))"
+
+    // Below 1 it holds: every instance there is ~(numeral k = numeral 1).
+    val k = Term.variable("k", numbers)
+    val below = proposition(s"(k:num) < $one")
+    val instance = asSubstitution("2", applied(numeralHead, List(k)), p, negated = false, distinctBelowOne)
+    val every = force(rules.disch(below, instance).flatMap(rules.gen(k, _)))
+    val held = force(rules.specAll(force(deduction.fact(Deduction.AllBelowNumeral)), List(term("5"), term("2"), term(one), p))
+      .flatMap(rules.mp(_, apart)).flatMap(rules.mp(_, isFormula)).flatMap(rules.mp(_, every)))
+    held.hypotheses shouldBe empty
+    opened(held).conclusion shouldBe proposition(s"NUM_PROV (${universalCode(one)})")
+
+    // Below 3 it is refuted at 1: ~~(numeral 1 = numeral 1), reflexivity doubled inside PA.
+    val equalText = s"NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL ($one)) (NUM_NUMERAL ($one)))"
+    val equal = term(equalText)
+    val doubled = force(rules.spec(equal, force(deduction.fact(Deduction.DoubleNegationIntroduction)))
+      .flatMap(rules.mp(_, force(chain.language.wellFormedIn(equal))))
+      .flatMap(implication => rules.specAll(force(chain.provability.fact(Provability.ModusPonens)),
+        List(equal, term(s"NUM_CODE 6 (NUM_CODE 6 ($equalText))")))
+        .flatMap(rules.mp(_, implication)))
+      .flatMap(rules.mp(_, oneIsOne)))
+    val atOne = asSubstitution("2", term(s"NUM_NUMERAL ($one)"), p, negated = true, doubled)
+    val refuted = force(rules.specAll(refuting, List(term("5"), term("2"), term(three), term(one), p))
+      .flatMap(rules.mp(_, apart)).flatMap(rules.mp(_, isFormula))
+      .flatMap(rules.mp(_, oneBelowThree)).flatMap(rules.mp(_, atOne)))
+    refuted.hypotheses shouldBe empty
+    opened(refuted).conclusion shouldBe proposition(s"NUM_PROV (NUM_CODE 6 (${universalCode(three)}))")
   }
 
   /**
