@@ -774,7 +774,10 @@ That is all four cases completeness for bounded formulas consumes of a quantifie
 **And since 2026-11-21 the truth reads a numeral put for a variable**: `NUM_TRUE_SUBST_NUMERAL` says
 `NUM_TRUE (p[numeral k/x]) e = NUM_TRUE p e[x := k]` for every formula, with
 `NUM_VALUE_SUBST_NUMERAL` the same for a term, which is what turns the instances those four cases
-speak of into the values of `x` the truth of a bounded quantifier speaks of.
+speak of into the values of `x` the truth of a bounded quantifier speaks of. The class those
+cases are for is `NUM_BOUNDED`, also since 2026-11-21. It is built from equations by negation,
+implication and the universal below a variable or a numeral, and `NUM_BOUNDED_ALL` reads a universal
+in it as a `NUM_ALL_BELOW`.
 
 Not written above that: completeness for bounded formulas itself; any
 representation other than

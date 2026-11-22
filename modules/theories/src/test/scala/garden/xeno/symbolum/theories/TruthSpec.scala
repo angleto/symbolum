@@ -77,7 +77,8 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     val below = chain.provability.theory
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
-      Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.TriangleGraphName)
+      Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName,
+        Truth.TriangleGraphName)
     truth.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
@@ -208,6 +209,103 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     stopLeft shouldBe force(LogicError.lift(Term.eq(term("n:num"), atOne)).flatMap(body =>
       truth.logic.mkForall(Term.variable("n", numbers), body)))
     stopRight shouldBe stopLeft
+  }
+
+  "The bounded class" should "take a universal below a numeral, and neither an unbounded one nor one whose order binds its own index" in {
+    // `!v_0. v_0 < 3 ==> v_0 = v_0` with the order's witness at 1 is in the class. The same with
+    // the witness at 0 is not, the order then binding the index it is about, and `!v_0. v_0 = v_0`
+    // is not either: a universal in the class is a universal below, and that one's body is an
+    // equation where the class wants an order's implication. A class that took every universal,
+    // or read the clause without the condition on the witness, would prove one of the two denials
+    // false. The two denials come first, so that a class which lost a condition goes red at the
+    // denial it makes false rather than at the instance that no longer reads.
+    val equation = "NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))"
+    val clause = fact(Truth.BoundedAllBelow)
+    val bounded = term("NUM_BOUNDED")
+    def holds(text: String): Term = force(LogicError.lift(Term.app(bounded, term(text))))
+
+    val logic = truth.logic
+    val three = term("NUM_NUMERAL 3")
+    val ownIndex = holds(s"NUM_ALL_BELOW 0 0 (NUM_NUMERAL 3) ($equation)")
+    val refusedOwn = force(for {
+      opened <- rules.specAll(clause, List(term("0:num"), term("0:num"), three, term(equation)))
+      assumed <- LogicError.lift(Kernel.assume(ownIndex))
+      read <- LogicError.lift(Kernel.eqMp(opened, assumed))
+      apart <- rules.conjElim1(read)
+      absurd <- rules.notElim(apart, Kernel.refl(term("0:num")))
+      out <- rules.notIntro(ownIndex, absurd)
+    } yield out)
+    refusedOwn.hypotheses shouldBe empty
+    refusedOwn.conclusion shouldBe force(logic.mkNot(ownIndex))
+
+    val unbounded = holds(s"NUM_CODE 8 (NUM_PAIR 0 ($equation))")
+    val numbering = chain.numbering
+    def inside(existential: Term, name: String): (FVar, Term) = {
+      val predicate = force(logic.destExistsPredicate(existential).toRight("an existential"))
+      val variable = Term.variable(name, numbers)
+      val applied = force(LogicError.lift(Term.app(predicate, variable)))
+      (variable, force(Term.betaReduce(applied).toRight("a predicate")))
+    }
+    val shaped = force(rules.specAll(fact(Truth.BoundedUniversal), List(term("0:num"), term(equation)))
+      .flatMap(inversion => LogicError.lift(Kernel.assume(unbounded)).flatMap(rules.mp(inversion, _))))
+    val (z, overT) = inside(shaped.conclusion, "z")
+    val (t, overP) = inside(overT, "t")
+    val (p, body) = inside(overP, "p")
+    val refusedUnbounded = force(for {
+      held <- LogicError.lift(Kernel.assume(body))
+      cases <- chain.language.fact(Language.AllBelowCases)
+      unfolded <- rules.specAll(cases, List(z, term("0:num"), t, p))
+      codes <- Conv.trans(held, unfolded)
+      codeInjective <- numbering.fact(Numbering.CodeInjective)
+      pairInjective <- numbering.fact(Numbering.PairInjective)
+      outer <- (rightOf(codes) match {
+        case App(_, payload) =>
+          rules.specAll(codeInjective, List(term("8:num"), term(s"NUM_PAIR 0 ($equation)"), term("8:num"), payload))
+        case other => Left(NotOfForm("a code", other))
+      }).flatMap(rules.mp(_, codes)).flatMap(rules.conjElim2)
+      bodies <- (rightOf(outer) match {
+        case App(App(_, first), second) =>
+          rules.specAll(pairInjective, List(term("0:num"), term(equation), first, second))
+        case other => Left(NotOfForm("a pair", other))
+      }).flatMap(rules.mp(_, outer)).flatMap(rules.conjElim2)
+      tags <- (rightOf(bodies) match {
+        case App(App(_, tag), payload) =>
+          rules.specAll(codeInjective, List(term("5:num"), term("NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0)"), tag, payload))
+        case other => Left(NotOfForm("a code", other))
+      }).flatMap(rules.mp(_, bodies)).flatMap(rules.conjElim1)
+      apart <- chain.successor.distinct(term("5:num"), term("7:num"))
+      absurd <- rules.notElim(apart, tags)
+      overPAssumed <- LogicError.lift(Kernel.assume(overP))
+      atT <- rules.existsElim(overPAssumed, p, absurd)
+      overTAssumed <- LogicError.lift(Kernel.assume(overT))
+      atZ <- rules.existsElim(overTAssumed, t, atT)
+      none <- rules.existsElim(shaped, z, atZ)
+      out <- rules.notIntro(unbounded, none)
+    } yield out)
+    refusedUnbounded.hypotheses shouldBe empty
+    refusedUnbounded.conclusion shouldBe force(logic.mkNot(unbounded))
+
+    val oneIsSuccessor = force(chain.peano.fact(Peano.NumeralOneIsSuccessorOfZero))
+    val oneNotZero = force(chain.naturals.fact(Natural.SuccessorNotZero).flatMap(rules.spec(term("ZERO"), _))
+      .flatMap(Rewrite.inTheorem(force(Conv.sym(oneIsSuccessor).flatMap(e => Rewrite.Rule.all(truth.logic, Vector(e)))), _)))
+    val isNumeral = force(rules.existsIntro(term("\\n:num. NUM_NUMERAL 3 = NUM_NUMERAL n"), term("3:num"),
+      Kernel.refl(three)))
+    val equationBounded = force(rules.specAll(fact(Truth.BoundedEquality), List(term("NUM_CODE 0 0"), term("NUM_CODE 0 0")))
+      .flatMap(rules.eqTruthElim))
+    val below = force(rules.specAll(clause, List(term("1:num"), term("0:num"), three, term(equation))))
+    val (_, conditions) = force(Term.destEq(below.conclusion).toRight("an equation"))
+    val bound = force(logic.destConj(conditions).map(_._2).flatMap(logic.destConj).map(_._1).toRight("a conjunction"))
+    val variableBound = force(logic.destDisj(bound).map(_._1).toRight("a disjunction"))
+    val taken = force(for {
+      either <- rules.disjIntro2(variableBound, isNumeral)
+      rest <- rules.conjIntro(either, equationBounded)
+      all <- rules.conjIntro(oneNotZero, rest)
+      back <- Conv.sym(below)
+      out <- LogicError.lift(Kernel.eqMp(back, all))
+    } yield out)
+    taken.hypotheses shouldBe empty
+    taken.conclusion shouldBe holds(s"NUM_ALL_BELOW 1 0 (NUM_NUMERAL 3) ($equation)")
+
   }
 
   "The graph of the triangle" should "hold where the value is the triangle, fail elsewhere" in {

@@ -4622,6 +4622,7 @@ object Language {
       pairLeft <- numbering.fact(Numbering.PairLeft)
       pairRight <- numbering.fact(Numbering.PairRight)
       mixed <- numbering.peano.fact(Peano.AtMostThenBelow)
+      strict <- numbering.peano.fact(Peano.StrictTransitive)
 
       stripped <- Logic.stripForall(admissible)
       left <- stripped._1.headOption.toRight(NotOfForm("a claim about a function", admissible))
@@ -4640,8 +4641,62 @@ object Language {
           case _ => None
         }
 
-        /** `x < s`, read off a guard that says what shape `s` has. */
-        def boundOf(argument: Term, guard: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+        /**
+         * `x < s`, read off a guard that says what shape `s` has.
+         *
+         * The argument may sit any number of constructors down: the bounded universal's branch in
+         * `Truth` recurses on the body of the implication under the quantifier, two codes and two
+         * pairs below `s`. The walk goes through `NUM_CODE` and `NUM_PAIR` only, a payload being
+         * below its code and a component at most its pair, and it stops at anything else, so a
+         * projection written inside the shape is a leaf and never opened.
+         */
+        def boundOf(argument: Term, guard: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+          def headed(term: Term, name: String): Option[(Term, Term)] = term match {
+            case App(App(Const(`name`, _), first), second) => Some((first, second))
+            case _ => None
+          }
+          def search(term: Term, termBelow: Kernel.Thm): Option[Either[LogicError, Kernel.Thm]] =
+            if (term == argument) Some(Right(termBelow))
+            else
+              headed(term, Numbering.PairName) match {
+                case Some((first, second)) =>
+                  def component(part: Term, which: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+                    for {
+                      inPair <- rules.specAll(which, List(first, second))
+                      pieces <- rules.conjIntro(inPair, termBelow)
+                      settled <- rules.specAll(mixed, List(part, term, subject))
+                        .flatMap(rules.mp(_, pieces))
+                    } yield settled
+                  def into(part: Term, which: Kernel.Thm): Option[Either[LogicError, Kernel.Thm]] =
+                    if (part == argument) Some(component(part, which))
+                    else if (!occurs(part)) None
+                    else component(part, which) match {
+                      case Right(partBelow) => search(part, partBelow)
+                      case Left(refused) => Some(Left(refused))
+                    }
+                  into(first, pairLeft).orElse(into(second, pairRight))
+                case None =>
+                  headed(term, Numbering.CodeName) match {
+                    case Some((tag, payload)) if occurs(payload) =>
+                      val payloadBelow = for {
+                        raw <- rules.specAll(codeRight, List(tag, payload))
+                        pieces <- rules.conjIntro(raw, termBelow)
+                        settled <- rules.specAll(strict, List(payload, term, subject))
+                          .flatMap(rules.mp(_, pieces))
+                      } yield settled
+                      payloadBelow match {
+                        case Right(below) => search(payload, below)
+                        case Left(refused) => Some(Left(refused))
+                      }
+                    case _ => None
+                  }
+              }
+          def occurs(term: Term): Boolean =
+            term == argument || (term match {
+              case App(function, operand) => occurs(function) || occurs(operand)
+              case _ => false
+            })
+
           for {
             shape <- Term
               .destEq(guard.conclusion)
@@ -4657,22 +4712,10 @@ object Language {
               .sym(guard)
               .flatMap(equation => Conv.apTerm(headed, equation))
               .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, raw)))
-            result <-
-              if (argument == coded._2) Right(payloadBelow)
-              else
-                coded._2 match {
-                  case App(App(_, first), second) =>
-                    val which = if (argument == first) pairLeft else pairRight
-                    for {
-                      inPair <- rules.specAll(which, List(first, second))
-                      pieces <- rules.conjIntro(inPair, payloadBelow)
-                      settled <- rules
-                        .specAll(mixed, List(argument, coded._2, subject))
-                        .flatMap(rules.mp(_, pieces))
-                    } yield settled
-                  case other => Left(NotOfForm("a pair", other))
-                }
+            result <- search(coded._2, payloadBelow)
+              .getOrElse(Left(NotOfForm("a component of the shape the guard gives", argument)))
           } yield result
+        }
 
         /** Two branches that differ only by the function, related argument by argument. */
         def congruent(a: Term, b: Term, guard: Kernel.Thm): Either[LogicError, Kernel.Thm] =
@@ -4919,6 +4962,12 @@ object Language {
     def decide(guard: Term): Either[LogicError, Option[Either[Kernel.Thm, Kernel.Thm]]] =
       Term.destEq(guard) match {
         case Some((one, other)) if one == other => Right(Some(Left(Conv.refl(one))))
+        // One tag on both sides and payloads that differ: the tags decide nothing, and whether the
+        // payloads agree is a question about the code's variables. `NUM_BOUNDED`'s universal is
+        // the guard that asks it, at a quantifier whose body is not yet known to be an order's
+        // implication, and the conditional is left standing for the caller to split.
+        case Some((App(App(_, leftTag), _), App(App(_, rightTag), _))) if leftTag == rightTag =>
+          Right(None)
         case Some((App(App(_, leftTag), leftPayload), App(App(_, rightTag), rightPayload))) =>
           for {
             assumed <- LogicError.lift(Kernel.assume(guard))

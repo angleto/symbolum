@@ -194,6 +194,54 @@ object Truth {
   val ProvesGround: String = "NUM_PROV_GROUND"
 
   /**
+   * `NUM_BOUNDED p` says every quantifier in `p` is bounded: `p` is built from equations by
+   * negation, implication and the bounded universal `!i. i < b ==> q`, where `b` is a variable
+   * other than `v_i` and the order's own witness, or a numeral. The class completeness is proved
+   * for next, an existential below being written as the negation of a universal below.
+   *
+   * **The bound is a variable or a numeral, and not any term.** Putting a numeral for a variable
+   * keeps the class, since a variable bound becomes a numeral or stays a variable, and a closed
+   * formula of the class has every bound a numeral, which is the form the four facts about a
+   * quantifier below a numeral in `Deduction` consume. A bound written as a term would first have
+   * to be brought to a numeral inside PA under the quantifier, and what is lost is nothing a
+   * formula with one unbounded existential more cannot say: `?y. y = t /\ !i. i < y ==> q`.
+   *
+   * Like `NUM_GROUND` it says nothing about the formula being well formed; a statement about it
+   * asks for `NUM_FORM` beside it.
+   */
+  val BoundedName: String = "NUM_BOUNDED"
+
+  /** `|- !a b. NUM_BOUNDED (a = b) = T`, coded: every equation is bounded. */
+  val BoundedEquality: String = "NUM_BOUNDED_EQ"
+
+  /** `|- !p. NUM_BOUNDED ~p = NUM_BOUNDED p`, coded. */
+  val BoundedNegation: String = "NUM_BOUNDED_NOT"
+
+  /** `|- !p q. NUM_BOUNDED (p ==> q) = (NUM_BOUNDED p /\ NUM_BOUNDED q)`, coded. */
+  val BoundedImplication: String = "NUM_BOUNDED_IMP"
+
+  /**
+   * `|- !z i t p. NUM_BOUNDED (NUM_ALL_BELOW z i t p) =`
+   *   `(~(z = i) /\ ((?j. t = v_j /\ ~(j = i) /\ ~(j = z)) \/ (?n. t = NUM_NUMERAL n)) /\`
+   *   `NUM_BOUNDED p)`
+   *
+   * The quantifier the class admits. The order's witness must differ from the quantified index,
+   * or `?z. i + S z = t` would bind the `i` it is about; a variable bound must differ from both,
+   * or it would be bound by one of them. Any other universal is not in the class.
+   */
+  val BoundedAllBelow: String = "NUM_BOUNDED_ALL_BELOW"
+
+  /**
+   * `|- !j q. NUM_BOUNDED (!v_j. q) ==> ?z t p. (!v_j. q) = NUM_ALL_BELOW z j t p`, coded.
+   *
+   * A universal in the class is a universal below: the reading an induction over the class needs
+   * at a quantifier, since the code it is handed is `NUM_CODE 8 (NUM_PAIR j q)` and the facts
+   * about a quantifier below are stated at `NUM_ALL_BELOW`. With [[BoundedAllBelow]] at what it
+   * yields, it also gives the conditions on the witness and the bound.
+   */
+  val BoundedUniversal: String = "NUM_BOUNDED_ALL"
+
+  /**
    * `|- !x k t. NUM_TERM t ==> !e. NUM_VALUE (t[numeral k/x]) e = NUM_VALUE t e[x := k]`
    *
    * Putting the numeral of `k` for `v_x` in a term changes its value exactly as sending `x` to
@@ -321,6 +369,17 @@ object Truth {
     ProvesGround ->
       ("!e:num -> num. !p:num. NUM_FORM p ==> NUM_GROUND p ==> " +
         "(NUM_TRUE p e ==> NUM_PROV p) /\\ (~(NUM_TRUE p e) ==> NUM_PROV (NUM_CODE 6 p))"),
+    BoundedEquality -> "!a:num. !b:num. NUM_BOUNDED (NUM_CODE 5 (NUM_PAIR a b)) = T",
+    BoundedNegation -> "!p:num. NUM_BOUNDED (NUM_CODE 6 p) = NUM_BOUNDED p",
+    BoundedImplication ->
+      "!p:num. !q:num. NUM_BOUNDED (NUM_CODE 7 (NUM_PAIR p q)) = (NUM_BOUNDED p /\\ NUM_BOUNDED q)",
+    BoundedAllBelow ->
+      ("!z:num. !i:num. !t:num. !p:num. NUM_BOUNDED (NUM_ALL_BELOW z i t p) = " +
+        "(~(z = i) /\\ ((?j:num. t = NUM_CODE 0 j /\\ ~(j = i) /\\ ~(j = z)) \\/ " +
+        "(?n:num. t = NUM_NUMERAL n)) /\\ NUM_BOUNDED p)"),
+    BoundedUniversal ->
+      ("!j:num. !q:num. NUM_BOUNDED (NUM_CODE 8 (NUM_PAIR j q)) ==> " +
+        "?z:num t:num p:num. NUM_CODE 8 (NUM_PAIR j q) = NUM_ALL_BELOW z j t p"),
     ValueAtNumeral ->
       ("!x:num k:num t:num. NUM_TERM t ==> !e:num -> num. " +
         "NUM_VALUE (NUM_SUBST_TERM x (NUM_NUMERAL k) t) e = NUM_VALUE t (\\j:num. COND (j = x) k (e j))"),
@@ -339,6 +398,34 @@ object Truth {
       "           (COND (s = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) (NUM_SND (NUM_PAYLOAD s)))) " +
       "                 (f (NUM_FST (NUM_PAYLOAD s)) /\\ f (NUM_SND (NUM_PAYLOAD s))) " +
       "                 F))"
+
+  /**
+   * The step of the bounded class, as text.
+   *
+   * The universal's guard is the whole shape `!X. NUM_LESS W v_X B ==> Z`, with `W` and `B` read
+   * back out of the order's code, so a universal whose antecedent is anything else falls through
+   * to `F`. Its branch recurses on `Z`, two codes and two pairs below `s`, which is the one place
+   * a recursion here reaches further down than a payload's pair.
+   */
+  val BoundedStepText: String = {
+    val index = "NUM_FST (NUM_PAYLOAD s)"
+    val implication = "NUM_SND (NUM_PAYLOAD s)"
+    val antecedent = s"NUM_FST (NUM_PAYLOAD ($implication))"
+    val body = s"NUM_SND (NUM_PAYLOAD ($implication))"
+    val witness = s"NUM_FST (NUM_PAYLOAD (NUM_PAYLOAD ($antecedent)))"
+    val bound = s"NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD ($antecedent))))))"
+    "\\f:num -> bool. \\s:num. " +
+      "COND (s = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) (NUM_SND (NUM_PAYLOAD s)))) T " +
+      "(COND (s = NUM_CODE 6 (NUM_PAYLOAD s)) (f (NUM_PAYLOAD s)) " +
+      "(COND (s = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) (NUM_SND (NUM_PAYLOAD s)))) " +
+      "(f (NUM_FST (NUM_PAYLOAD s)) /\\ f (NUM_SND (NUM_PAYLOAD s))) " +
+      s"(COND (s = NUM_CODE 8 (NUM_PAIR ($index) (NUM_CODE 7 (NUM_PAIR " +
+      s"(NUM_LESS ($witness) (NUM_CODE 0 ($index)) ($bound)) ($body))))) " +
+      s"(~(($witness) = ($index)) /\\ " +
+      s"((?j:num. ($bound) = NUM_CODE 0 j /\\ ~(j = ($index)) /\\ ~(j = ($witness))) \\/ " +
+      s"(?n:num. ($bound) = NUM_NUMERAL n)) /\\ f ($body)) " +
+      "F)))"
+  }
 
   /** The one the standard chain builds. */
   lazy val standard: Truth = Chain.standard.truth
@@ -383,8 +470,14 @@ object Truth {
         GroundName, GroundStepText, Type.Bool, Nil)
       (groundTheory, groundDefinition, groundNamed) = withGround
 
-      graphBody <- Parser.term(groundTheory, provability.notation, TriangleGraphText, numbers)
-      withGraph <- LogicError.lift(Kernel.defineConstant(groundTheory, TriangleGraphName, graphBody))
+      groundLogic <- numbering.logic.over(groundTheory)
+      withBounded <- Language.defineShaped(
+        numbering, recursion, groundTheory, provability.notation, groundLogic,
+        BoundedName, BoundedStepText, Type.Bool, Nil)
+      (boundedTheory, boundedDefinition, boundedNamed) = withBounded
+
+      graphBody <- Parser.term(boundedTheory, provability.notation, TriangleGraphText, numbers)
+      withGraph <- LogicError.lift(Kernel.defineConstant(boundedTheory, TriangleGraphName, graphBody))
       (theory, graphDefinition) = withGraph
       logic <- numbering.logic.over(theory)
 
@@ -419,6 +512,21 @@ object Truth {
       groundNegation <- clauses.plain(groundNamed, GroundNegation)
       groundImplication <- clauses.plain(groundNamed, GroundImplication)
       groundUniversal <- clauses.plain(groundNamed, GroundUniversal)
+      boundedEquality <- clauses.plain(boundedNamed, BoundedEquality)
+      boundedNegation <- clauses.plain(boundedNamed, BoundedNegation)
+      boundedImplication <- clauses.plain(boundedNamed, BoundedImplication)
+      abbreviations <- Vector(Language.AllBelowCases, Language.LessCases, Language.ExistsCases)
+        .foldLeft[Either[LogicError, Vector[Rewrite.Rule]]](Right(Vector.empty)) { (carried, name) =>
+          for {
+            found <- carried
+            fact <- language.fact(name)
+            rule <- Rewrite.Rule.of(logic, fact)
+          } yield found :+ rule
+        }
+      boundedAllBelow <- clauses.abbreviated(boundedNamed, BoundedAllBelow, abbreviations)
+      allBelowCases <- language.fact(Language.AllBelowCases)
+      boundedUniversal <- boundedShape(
+        logic, statements, clauses, boundedNamed, allBelowCases, naturals.classical)
       modusPonens <- provability.fact(Provability.ModusPonens)
       doubleNegation <- naturals.classical.fact(Classical.DoubleNegation)
 
@@ -442,6 +550,7 @@ object Truth {
         ValueName -> valueDefinition,
         TrueName -> truthDefinition,
         GroundName -> groundDefinition,
+        BoundedName -> boundedDefinition,
         TriangleGraphName -> graphDefinition
       ),
       Map(
@@ -466,7 +575,12 @@ object Truth {
         GroundUniversal -> groundUniversal,
         ProvesGround -> evaluation._4,
         ValueAtNumeral -> evaluation._5,
-        TrueAtNumeral -> evaluation._6
+        TrueAtNumeral -> evaluation._6,
+        BoundedEquality -> boundedEquality,
+        BoundedNegation -> boundedNegation,
+        BoundedImplication -> boundedImplication,
+        BoundedAllBelow -> boundedAllBelow,
+        BoundedUniversal -> boundedUniversal
       )
     )
   }
@@ -521,13 +635,60 @@ object Truth {
           case App(_, coded) => Right(coded)
           case other => Left(NotOfForm("a predicate read at a code", other))
         }
+        reduced <- opened(named, code, Vector.empty)
+        general <- rules.genAll(reduced, variables.toList)
+        result <- statements.checked(name, general)
+      } yield result
+
+    /**
+     * The recursion equation of a truth-valued recursion at one code, its projections taken off
+     * and every guard the tags decide settled. A guard they cannot decide stays standing, and the
+     * caller compares what is left with a statement or splits on it.
+     */
+    def opened(
+      named: Kernel.Thm,
+      code: Term,
+      unfolding: Vector[Rewrite.Rule]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
         instance <- rules.spec(code, named)
-        cleaned <- Rewrite.inTheorem(projections, instance)
+        cleaned <- Rewrite.inTheorem(projections ++ unfolding, instance)
         settled <- Language.settleGuards(numbering, logic, successor, Type.Bool, cleaned)
         reduced <- Conv
           .betaNormalise(settled.conclusion)
           .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, settled)))
-        general <- rules.genAll(reduced, variables.toList)
+      } yield reduced
+
+    /**
+     * A clause of a truth-valued recursion stated at an abbreviation rather than at a code.
+     *
+     * The abbreviation is unfolded into the code it names first, by `unfolding`, and the recursion
+     * equation is read there; its own step may name the same abbreviations, so the projections are
+     * taken off with them unfolded as well, and the guards then compare two codes. The name goes
+     * back on the left by congruence with the unfolding, so the published statement says
+     * `NUM_ALL_BELOW` where the reader writes it.
+     */
+    def abbreviated(
+      named: Kernel.Thm,
+      name: String,
+      unfolding: Vector[Rewrite.Rule]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        statement <- statements.statement(name)
+        stripped <- Logic.stripForall(statement)
+        (variables, body) = stripped
+        sides <- Term.destEq(body).toRight(NotOfForm("an equation", body))
+        read <- sides._1 match {
+          case App(head, abbreviation) => Right((head, abbreviation))
+          case other => Left(NotOfForm("a predicate read at an abbreviation", other))
+        }
+        (predicate, abbreviation) = read
+        expanded <- Rewrite.rewrite(unfolding, abbreviation)
+        code <- Term.destEq(expanded.conclusion).map(_._2)
+          .toRight(NotOfForm("an equation", expanded.conclusion))
+        reduced <- opened(named, code, unfolding)
+        folded <- Conv.apTerm(predicate, expanded).flatMap(Conv.trans(_, reduced))
+        general <- rules.genAll(folded, variables.toList)
         result <- statements.checked(name, general)
       } yield result
 
@@ -553,6 +714,87 @@ object Truth {
         general <- rules.genAll(reduced, variables.toList)
         result <- statements.checked(name, general)
       } yield result
+  }
+
+  /**
+   * [[BoundedUniversal]], by splitting on the universal's guard in the recursion equation.
+   *
+   * Where it holds, the guard is the equation the statement asks for, `NUM_ALL_BELOW` read
+   * backwards at the witness, bound and body it names; where it fails, the class says `F` there
+   * and the assumption is absurd.
+   */
+  private def boundedShape(
+    logic: Logic,
+    statements: Statements,
+    clauses: Clauses,
+    named: Kernel.Thm,
+    allBelowCases: Kernel.Thm,
+    classical: Classical
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    /** `goal` from `proved`, a proof of its body at `witnesses`, one existential at a time. */
+    def introduced(goal: Term, witnesses: List[Term], proved: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      witnesses match {
+        case Nil =>
+          if (proved.conclusion == goal) Right(proved)
+          else Left(NotOfForm("the body of the existential", proved.conclusion))
+        case witness :: rest =>
+          for {
+            predicate <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
+            applied <- LogicError.lift(Term.app(predicate, witness))
+            inner <- Term.betaReduce(applied).toRight(NotOfForm("a predicate", predicate))
+            below <- introduced(inner, rest, proved)
+            result <- rules.existsIntro(predicate, witness, below)
+          } yield result
+      }
+
+    for {
+      statement <- statements.statement(BoundedUniversal)
+      stripped <- Logic.stripForall(statement)
+      (variables, body) = stripped
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (claim, goal) = parts
+      code <- claim match {
+        case App(_, coded) => Right(coded)
+        case other => Left(NotOfForm("a predicate read at a code", other))
+      }
+      reduced <- clauses.opened(named, code, Vector.empty)
+      split <- Term.destEq(reduced.conclusion).map(_._2) match {
+        case Some(App(App(App(_, guard), yes), no)) => Right((guard, yes, no))
+        case _ => Left(NotOfForm("the universal's guard left standing", reduced.conclusion))
+      }
+      (guard, yes, no) = split
+      shape <- Term.destEq(guard).map(_._2).toRight(NotOfForm("an equation", guard))
+      pieces <- shape match {
+        case App(App(_, _), App(App(_, index),
+          App(App(_, _), App(App(_, App(App(App(_, witness), _), bound)), inner)))) =>
+          Right((index, witness, bound, inner))
+        case other => Left(NotOfForm("a universal over an order's implication", other))
+      }
+      (index, witness, bound, inner) = pieces
+      assumed <- LogicError.lift(Kernel.assume(claim))
+      conditional <- LogicError.lift(Kernel.eqMp(reduced, assumed))
+      condFalse <- classical.fact(Classical.CondFalse)
+        .map(Kernel.instType(Map(Classical.TypeVariable -> Type.Bool), _))
+      middle <- classical.fact(Classical.ExcludedMiddle).flatMap(rules.spec(guard, _))
+      whenHeld <- for {
+        held <- LogicError.lift(Kernel.assume(guard))
+        unfolded <- rules.specAll(allBelowCases, List(witness, index, bound, inner))
+        folded <- Conv.sym(unfolded).flatMap(Conv.trans(held, _))
+        result <- introduced(goal, List(witness, bound, inner), folded)
+      } yield result
+      whenDenied <- for {
+        denied <- logic.mkNot(guard).flatMap(term => LogicError.lift(Kernel.assume(term)))
+        falls <- rules.specAll(condFalse, List(guard, yes, no)).flatMap(rules.mp(_, denied))
+        absurd <- LogicError.lift(Kernel.eqMp(falls, conditional))
+        result <- rules.falsityElim(goal, absurd)
+      } yield result
+      cases <- rules.disjElim(middle, whenHeld, whenDenied)
+      discharged <- rules.disch(claim, cases)
+      general <- rules.genAll(discharged, variables.toList)
+      result <- statements.checked(BoundedUniversal, general)
+    } yield result
   }
 
   /** [[ValueNumeral]], by induction on the number with the two numeral equations. */

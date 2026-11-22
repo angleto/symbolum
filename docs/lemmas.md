@@ -1331,6 +1331,11 @@ they have least appetite for working out how it is produced.
 
 ## Truth
 
+  NUM_BOUNDED_ALL          !n:num. !m:num. NUM_BOUNDED (NUM_CODE 8 (NUM_PAIR n m)) ==> (?k:num. ?i:num. ?j:num. NUM_CODE 8 (NUM_PAIR n m) = NUM_ALL_BELOW k n i j)
+  NUM_BOUNDED_ALL_BELOW    !n:num. !m:num. !k:num. !i:num. NUM_BOUNDED (NUM_ALL_BELOW n m k i) = (~(n = m) /\ ((?j:num. k = NUM_CODE 0 j /\ ~(j = m) /\ ~(j = n)) \/ (?j:num. k = NUM_NUMERAL j)) /\ NUM_BOUNDED i)
+  NUM_BOUNDED_EQ           !n:num. !m:num. NUM_BOUNDED (NUM_CODE 5 (NUM_PAIR n m)) = T
+  NUM_BOUNDED_IMP          !n:num. !m:num. NUM_BOUNDED (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_BOUNDED n /\ NUM_BOUNDED m)
+  NUM_BOUNDED_NOT          !n:num. NUM_BOUNDED (NUM_CODE 6 n) = NUM_BOUNDED n
   NUM_GROUND_ALL           !n:num. !m:num. NUM_GROUND (NUM_CODE 8 (NUM_PAIR n m)) = F
   NUM_GROUND_EQ            !n:num. !m:num. NUM_GROUND (NUM_CODE 5 (NUM_PAIR n m)) = (NUM_CLOSED n /\ NUM_CLOSED m)
   NUM_GROUND_IMP           !n:num. !m:num. NUM_GROUND (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_GROUND n /\ NUM_GROUND m)

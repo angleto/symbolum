@@ -801,10 +801,15 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "contains no `1`. What would catch a short walk even so is `OrderSpec`, which pins the " +
         "printed form of every fact this file publishes"),
     "Truth.scala" ->
-      ("nine, and one of them is read as a normal form. Two are `inTheorem` taking the three " +
+      ("ten, and one of them is read as a normal form. Two are `inTheorem` taking the three " +
         "projections off a recursion equation at a code, one per reader of a clause, and what follows it settles every shape " +
         "test and compares the clause with its published statement, so a walk that stopped with " +
-        "a projection standing is refused there by name. Five unfold the triangle and products " +
+        "a projection standing is refused there by name. The truth-valued reader also unfolds " +
+        "the bounded universal, the order and the existential when a clause is stated at one, and " +
+        "the tenth, since 2026-11-21, is that unfolding applied to the clause's own subject: each " +
+        "rule replaces an abbreviation by the code it names, so it strictly reduces, and its right " +
+        "side is the code the recursion is read at, so an abbreviation left standing leaves a " +
+        "guard the tags cannot settle and the comparison with the statement refuses. Five unfold the triangle and products " +
         "with a successor in them and hand both sides to the semiring, which refuses an identity " +
         "it cannot close, and the induction driver compares the result with the statement. The " +
         "seventh evaluates the triangle's graph, and its result is destructured as an equation " +

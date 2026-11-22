@@ -501,7 +501,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 1060 with a numeral put for a variable, read by the truth, 2026-11-21, card `4102f131`,
     // predicted before the run: one antecedent each on `NUM_VALUE_SUBST_NUMERAL` and
     // `NUM_TRUE_SUBST_NUMERAL`. Plus two.
-    proposals.size shouldBe 1060
+    // 1061 with the class of bounded formulas, 2026-11-21, card `4102f131`, predicted before the
+    // run: one antecedent on `NUM_BOUNDED_ALL`, the four clauses being equations. Plus one.
+    proposals.size shouldBe 1061
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -2015,7 +2017,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 268 with a numeral put for a variable in the truth, 2026-11-21, card `4102f131`: both new
     // weakenings, `open` above not moving, read off the first run and confirmed on a second. Plus
     // two.
-    unreadable shouldBe 268
+    // 269 with the class of bounded formulas, 2026-11-21, card `4102f131`: the one weakening of
+    // `NUM_BOUNDED_ALL`, predicted as one more across `open` and this bucket and read off the run
+    // here, `open` above not moving. Plus one.
+    unreadable shouldBe 269
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

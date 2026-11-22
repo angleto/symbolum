@@ -184,7 +184,7 @@ together they state a complete ordered field, which no derivation can.
 | `law LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `law COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
-## The definitions (209)
+## The definitions (210)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -254,6 +254,7 @@ axiom mentioning it means.
 | `definition NUM_BETA` | NUM_BETA = \n:num. \m:num. \k:num. NUM_MOD n (SUC (SUC k * m)) | **NOT READ** |  |  |
 | `definition NUM_BIT0` | NUM_BIT0 = \n:num. n + n | **NOT READ** |  |  |
 | `definition NUM_BIT1` | NUM_BIT1 = \n:num. SUC (n + n) | **NOT READ** |  |  |
+| `definition NUM_BOUNDED` | NUM_BOUNDED = select (\f:num -> bool. !n:num. f n = COND (n = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) T (COND (n = NUM_CODE 6 (NUM_PAYLOAD n)) (f (NUM_PAYLOAD n)) (COND (n = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (f (NUM_FST (NUM_PAYLOAD n)) /\ f (NUM_SND (NUM_PAYLOAD n))) (COND (n = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_CODE 7 (NUM_PAIR (NUM_LESS (NUM_FST (NUM_PAYLOAD (NUM_PAYLOAD (NUM_FST (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n))))))) (NUM_CODE 0 (NUM_FST (NUM_PAYLOAD n))) (NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD (NUM_FST (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n))))))))))) (NUM_SND (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n)))))))) (~(NUM_FST (NUM_PAYLOAD (NUM_PAYLOAD (NUM_FST (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n)))))) = NUM_FST (NUM_PAYLOAD n)) /\ ((?m:num. NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD (NUM_FST (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n))))))))) = NUM_CODE 0 m /\ ~(m = NUM_FST (NUM_PAYLOAD n)) /\ ~(m = NUM_FST (NUM_PAYLOAD (NUM_PAYLOAD (NUM_FST (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n)))))))) \/ (?m:num. NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD (NUM_PAYLOAD (NUM_FST (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n))))))))) = NUM_NUMERAL m)) /\ f (NUM_SND (NUM_PAYLOAD (NUM_SND (NUM_PAYLOAD n))))) F)))) | **NOT READ** |  |  |
 | `definition NUM_CEIL` | NUM_CEIL = \x:real. select (\n:num. x <= real_of_num n /\ real_of_num n < x + 1) | **NOT READ** |  |  |
 | `definition NUM_CHOOSE` | NUM_CHOOSE = select (\f:num -> num -> num. f 0 = (\n:num. COND (n = 0) (SUC 0) 0) /\ (!n:num. f (SUC n) = (\m:num. COND (m = 0) (SUC 0) (f n (PRE m) + f n m)))) | **NOT READ** |  |  |
 | `definition NUM_CLOSED` | NUM_CLOSED = \n:num. !m:num. ~(NUM_FREE_TERM m n) | **NOT READ** |  |  |

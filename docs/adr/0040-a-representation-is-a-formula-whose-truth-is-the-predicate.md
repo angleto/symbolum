@@ -205,3 +205,36 @@ bounded formulas as a predicate on codes, which an induction over it must be abl
 substitution, and a measure that a numeral put for a variable does not raise, since the code of
 `p[numeral k/x]` can be larger than the code of `p` and so strong induction on the code does not
 reach it.
+
+## The class of bounded formulas, 2026-11-21
+
+`NUM_BOUNDED` is the class, as a recursion on the code in `Truth` beside `NUM_GROUND`. It holds of
+every equation, and of a negation, an implication and a universal below when it holds of their
+parts. A universal below is `NUM_ALL_BELOW z i b p`. Its order's witness `z` must differ from `i`,
+and its bound `b` is a variable other than `v_i` and `v_z`, or a numeral. Any other universal is
+outside the class. An existential below is written as the negation of a universal below. Five facts
+read it: one clause per connective, and `NUM_BOUNDED_ALL`, which reads a universal in the class back
+as a `NUM_ALL_BELOW`. The induction will meet the universal as `NUM_CODE 8 (NUM_PAIR j q)`, so it
+needs that inversion.
+
+**The bound is a variable or a numeral, and that is the decision this section records.** The plan
+written the same morning allowed any term not mentioning the index. That plan needed a step that
+this one drops: in a closed instance, bringing the bound to a numeral inside PA, under the
+quantifier, by replacing equals. With a variable or a numeral, putting a numeral for a variable
+keeps the class, and a closed formula of the class already has numerals for bounds. That is the
+form the four facts in `Deduction` consume. What is lost is a bound written as a term. It comes back
+one level up, as `?y. y = t /\ !i. i < y ==> p`, which is Sigma-1 and is what completeness for
+Sigma-1 formulas will read. The choice is reversible. Widening the class later is a new clause plus
+the PA step this one avoids.
+
+Two pieces of machinery moved with it. The first is in `Language`'s admissibility proof for a
+recursion. It read a bound only for a payload or a component of the payload's pair. It now walks
+any nest of codes and pairs in the guard's shape, because the universal's branch recurses on the
+body of the order's implication, two codes down. The second is `settleGuards`. It leaves standing a
+guard comparing two codes of one tag whose payloads differ, where it used to fail asking two equal
+tags to be distinct. No guard that previously settled is read differently. `NUM_BOUNDED_ALL` splits
+on the one guard left standing.
+
+What remains: the class survives a numeral put for a variable; a measure on codes that numeral
+substitution leaves unchanged; and the induction on that measure, which consumes the four cases and
+the two facts above.
