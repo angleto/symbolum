@@ -308,6 +308,62 @@ class TruthSpec extends AnyFlatSpec with Matchers {
 
   }
 
+  "A numeral put for a variable" should "keep a formula in the bounded class when the variable is a bound" in {
+    // `!v_0. v_0 < v_2 ==> v_0 = v_0`, with the order's witness at 1, is in the class with the
+    // variable v_2 for its bound, and 3 is put for v_2: the substitution reaches the bound, so this
+    // is the case where the class's two kinds of bound have to meet, the variable turning into the
+    // numeral. Both conditions of the fact are discharged here rather than assumed, so the instance
+    // says the closure applies to a formula the class was shown to hold, with nothing owed.
+    val equation = "NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))"
+    val bound = term("NUM_CODE 0 2")
+    val formula = term(s"NUM_ALL_BELOW 1 0 (NUM_CODE 0 2) ($equation)")
+    val logic = truth.logic
+    val language = chain.language
+    def holds(predicate: String, subject: Term): Term =
+      force(LogicError.lift(Term.app(term(predicate), subject)))
+
+    val isFormula = force(for {
+      variables <- language.fact(Language.TermVariable)
+      atZero <- rules.spec(term("0:num"), variables)
+      atTwo <- rules.spec(term("2:num"), variables)
+      equality <- language.fact(Language.FormulaEquality)
+        .flatMap(rules.specAll(_, List(term("NUM_CODE 0 0"), term("NUM_CODE 0 0"))))
+        .flatMap(rules.mp(_, atZero)).flatMap(rules.mp(_, atZero))
+      out <- language.fact(Language.AllBelowFormula)
+        .flatMap(rules.specAll(_, List(term("1:num"), term("0:num"), bound, term(equation))))
+        .flatMap(rules.mp(_, atTwo)).flatMap(rules.mp(_, equality))
+    } yield out)
+    isFormula.conclusion shouldBe holds("NUM_FORM", formula)
+
+    val clause = force(rules.specAll(fact(Truth.BoundedAllBelow), List(term("1:num"), term("0:num"), bound, term(equation))))
+    val (_, conditions) = force(Term.destEq(clause.conclusion).toRight("an equation"))
+    val bounds = force(logic.destConj(conditions).map(_._2).flatMap(logic.destConj).map(_._1).toRight("a conjunction"))
+    val (variableBound, numeralBound) = force(logic.destDisj(bounds).toRight("a disjunction"))
+    val isBounded = force(for {
+      oneNotZero <- chain.successor.distinct(term("1:num"), term("0:num"))
+      twoNotZero <- chain.successor.distinct(term("2:num"), term("0:num"))
+      twoNotOne <- chain.successor.distinct(term("2:num"), term("1:num"))
+      apart <- rules.conjIntro(twoNotZero, twoNotOne)
+      atTwo <- rules.conjIntro(Kernel.refl(bound), apart)
+      predicate <- logic.destExistsPredicate(variableBound).toRight(NotOfForm("an existential", variableBound))
+      variable <- rules.existsIntro(predicate, term("2:num"), atTwo)
+      either <- rules.disjIntro1(numeralBound, variable)
+      body <- rules.specAll(fact(Truth.BoundedEquality), List(term("NUM_CODE 0 0"), term("NUM_CODE 0 0")))
+        .flatMap(rules.eqTruthElim)
+      rest <- rules.conjIntro(either, body)
+      all <- rules.conjIntro(oneNotZero, rest)
+      back <- Conv.sym(clause)
+      out <- LogicError.lift(Kernel.eqMp(back, all))
+    } yield out)
+    isBounded.hypotheses shouldBe empty
+    isBounded.conclusion shouldBe holds("NUM_BOUNDED", formula)
+
+    val closed = force(rules.specAll(fact(Truth.BoundedAtNumeral), List(term("2:num"), term("3:num"), formula))
+      .flatMap(rules.mp(_, isFormula)).flatMap(rules.mp(_, isBounded)))
+    closed.hypotheses shouldBe empty
+    closed.conclusion shouldBe holds("NUM_BOUNDED", term(s"NUM_SUBST_FORM 2 (NUM_NUMERAL 3) (NUM_ALL_BELOW 1 0 (NUM_CODE 0 2) ($equation))"))
+  }
+
   "The graph of the triangle" should "hold where the value is the triangle, fail elsewhere" in {
     val graph = fact(Truth.TriangleGraphTrue)
     val arithmetic = Vector(

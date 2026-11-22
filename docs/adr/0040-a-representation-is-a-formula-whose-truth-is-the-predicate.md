@@ -235,6 +235,14 @@ guard comparing two codes of one tag whose payloads differ, where it used to fai
 tags to be distinct. No guard that previously settled is read differently. `NUM_BOUNDED_ALL` splits
 on the one guard left standing.
 
-What remains: the class survives a numeral put for a variable; a measure on codes that numeral
-substitution leaves unchanged; and the induction on that measure, which consumes the four cases and
-the two facts above.
+On 2026-11-22 the class was shown to survive a numeral put for a variable, as
+`NUM_BOUNDED_SUBST_NUMERAL`, by strong induction on the code. The universal is the case where the
+decision above is used: under the substitution a variable bound becomes the numeral when it is the
+variable substituted and stays a variable otherwise, and a numeral bound is left alone because it is
+closed. A bound allowed to be any term would come out of the substitution as any term. The proof
+needed one fact about formulas that `Language` did not have, `NUM_FORM_IMP_PARTS`: the parts of a
+formula built by the implication are formulas. Without it nothing follows about the body of a
+universal below from the universal being a formula.
+
+What remains: a measure on codes that numeral substitution leaves unchanged, and the induction on
+that measure, which consumes the four cases and the facts above.

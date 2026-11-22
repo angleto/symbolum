@@ -503,7 +503,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_TRUE_SUBST_NUMERAL`. Plus two.
     // 1061 with the class of bounded formulas, 2026-11-21, card `4102f131`, predicted before the
     // run: one antecedent on `NUM_BOUNDED_ALL`, the four clauses being equations. Plus one.
-    proposals.size shouldBe 1061
+    // 1064 with the class closed under a numeral put for a variable, 2026-11-22, card `4102f131`,
+    // predicted before the run: one antecedent on `NUM_FORM_IMP_PARTS` and two on
+    // `NUM_BOUNDED_SUBST_NUMERAL`. Plus three.
+    proposals.size shouldBe 1064
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1573,7 +1576,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_EXISTS_BELOW` or `NUM_PROV` that no procedure reads. Plus two.
     // 880 with a bounded universal refuted from one instance, 2026-11-20, card `4102f131`, read off
     // the run and not predicted: one of the four new weakenings. Plus one.
-    open shouldBe 880
+    // 883 with the class closed under a numeral put for a variable, 2026-11-22, card `4102f131`,
+    // read off the run and not predicted: all three new weakenings, claims about `NUM_FORM`,
+    // `NUM_BOUNDED` or `NUM_SUBST_FORM` that no procedure reads. Plus three.
+    open shouldBe 883
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

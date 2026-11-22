@@ -777,7 +777,8 @@ That is all four cases completeness for bounded formulas consumes of a quantifie
 speak of into the values of `x` the truth of a bounded quantifier speaks of. The class those
 cases are for is `NUM_BOUNDED`, also since 2026-11-21. It is built from equations by negation,
 implication and the universal below a variable or a numeral, and `NUM_BOUNDED_ALL` reads a universal
-in it as a `NUM_ALL_BELOW`.
+in it as a `NUM_ALL_BELOW`. Since 2026-11-22 `NUM_BOUNDED_SUBST_NUMERAL` keeps a formula in the class
+when a numeral is put for a variable.
 
 Not written above that: completeness for bounded formulas itself; any
 representation other than

@@ -1336,6 +1336,8 @@ they have least appetite for working out how it is produced.
   NUM_BOUNDED_EQ           !n:num. !m:num. NUM_BOUNDED (NUM_CODE 5 (NUM_PAIR n m)) = T
   NUM_BOUNDED_IMP          !n:num. !m:num. NUM_BOUNDED (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_BOUNDED n /\ NUM_BOUNDED m)
   NUM_BOUNDED_NOT          !n:num. NUM_BOUNDED (NUM_CODE 6 n) = NUM_BOUNDED n
+  NUM_BOUNDED_SUBST_NUMERAL !n:num. !m:num. !k:num. NUM_FORM k ==> NUM_BOUNDED k ==> NUM_BOUNDED (NUM_SUBST_FORM n (NUM_NUMERAL m) k)
+  NUM_FORM_IMP_PARTS       !n:num. !m:num. NUM_FORM (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_FORM n /\ NUM_FORM m
   NUM_GROUND_ALL           !n:num. !m:num. NUM_GROUND (NUM_CODE 8 (NUM_PAIR n m)) = F
   NUM_GROUND_EQ            !n:num. !m:num. NUM_GROUND (NUM_CODE 5 (NUM_PAIR n m)) = (NUM_CLOSED n /\ NUM_CLOSED m)
   NUM_GROUND_IMP           !n:num. !m:num. NUM_GROUND (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_GROUND n /\ NUM_GROUND m)

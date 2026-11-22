@@ -268,6 +268,30 @@ object Truth {
   val TrueAtNumeral: String = "NUM_TRUE_SUBST_NUMERAL"
 
   /**
+   * `|- !p q. NUM_FORM (p ==> q) ==> NUM_FORM p /\ NUM_FORM q`, coded.
+   *
+   * The converse of `Language`'s introduction rule for an implication, read off `NUM_FORM`'s cases:
+   * a formula at tag `7` was built by that rule, the other three tags being distinct numerals.
+   * It is here rather than beside the introduction because a bounded universal is the first thing
+   * that needs it: the body of `NUM_ALL_BELOW z i t p` sits under an implication, and nothing about
+   * `p` follows from the universal being a formula until the implication is taken apart.
+   */
+  val FormImplicationParts: String = "NUM_FORM_IMP_PARTS"
+
+  /**
+   * `|- !x k p. NUM_FORM p ==> NUM_BOUNDED p ==> NUM_BOUNDED (p[numeral k/x])`
+   *
+   * The class survives a numeral put for a variable, which is what lets the completeness induction
+   * take a bounded universal's instances as bounded formulas again. By strong induction on the code.
+   * At a universal the substitution either stops, at its own index, or goes under; under, the bound
+   * is where the choice of the class shows: a variable bound becomes the numeral when it is `x` and
+   * stays a variable otherwise, and a numeral bound is left alone, being closed. A bound allowed to be
+   * any term would come out of this as any term, which the class does not hold, and this is why the
+   * class names the two.
+   */
+  val BoundedAtNumeral: String = "NUM_BOUNDED_SUBST_NUMERAL"
+
+  /**
    * The step of the value, as text.
    *
    * Tag `1` has no branch: zero falls through to the last one with every code that is not a term,
@@ -385,7 +409,12 @@ object Truth {
         "NUM_VALUE (NUM_SUBST_TERM x (NUM_NUMERAL k) t) e = NUM_VALUE t (\\j:num. COND (j = x) k (e j))"),
     TrueAtNumeral ->
       ("!x:num k:num p:num. NUM_FORM p ==> !e:num -> num. " +
-        "NUM_TRUE (NUM_SUBST_FORM x (NUM_NUMERAL k) p) e = NUM_TRUE p (\\j:num. COND (j = x) k (e j))")
+        "NUM_TRUE (NUM_SUBST_FORM x (NUM_NUMERAL k) p) e = NUM_TRUE p (\\j:num. COND (j = x) k (e j))"),
+    FormImplicationParts ->
+      "!p:num q:num. NUM_FORM (NUM_CODE 7 (NUM_PAIR p q)) ==> NUM_FORM p /\\ NUM_FORM q",
+    BoundedAtNumeral ->
+      ("!x:num k:num p:num. NUM_FORM p ==> NUM_BOUNDED p ==> " +
+        "NUM_BOUNDED (NUM_SUBST_FORM x (NUM_NUMERAL k) p)")
   )
 
   /** The step of the ground predicate, as text, with the guards the truth's step has. */
@@ -540,7 +569,9 @@ object Truth {
         logic, theory, provability.notation, language, numbering, deduction, statements,
         valueZero, valueSuccessor, valueSum, valueProduct, trueEquality, trueNegation,
         Grounding(trueImplication, groundEquality, groundNegation, groundImplication, groundUniversal,
-          modusPonens, doubleNegation, naturals.classical, valueVariable, valueNumeral, trueUniversal))
+          modusPonens, doubleNegation, naturals.classical, valueVariable, valueNumeral, trueUniversal),
+        Bounding(boundedEquality, boundedNegation, boundedImplication, boundedAllBelow, boundedUniversal,
+          successor))
     } yield new Truth(
       language,
       theory,
@@ -580,7 +611,9 @@ object Truth {
         BoundedNegation -> boundedNegation,
         BoundedImplication -> boundedImplication,
         BoundedAllBelow -> boundedAllBelow,
-        BoundedUniversal -> boundedUniversal
+        BoundedUniversal -> boundedUniversal,
+        FormImplicationParts -> evaluation._7,
+        BoundedAtNumeral -> evaluation._8
       )
     )
   }
@@ -1075,6 +1108,16 @@ object Truth {
     trueUniversal: Kernel.Thm
   )
 
+  /** What the closure of the bounded class reads: its clauses, and tags told apart. */
+  private final case class Bounding(
+    equality: Kernel.Thm,
+    negation: Kernel.Thm,
+    implication: Kernel.Thm,
+    allBelow: Kernel.Thm,
+    universal: Kernel.Thm,
+    successor: Successor
+  )
+
   private object Evaluation {
 
     def of(
@@ -1091,8 +1134,10 @@ object Truth {
       valueProduct: Kernel.Thm,
       trueEquality: Kernel.Thm,
       trueNegation: Kernel.Thm,
-      grounding: Grounding
-    ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm)] =
+      grounding: Grounding,
+      bounding: Bounding
+    ): Either[LogicError,
+      (Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm)] =
       try {
         val built = new Evaluation(
           logic, theory, notation, language, numbering, deduction,
@@ -1104,7 +1149,9 @@ object Truth {
           ground <- statements.checked(ProvesGround, built.provesGround(equation, denial, grounding))
           valueAt <- statements.checked(ValueAtNumeral, built.valueAtNumeral(grounding))
           truthAt <- statements.checked(TrueAtNumeral, built.trueAtNumeral(grounding, valueAt))
-        } yield (value, equation, denial, ground, valueAt, truthAt)
+          parts <- statements.checked(FormImplicationParts, built.formImplicationParts(bounding))
+          boundedAt <- statements.checked(BoundedAtNumeral, built.boundedAtNumeral(grounding, bounding, parts))
+        } yield (value, equation, denial, ground, valueAt, truthAt, parts, boundedAt)
       } catch { case refused: RefusedHere => Left(refused.error) }
   }
 
@@ -2135,6 +2182,265 @@ object Truth {
       }
 
       val step = force(rules.disch(isForm(y), reached).flatMap(rules.disch(hypothesis, _)).flatMap(rules.gen(y, _)))
+      val p = Term.variable("p", numbers)
+      force(rules.mp(instance, step).flatMap(rules.spec(p, _)).flatMap(rules.genAll(_, List(x, k, p))))
+    }
+
+    /* ------------------------------------- the bounded class under a numeral put for a variable */
+
+    private val boundedPredicate = constant(BoundedName, property)
+    private def isFormula(s: Term): Term = applied(formPredicate, List(s))
+    private def bounded(s: Term): Term = applied(boundedPredicate, List(s))
+    private def conjuncts(t: Term): (Term, Term) =
+      logic.destConj(t).getOrElse(throw new RefusedHere(NotOfForm("a conjunction", t)))
+    private def disjuncts(t: Term): (Term, Term) =
+      logic.destDisj(t).getOrElse(throw new RefusedHere(NotOfForm("a disjunction", t)))
+
+    /** The two arguments of a binary application, `f a b`. */
+    private def arguments(t: Term): (Term, Term) = t match {
+      case App(App(_, first), second) => (first, second)
+      case other => throw new RefusedHere(NotOfForm("an application to two arguments", other))
+    }
+
+    /** The guard and the two branches of `COND p a b`. */
+    private def branches(t: Term): (Term, Term, Term) = t match {
+      case App(App(App(_, guard), yes), no) => (guard, yes, no)
+      case other => throw new RefusedHere(NotOfForm("a conditional", other))
+    }
+
+    /** `goal`, an existential, from its body at `witness`. */
+    private def introduced(goal: Term, witness: Term, proved: Kernel.Thm): Kernel.Thm = {
+      val predicate = logic.destExistsPredicate(goal)
+        .getOrElse(throw new RefusedHere(NotOfForm("an existential", goal)))
+      force(rules.existsIntro(predicate, witness, proved))
+    }
+
+    private lazy val codeInjective = force(numbering.fact(Numbering.CodeInjective))
+    private lazy val pairInjective = force(numbering.fact(Numbering.PairInjective))
+
+    /** [[FormImplicationParts]], from `NUM_FORM`'s cases at tag `7`, the other tags refused. */
+    def formImplicationParts(bounding: Bounding): Kernel.Thm = {
+      val p = Term.variable("p", numbers)
+      val q = Term.variable("q", numbers)
+      val whole = code(7, pair(p, q))
+      val goal = force(logic.mkConj(isFormula(p), isFormula(q)))
+      val held = assumed(isFormula(whole))
+      val shapes = force(rules.spec(whole, languageFact(Language.FormulaCases)).flatMap(unfolding =>
+        LogicError.lift(Kernel.eqMp(unfolding, held))))
+      val reached = opened(shapes, "a", Set(p, q)) { (a, withTag) =>
+        opened(withTag, "b", Set(p, q, a)) { (b, shaped) =>
+          val injected = apply(codeInjective, List(tags(7), pair(p, q), a, b), force(rules.conjElim1(shaped)))
+          val tagIs = force(rules.conjElim1(injected)) // 7 = a
+          val payloadIs = force(rules.conjElim2(injected)) // NUM_PAIR p q = b
+          val alternatives = force(rules.conjElim2(shaped))
+          val (equalityCase, rest1) = disjuncts(alternatives.conclusion)
+          val (negationCase, rest2) = disjuncts(rest1)
+          val (implicationCase, universalCase) = disjuncts(rest2)
+          def refuted(alternative: Term, tag: Int): Kernel.Thm = {
+            val sevenIs = force(Conv.trans(tagIs, force(rules.conjElim1(assumed(alternative)))))
+            val never = force(bounding.successor.distinct(tags(7), tags(tag)))
+            force(rules.notElim(never, sevenIs).flatMap(rules.falsityElim(goal, _)))
+          }
+          val asImplication =
+            opened(force(rules.conjElim2(assumed(implicationCase))), "u", Set(p, q, a, b)) { (u, withLeft) =>
+              opened(withLeft, "v", Set(p, q, a, b, u)) { (v, pieces) =>
+                val pairs = force(Conv.trans(payloadIs, force(rules.conjElim1(pieces))))
+                val components = apply(pairInjective, List(p, q, u, v), pairs) // p = u /\ q = v
+                val forms = force(rules.conjElim2(pieces))
+                val atP = moved(isFormula, force(Conv.sym(force(rules.conjElim1(components)))),
+                  force(rules.conjElim1(forms)))
+                val atQ = moved(isFormula, force(Conv.sym(force(rules.conjElim2(components)))),
+                  force(rules.conjElim2(forms)))
+                force(rules.conjIntro(atP, atQ))
+              }
+            }
+          val lastTwo = force(rules.disjElim(assumed(rest2), asImplication, refuted(universalCase, 8)))
+          val lastThree = force(rules.disjElim(assumed(rest1), refuted(negationCase, 6), lastTwo))
+          force(rules.disjElim(alternatives, refuted(equalityCase, 5), lastThree))
+        }
+      }
+      force(rules.disch(isFormula(whole), reached).flatMap(rules.genAll(_, List(p, q))))
+    }
+
+    /** [[BoundedAtNumeral]], by strong induction on the code, one case per shape of a formula. */
+    def boundedAtNumeral(g: Grounding, bounding: Bounding, parts: Kernel.Thm): Kernel.Thm = {
+      val conditions = new Conditions(g)
+      import conditions.*
+      val x = Term.variable("x", numbers)
+      val k = Term.variable("k", numbers)
+      val nk = numeral(k) // closed, so a bound it replaces is a numeral, which the class takes
+      val substitutedHead = applied(formulaSubstituting, List(x, nk))
+      val termSubstitutedHead = applied(substituting, List(x, nk))
+      def substituted(s: Term): Term = applied(formulaSubstituting, List(x, nk, s))
+      def claimAt(s: Term): Term = imp(isFormula(s), imp(bounded(s), bounded(substituted(s))))
+      /** `NUM_BOUNDED r` from `NUM_BOUNDED l` and `l = r`. */
+      def through(equation: Kernel.Thm, held: Kernel.Thm): Kernel.Thm = moved(bounded, equation, held)
+      val strictTransitive = force(numbering.peano.fact(Peano.StrictTransitive))
+
+      val y = Term.variable("y", numbers)
+      val z = Term.variable("z", numbers)
+      val strong = force(numbering.peano.fact(Peano.StrongInduction))
+      val predicate = force(LogicError.lift(Term.abs(y, claimAt(y))))
+      val instance = force(rules.spec(predicate, strong).flatMap(theorem =>
+        Conv.betaNormalise(theorem.conclusion).flatMap(reduced => LogicError.lift(Kernel.eqMp(reduced, theorem)))))
+      val hypothesis = force(logic.mkForall(z, imp(applied(below, List(z, y)), claimAt(z))))
+      val earlier = assumed(hypothesis)
+      val yIsForm = assumed(isFormula(y))
+      val yIsBounded = assumed(bounded(y))
+      def atComponent(part: Term, isBelow: Kernel.Thm, partIsForm: Kernel.Thm, partIsBounded: Kernel.Thm)
+        : Kernel.Thm =
+        force(rules.spec(part, earlier).flatMap(rules.mp(_, isBelow)).flatMap(rules.mp(_, partIsForm))
+          .flatMap(rules.mp(_, partIsBounded)))
+
+      val shapes = force(rules.spec(y, languageFact(Language.FormulaCases)).flatMap(unfolding =>
+        LogicError.lift(Kernel.eqMp(unfolding, yIsForm))))
+      val taken0 = Set(y, z, x, k)
+
+      val reached = opened(shapes, "a", taken0) { (a, withTag) =>
+        opened(withTag, "b", taken0 + a) { (b, shaped) =>
+          val yIsCode = force(rules.conjElim1(shaped))
+          val alternatives = force(rules.conjElim2(shaped))
+          def back(atShape: Kernel.Thm, yIsShape: Kernel.Thm): Kernel.Thm =
+            moved(t => bounded(substituted(t)), force(Conv.sym(yIsShape)), atShape)
+          def belowY(isBelowShape: Kernel.Thm, part: Term, yIsShape: Kernel.Thm): Kernel.Thm =
+            moved(t => applied(below, List(part, t)), force(Conv.sym(yIsShape)), isBelowShape)
+          def shapeIsBounded(yIsShape: Kernel.Thm): Kernel.Thm = through(yIsShape, yIsBounded)
+          val (equalityCase, rest1) = disjuncts(alternatives.conclusion)
+          val (negationCase, rest2) = disjuncts(rest1)
+          val (implicationCase, universalCase) = disjuncts(rest2)
+          def pairCase(held: Kernel.Thm)(proceed: (FVar, FVar, Kernel.Thm, Kernel.Thm) => Kernel.Thm): Kernel.Thm = {
+            val tagIs = force(rules.conjElim1(held))
+            opened(force(rules.conjElim2(held)), "u", taken0 + a + b) { (u, withLeft) =>
+              opened(withLeft, "v", taken0 + a + b + u) { (v, pieces) =>
+                val yIsShape = force(Conv.trans(yIsCode, codeCongruence(tagIs, force(rules.conjElim1(pieces)))))
+                proceed(u, v, yIsShape, force(rules.conjElim2(pieces)))
+              }
+            }
+          }
+
+          // An equation: every equation is in the class, substituted or not.
+          val asEquality = pairCase(assumed(equalityCase)) { (u, v, yIsShape, _) =>
+            val substitution = apply(languageFact(Language.FormulaSubstituteEquality), List(x, nk, u, v))
+            val (left, right) = arguments(arguments(sides(substitution)._2)._2)
+            val atResult = force(rules.eqTruthElim(apply(bounding.equality, List(left, right))))
+            back(through(force(Conv.sym(substitution)), atResult), yIsShape)
+          }
+
+          // A negation: the hypothesis at its body.
+          val asNegation = {
+            val held = assumed(negationCase)
+            val yIsShape = force(Conv.trans(yIsCode, codeCongruence(force(rules.conjElim1(held)), refl(b))))
+            val bIsBounded = force(LogicError.lift(
+              Kernel.eqMp(apply(bounding.negation, List(b)), shapeIsBounded(yIsShape))))
+            val atB = atComponent(b, belowY(belowCode(6, b), b, yIsShape), force(rules.conjElim2(held)), bIsBounded)
+            val substitution = apply(languageFact(Language.FormulaSubstituteNegation), List(x, nk, b))
+            val atResult = force(Conv.sym(apply(bounding.negation, List(substituted(b)))).flatMap(folded =>
+              LogicError.lift(Kernel.eqMp(folded, atB))))
+            back(through(force(Conv.sym(substitution)), atResult), yIsShape)
+          }
+
+          // An implication: the hypothesis at both sides.
+          val asImplication = pairCase(assumed(implicationCase)) { (u, v, yIsShape, forms) =>
+            val both = force(LogicError.lift(
+              Kernel.eqMp(apply(bounding.implication, List(u, v)), shapeIsBounded(yIsShape))))
+            val atU = atComponent(u, belowY(belowPair(7, u, v, first = true), u, yIsShape),
+              force(rules.conjElim1(forms)), force(rules.conjElim1(both)))
+            val atV = atComponent(v, belowY(belowPair(7, u, v, first = false), v, yIsShape),
+              force(rules.conjElim2(forms)), force(rules.conjElim2(both)))
+            val substitution = apply(languageFact(Language.FormulaSubstituteImplication), List(x, nk, u, v))
+            val atResult = force(
+              Conv.sym(apply(bounding.implication, List(substituted(u), substituted(v)))).flatMap(folded =>
+                rules.conjIntro(atU, atV).flatMap(joined => LogicError.lift(Kernel.eqMp(folded, joined)))))
+            back(through(force(Conv.sym(substitution)), atResult), yIsShape)
+          }
+
+          // A universal: in the class only as an order's universal, whose parts the clause gives.
+          val asUniversal = pairCase(assumed(universalCase)) { (u, v, yIsShape, vIsForm) =>
+            val inverted = apply(bounding.universal, List(u, v), shapeIsBounded(yIsShape))
+            val avoid = taken0 + a + b + u + v
+            opened(inverted, "w", avoid) { (w, atW) =>
+              opened(atW, "c", avoid + w) { (c, atC) =>
+                opened(atC, "r", avoid + w + c) { (r, isAllBelow) =>
+                  // code8 (pair u v) = NUM_ALL_BELOW w u c r = code8 (pair u (code7 (pair less r)))
+                  val unfolding = apply(languageFact(Language.AllBelowCases), List(w, u, c, r))
+                  val whole = sides(unfolding)._2
+                  val implication = arguments(arguments(whole)._2)._2
+                  val less = arguments(arguments(implication)._2)._1
+                  val shapes8 = chained(isAllBelow, unfolding)
+                  val payloads = force(rules.conjElim2(
+                    apply(codeInjective, List(tags(8), pair(u, v), tags(8), pair(u, implication)), shapes8)))
+                  val vIs = force(rules.conjElim2(apply(pairInjective, List(u, v, u, implication), payloads)))
+                  val rIsForm = force(rules.conjElim2(apply(parts, List(less, r), moved(isFormula, vIs, vIsForm))))
+
+                  val allBelowIsBounded = through(isAllBelow, shapeIsBounded(yIsShape))
+                  val clause = force(LogicError.lift(
+                    Kernel.eqMp(apply(bounding.allBelow, List(w, u, c, r)), allBelowIsBounded)))
+                  val apart = force(rules.conjElim1(clause)) // ~(w = u)
+                  val boundHeld = force(rules.conjElim1(force(rules.conjElim2(clause))))
+                  val rIsBounded = force(rules.conjElim2(force(rules.conjElim2(clause))))
+
+                  val rBelow = apply(strictTransitive, List(r, implication, whole),
+                    force(rules.conjIntro(belowPair(7, less, r, first = false),
+                      belowPair(8, u, implication, first = false))))
+                  val atR = atComponent(r, belowY(rBelow, r, chained(yIsShape, shapes8)), rIsForm, rIsBounded)
+
+                  val substitution = chained(force(Conv.apTerm(substitutedHead, isAllBelow)),
+                    apply(languageFact(Language.AllBelowSubstitute), List(x, nk, w, u, c, r)))
+                  val (_, stopped, under) = branches(sides(substitution)._2)
+                  val atShape = split(equal(u, x))(
+                    isX => through(force(Conv.sym(chained(substitution, taken(isX, stopped, under)))),
+                      allBelowIsBounded),
+                    notX => {
+                      val (newBound, substitutedBody) = arguments(under)
+                      def boundAt(t: Term): Term =
+                        conjuncts(conjuncts(sides(apply(bounding.allBelow, List(w, u, t, substitutedBody)))._2)._2)._1
+                      val (_, unchanged, termSubstituted) = branches(newBound)
+                      val newBoundHeld = split(equal(w, x))(
+                        isWX => moved(boundAt, force(Conv.sym(taken(isWX, unchanged, termSubstituted))), boundHeld),
+                        notWX => {
+                          val (variableGoal, numeralGoal) = disjuncts(boundAt(termSubstituted))
+                          val (variableHad, numeralHad) = disjuncts(boundHeld.conclusion)
+                          val asVariable = opened(assumed(variableHad), "j", avoid + w + c + r) { (j, held) =>
+                            val atVariable = chained(force(Conv.apTerm(termSubstitutedHead, force(rules.conjElim1(held)))),
+                              apply(languageFact(Language.SubstituteVariable), List(x, nk, j)))
+                            split(equal(j, x))(
+                              isJX => force(rules.disjIntro2(variableGoal,
+                                introduced(numeralGoal, k, chained(atVariable, taken(isJX, nk, code(0, j)))))),
+                              notJX => force(rules.disjIntro1(numeralGoal,
+                                introduced(variableGoal, j, force(rules.conjIntro(
+                                  chained(atVariable, passed(notJX, nk, code(0, j))),
+                                  force(rules.conjElim2(held))))))))
+                          }
+                          val asNumeral = opened(assumed(numeralHad), "n", avoid + w + c + r) { (n, held) =>
+                            val nowhere = force(rules.spec(numeral(n), closedCases).flatMap(unfolded =>
+                              LogicError.lift(Kernel.eqMp(unfolded, numeralClosed(n)))).flatMap(rules.spec(x, _)))
+                            val idle = apply(languageFact(Language.SubstituteIdle), List(x, nk, numeral(n)),
+                              numeralTerm(n), nowhere)
+                            val atNumeral = chained(force(Conv.apTerm(termSubstitutedHead, held)), idle)
+                            force(rules.disjIntro2(variableGoal, introduced(numeralGoal, n, atNumeral)))
+                          }
+                          val joined = force(rules.disjElim(boundHeld, asVariable, asNumeral))
+                          moved(boundAt, force(Conv.sym(passed(notWX, unchanged, termSubstituted))), joined)
+                        })
+                      val atUnder = force(Conv.sym(apply(bounding.allBelow, List(w, u, newBound, substitutedBody)))
+                        .flatMap(folded => rules.conjIntro(newBoundHeld, atR).flatMap(rules.conjIntro(apart, _))
+                          .flatMap(joined => LogicError.lift(Kernel.eqMp(folded, joined)))))
+                      through(force(Conv.sym(chained(substitution, passed(notX, stopped, under)))), atUnder)
+                    })
+                  back(atShape, yIsShape)
+                }
+              }
+            }
+          }
+
+          val lastTwo = force(rules.disjElim(assumed(rest2), asImplication, asUniversal))
+          val lastThree = force(rules.disjElim(assumed(rest1), asNegation, lastTwo))
+          force(rules.disjElim(alternatives, asEquality, lastThree))
+        }
+      }
+
+      val step = force(rules.disch(bounded(y), reached).flatMap(rules.disch(isFormula(y), _))
+        .flatMap(rules.disch(hypothesis, _)).flatMap(rules.gen(y, _)))
       val p = Term.variable("p", numbers)
       force(rules.mp(instance, step).flatMap(rules.spec(p, _)).flatMap(rules.genAll(_, List(x, k, p))))
     }
