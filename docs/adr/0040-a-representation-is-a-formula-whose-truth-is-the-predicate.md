@@ -244,5 +244,13 @@ needed one fact about formulas that `Language` did not have, `NUM_FORM_IMP_PARTS
 formula built by the implication are formulas. Without it nothing follows about the body of a
 universal below from the universal being a formula.
 
-What remains: a measure on codes that numeral substitution leaves unchanged, and the induction on
-that measure, which consumes the four cases and the facts above.
+Later the same day the measure was written: `NUM_RANK`, one more recursion on codes, counting
+connectives and quantifiers, with an equation at `0`, a negation and a universal one more than their
+body, and an implication one more than its two parts together. `NUM_RANK_SUBST_NUMERAL` says a
+numeral put for a variable leaves it alone, since the substitution changes terms and the rank reads
+none. The code cannot be the measure: an instance of a bounded universal has a numeral where the
+universal has a variable, so its code is larger, and the induction from a universal to its
+instances goes up in the code and down in the rank.
+What remains: the induction on the rank, which consumes the four cases and the facts above, and
+the two facts it needs about a closed formula that are not written: which variables are free
+after a numeral is put for one, and the truth of a universal below a numeral read as its instances.

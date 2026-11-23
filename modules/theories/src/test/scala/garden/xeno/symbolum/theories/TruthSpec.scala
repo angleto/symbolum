@@ -77,7 +77,7 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     val below = chain.provability.theory
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
-      Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName,
+      Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName, Truth.RankName,
         Truth.TriangleGraphName)
     truth.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
@@ -362,6 +362,26 @@ class TruthSpec extends AnyFlatSpec with Matchers {
       .flatMap(rules.mp(_, isFormula)).flatMap(rules.mp(_, isBounded)))
     closed.hypotheses shouldBe empty
     closed.conclusion shouldBe holds("NUM_BOUNDED", term(s"NUM_SUBST_FORM 2 (NUM_NUMERAL 3) (NUM_ALL_BELOW 1 0 (NUM_CODE 0 2) ($equation))"))
+  }
+
+  "The rank of a formula" should "count its connectives, and not move when a numeral is put for a variable" in {
+    // `!v_1. v_0 = v_1 ==> ~(v_0 = v_1)`: a universal over an implication whose right side is a
+    // negation, so all four clauses are read, and the rank is 1 + (1 + (0 + (1 + 0))). The
+    // numeral of 2 is put for v_0, which the universal does not bind, so the substitution reaches
+    // both equations and changes the code; the fact says the rank stays, with the formula's
+    // well-formedness discharged rather than assumed.
+    val equation = "NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))"
+    val formula = term(s"NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 7 (NUM_PAIR ($equation) (NUM_CODE 6 ($equation)))))")
+    val rank = force(LogicError.lift(Term.app(term("NUM_RANK"), formula)))
+    val clauses = Vector(Truth.RankEquality, Truth.RankNegation, Truth.RankImplication, Truth.RankUniversal)
+      .map(fact)
+    clauses.foreach(_.hypotheses shouldBe empty)
+    rightOf(evaluate(rank, clauses)) shouldBe term("SUC (SUC (NUM_ADD ZERO (SUC ZERO)))")
+
+    val kept = force(rules.specAll(fact(Truth.RankAtNumeral), List(term("0:num"), term("2:num"), formula))
+      .flatMap(rules.mp(_, force(chain.language.wellFormedIn(formula)))))
+    kept.hypotheses shouldBe empty
+    kept.conclusion shouldBe proposition(s"NUM_RANK (NUM_SUBST_FORM 0 (NUM_NUMERAL 2) ($formula)) = NUM_RANK ($formula)")
   }
 
   "The graph of the triangle" should "hold where the value is the triangle, fail elsewhere" in {

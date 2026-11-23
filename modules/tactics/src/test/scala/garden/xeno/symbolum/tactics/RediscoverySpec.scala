@@ -472,7 +472,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 1064 with the class closed under a numeral put for a variable, 2026-11-22, card `4102f131`,
     // counted before the run: one antecedent on `NUM_FORM_IMP_PARTS` and two on
     // `NUM_BOUNDED_SUBST_NUMERAL`. Plus three.
-    propose.weakenings.size shouldBe 1064
+    // 1065 with the rank, 2026-11-22, card `4102f131`, counted before the run: one antecedent on
+    // `NUM_RANK_SUBST_NUMERAL`, the four clauses being equations. Plus one.
+    propose.weakenings.size shouldBe 1065
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

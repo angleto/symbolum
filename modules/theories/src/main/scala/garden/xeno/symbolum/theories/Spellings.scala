@@ -169,6 +169,7 @@ object Spellings {
       .operator("NUM_TRUE", 2, "#2 \\vDash #1", Relation)
       .delimited("NUM_GROUND", 1, "\\operatorname{ground}(#1)")
       .delimited("NUM_BOUNDED", 1, "\\operatorname{bounded}(#1)")
+      .delimited("NUM_RANK", 1, "\\operatorname{rank}(#1)")
       .delimited("NUM_TRI_GRAPH", 0, "\\ulcorner v_0 + v_0 = v_1 \\cdot S v_1 \\urcorner")
       // The object language's derived connectives. Set as named operations rather than with the
       // meta level's own symbols, which is the point of the row: `NUM_AND p q` is a NUMBER that

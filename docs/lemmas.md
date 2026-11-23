@@ -1346,6 +1346,11 @@ they have least appetite for working out how it is produced.
   NUM_PROV_GROUND          !f:num -> num. !n:num. NUM_FORM n ==> NUM_GROUND n ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))
   NUM_PROV_TRUE_EQ         !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m))
   NUM_PROV_VALUE           !f:num -> num. !n:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n (NUM_NUMERAL (NUM_VALUE n f))))
+  NUM_RANK_ALL             !n:num. !m:num. NUM_RANK (NUM_CODE 8 (NUM_PAIR n m)) = SUC (NUM_RANK m)
+  NUM_RANK_EQ              !n:num. !m:num. NUM_RANK (NUM_CODE 5 (NUM_PAIR n m)) = 0
+  NUM_RANK_IMP             !n:num. !m:num. NUM_RANK (NUM_CODE 7 (NUM_PAIR n m)) = SUC (NUM_RANK n + NUM_RANK m)
+  NUM_RANK_NOT             !n:num. NUM_RANK (NUM_CODE 6 n) = SUC (NUM_RANK n)
+  NUM_RANK_SUBST_NUMERAL   !n:num. !m:num. !k:num. NUM_FORM k ==> NUM_RANK (NUM_SUBST_FORM n (NUM_NUMERAL m) k) = NUM_RANK k
   NUM_TRI_DOUBLE           !n:num. NUM_TRI n + NUM_TRI n = n * SUC n
   NUM_TRI_GRAPH_TRUE       !f:num -> num. NUM_TRUE NUM_TRI_GRAPH f = (f 0 = NUM_TRI (f 1))
   NUM_TRUE_ALL             !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 8 (NUM_PAIR n m)) f = (!k:num. NUM_TRUE m (\i:num. COND (i = n) k (f i)))

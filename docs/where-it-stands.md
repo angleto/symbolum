@@ -778,7 +778,9 @@ speak of into the values of `x` the truth of a bounded quantifier speaks of. The
 cases are for is `NUM_BOUNDED`, also since 2026-11-21. It is built from equations by negation,
 implication and the universal below a variable or a numeral, and `NUM_BOUNDED_ALL` reads a universal
 in it as a `NUM_ALL_BELOW`. Since 2026-11-22 `NUM_BOUNDED_SUBST_NUMERAL` keeps a formula in the class
-when a numeral is put for a variable.
+when a numeral is put for a variable. `NUM_RANK` counts a formula's connectives and quantifiers, and
+`NUM_RANK_SUBST_NUMERAL` says that substitution leaves it alone, which is the measure the
+completeness induction will descend on.
 
 Not written above that: completeness for bounded formulas itself; any
 representation other than

@@ -184,7 +184,7 @@ together they state a complete ordered field, which no derivation can.
 | `law LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `law COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
-## The definitions (210)
+## The definitions (211)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -291,6 +291,7 @@ axiom mentioning it means.
 | `definition NUM_PROOF` | NUM_PROOF = \n:num. \m:num. ?k:num. ?i:num. ?j:num. n = NUM_PAIR k (NUM_PAIR i j) /\ NUM_BETA i j k = m /\ (!n1:num. n1 <= k ==> NUM_STEP i j n1) | **NOT READ** |  |  |
 | `definition NUM_PROV` | NUM_PROV = \n:num. ?m:num. NUM_PROOF m n | **NOT READ** |  |  |
 | `definition NUM_PROV_FROM` | NUM_PROV_FROM = \n:num. \m:num. ?k:num. ?i:num. ?j:num. NUM_BETA i j k = m /\ (!n1:num. n1 <= k ==> NUM_STEP_FROM n i j n1) | **NOT READ** |  |  |
+| `definition NUM_RANK` | NUM_RANK = select (\f:num -> num. !n:num. f n = COND (n = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) 0 (COND (n = NUM_CODE 6 (NUM_PAYLOAD n)) (SUC (f (NUM_PAYLOAD n))) (COND (n = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (SUC (f (NUM_FST (NUM_PAYLOAD n)) + f (NUM_SND (NUM_PAYLOAD n)))) (COND (n = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (SUC (f (NUM_SND (NUM_PAYLOAD n)))) 0)))) | **NOT READ** |  |  |
 | `definition NUM_REP` | NUM_REP = \x:ind. !f:ind -> bool. f IND_0 /\ (!y:ind. f y ==> f (IND_SUC y)) ==> f x | **NOT READ** |  |  |
 | `definition NUM_SND` | NUM_SND = \n:num. select (\m:num. ?k:num. n = NUM_PAIR k m) | **NOT READ** |  |  |
 | `definition NUM_STEP` | NUM_STEP = \n:num. \m:num. \k:num. NUM_PA (NUM_BETA n m k) \/ NUM_LOGIC (NUM_BETA n m k) \/ (?i:num. ?j:num. i < k /\ j < k /\ NUM_BETA n m i = NUM_CODE 7 (NUM_PAIR (NUM_BETA n m j) (NUM_BETA n m k))) \/ (?i:num. ?j:num. i < k /\ NUM_BETA n m k = NUM_CODE 8 (NUM_PAIR j (NUM_BETA n m i))) | **NOT READ** |  |  |
