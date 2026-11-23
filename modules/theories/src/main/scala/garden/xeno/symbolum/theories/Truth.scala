@@ -2126,7 +2126,7 @@ object Truth {
             val update = updated(environment, x, k)
             val read = chained(
               apply(g.valueVariable, List(update, b)),
-              force(Conv.betaNormalise(applied(update, List(b))))) // VALUE v_b e' = COND (b = x) k (e b)
+              force(Conv.betaNormalise(applied(update, List(b))))) // VALUE v_b e[x := k] = COND (b = x) k (e b)
             def valueThrough(equation: Kernel.Thm): Kernel.Thm =
               force(Conv.apTerm(value, equation).flatMap(Conv.apThm(_, environment)))
             val atShape = split(equal(b, x))(
@@ -2288,19 +2288,19 @@ object Truth {
           val asUniversal = pairCase(assumed(universalCase)) { (u, v, yIsShape, vIsForm) =>
             val shape = code(8, pair(u, v))
             val n = Conv.freshVariable("n", numbers, taken0 + a + b + u + v)
-            val update = updated(environment, x, k) // e'
+            val update = updated(environment, x, k) // e[x := k]
             def bound(env: Term): Term = updated(env, u, n) // env[u := n]
             def underQuantifier(bodyEquation: Kernel.Thm): Kernel.Thm =
               force(LogicError.lift(Kernel.abs(n, bodyEquation)).flatMap(Conv.apTerm(universals, _)))
             def truthThrough(s: Term, envEquation: Kernel.Thm): Kernel.Thm =
               force(Conv.apTerm(applied(truth, List(s)), envEquation))
-            val atUpdate = apply(g.trueUniversal, List(update, u, v)) // TRUE (!v_u. v) e' = !n. TRUE v e'[u := n]
+            val atUpdate = apply(g.trueUniversal, List(update, u, v)) // TRUE (!v_u. v) e[x := k] = !n. TRUE v e[x := k][u := n]
             val substitution = apply(languageFact(Language.FormulaSubstituteUniversal), List(x, nk, u, v))
             def truthOfSubstituted(equation: Kernel.Thm): Kernel.Thm =
               force(Conv.apTerm(truth, equation).flatMap(Conv.apThm(_, environment)))
             val atShape = split(equal(u, x))(
               isX => {
-                // The substitution stops, and e'[u := n] is e[u := n], since u is x.
+                // The substitution stops, and e[x := k][u := n] is e[u := n], since u is x.
                 val stopped = chained(substitution, taken(isX, shape, code(8, pair(u, substituted(v)))))
                 val sameEnvironment = extensional(bound(environment), bound(update), taken0 + a + b + u + v + n) { m =>
                   val em = applied(environment, List(m))
