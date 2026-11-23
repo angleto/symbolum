@@ -508,7 +508,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_BOUNDED_SUBST_NUMERAL`. Plus three.
     // 1065 with the rank, 2026-11-22, card `4102f131`, predicted before the run: one antecedent on
     // `NUM_RANK_SUBST_NUMERAL`, the four clauses being equations. Plus one.
-    proposals.size shouldBe 1065
+    // 1072 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`,
+    // predicted before the run: one antecedent each on the two free-variable facts, whose second
+    // antecedent sits under `!w` where the generator stops peeling, one each on the two truth
+    // facts, and three on `NUM_PROV_BOUNDED`. Plus seven.
+    proposals.size shouldBe 1072
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1581,7 +1585,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 883 with the class closed under a numeral put for a variable, 2026-11-22, card `4102f131`,
     // read off the run and not predicted: all three new weakenings, claims about `NUM_FORM`,
     // `NUM_BOUNDED` or `NUM_SUBST_FORM` that no procedure reads. Plus three.
-    open shouldBe 883
+    // 884 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`, read off
+    // the run and not predicted: one of the seven new weakenings. Plus one.
+    open shouldBe 884
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2030,7 +2036,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // here, `open` above not moving. Plus one.
     // 270 with the rank, 2026-11-22, card `4102f131`: the one weakening of
     // `NUM_RANK_SUBST_NUMERAL`, read off the run here, `open` above not moving. Plus one.
-    unreadable shouldBe 270
+    // 276 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`: the six
+    // of the seven new weakenings that `open` above did not take, read off a second run because
+    // the first stopped at `open`. One there and six here account for all seven. Plus six.
+    unreadable shouldBe 276
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2407,7 +2416,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 382 with a bounded universal refuted from one instance, 2026-11-20, card `4102f131`, read
     // off the run and not decomposed: three of the four new weakenings keep a constant of the
     // naturals, while `after` is printed at 64 and does not move. Plus three.
-    aboutNumbers.size shouldBe 382
+    // 384 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`, read off
+    // the run and not decomposed: two of the seven new weakenings keep a constant of the naturals.
+    // Plus two.
+    aboutNumbers.size shouldBe 384
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

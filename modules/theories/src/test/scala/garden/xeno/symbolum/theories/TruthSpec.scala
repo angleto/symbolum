@@ -384,6 +384,146 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     kept.conclusion shouldBe proposition(s"NUM_RANK (NUM_SUBST_FORM 0 (NUM_NUMERAL 2) ($formula)) = NUM_RANK ($formula)")
   }
 
+  "A numeral put for a variable" should "leave the variable it replaced free nowhere" in {
+    // `!v_1. v_0 = v_1` has v_0 free. Asked about v_0 itself after the numeral of 2 is put for it,
+    // the fact's second conjunct is `~(0 = 0)`, which reflexivity refutes, so v_0 is not free in
+    // the instance: what the completeness induction needs to call an instance of a closed
+    // universal closed. A lemma that said only "free after means free before" would not give
+    // this, since v_0 was free before.
+    val formula = term("NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))")
+    val zero = term("0:num")
+    val asked = force(rules.specAll(fact(Truth.FreeFormAtNumeral), List(zero, term("2:num"), formula))
+      .flatMap(rules.mp(_, force(chain.language.wellFormedIn(formula))))
+      .flatMap(rules.spec(zero, _)))
+    asked.hypotheses shouldBe empty
+    val freeAfter = proposition(s"NUM_FREE_FORM 0 (NUM_SUBST_FORM 0 (NUM_NUMERAL 2) ($formula))")
+    val nowhere = force(for {
+      held <- LogicError.lift(Kernel.assume(freeAfter))
+      both <- rules.mp(asked, held)
+      apart <- rules.conjElim2(both)
+      absurd <- rules.notElim(apart, Kernel.refl(zero))
+      out <- rules.notIntro(freeAfter, absurd)
+    } yield out)
+    nowhere.hypotheses shouldBe empty
+    nowhere.conclusion shouldBe force(truth.logic.mkNot(freeAfter))
+  }
+
+  "A closed bounded formula" should "be provable in PA when it is true, with nothing assumed" in {
+    // `!v_0. v_0 < 2 ==> v_0 = v_0`, the order's witness at 1. Every premise of the completeness
+    // theorem is discharged here: well formed by the introduction rules, in the class by its
+    // clause, closed by walking the code, and true by reading the universal at each value below 2.
+    // What comes out is PA's proof of it, owing nothing, which no fact before this one gave for
+    // any formula with a quantifier.
+    val equation = "NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))"
+    val two = term("SUC (SUC ZERO)")
+    val bound = term("NUM_NUMERAL (SUC (SUC ZERO))")
+    val formula = term(s"NUM_ALL_BELOW 1 0 (NUM_NUMERAL (SUC (SUC ZERO))) ($equation)")
+    val logic = truth.logic
+    val language = chain.language
+    val zero = term("0:num")
+    val one = term("1:num")
+    def holds(predicate: String, subject: Term): Term =
+      force(LogicError.lift(Term.app(term(predicate), subject)))
+
+    val isFormula = force(for {
+      atZero <- language.fact(Language.TermVariable).flatMap(rules.spec(zero, _))
+      boundIsTerm <- language.fact(Language.NumeralIsTerm).flatMap(rules.spec(two, _))
+      equality <- language.fact(Language.FormulaEquality)
+        .flatMap(rules.specAll(_, List(term("NUM_CODE 0 0"), term("NUM_CODE 0 0"))))
+        .flatMap(rules.mp(_, atZero)).flatMap(rules.mp(_, atZero))
+      out <- language.fact(Language.AllBelowFormula)
+        .flatMap(rules.specAll(_, List(one, zero, bound, term(equation))))
+        .flatMap(rules.mp(_, boundIsTerm)).flatMap(rules.mp(_, equality))
+    } yield out)
+    isFormula.conclusion shouldBe holds("NUM_FORM", formula)
+
+    val clause = force(rules.specAll(fact(Truth.BoundedAllBelow), List(one, zero, bound, term(equation))))
+    val (_, conditions) = force(Term.destEq(clause.conclusion).toRight("an equation"))
+    val bounds = force(logic.destConj(conditions).map(_._2).flatMap(logic.destConj).map(_._1).toRight("a conjunction"))
+    val (variableBound, numeralBound) = force(logic.destDisj(bounds).toRight("a disjunction"))
+    val apart = force(chain.successor.distinct(one, zero))
+    val isBounded = force(for {
+      predicate <- logic.destExistsPredicate(numeralBound).toRight(NotOfForm("an existential", numeralBound))
+      numeral <- rules.existsIntro(predicate, two, Kernel.refl(bound))
+      either <- rules.disjIntro2(variableBound, numeral)
+      body <- rules.specAll(fact(Truth.BoundedEquality), List(term("NUM_CODE 0 0"), term("NUM_CODE 0 0")))
+        .flatMap(rules.eqTruthElim)
+      rest <- rules.conjIntro(either, body)
+      all <- rules.conjIntro(apart, rest)
+      back <- Conv.sym(clause)
+      out <- LogicError.lift(Kernel.eqMp(back, all))
+    } yield out)
+    isBounded.conclusion shouldBe holds("NUM_BOUNDED", formula)
+
+    // closed: the abbreviations and the numeral unfolded into the code they name, which the walk reads
+    val unfolding = force(Vector(Language.AllBelowCases, Language.LessCases, Language.ExistsCases,
+      Language.NumeralAtZero, Language.NumeralAtSuccessor)
+      .map(name => language.fact(name)).foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty))(
+        (carried, next) => carried.flatMap(found => next.map(found :+ _)))
+      .flatMap(Rewrite.Rule.all(logic, _)).flatMap(Rewrite.rewrite(_, formula)))
+    val raw = force(Term.destEq(unfolding.conclusion).map(_._2).toRight("an equation"))
+    val rawClosed = force(language.notFreeIn(raw))
+    val negationHead = force(logic.mkNot(proposition("T"))) match {
+      case App(head, _) => head
+      case other => fail(s"not a negation: $other")
+    }
+    val isClosed = force(for {
+      back <- Conv.sym(unfolding)
+      w = Term.variable("w", numbers)
+      atW <- rules.spec(w, rawClosed)
+      freeHead <- LogicError.lift(Term.app(term("NUM_FREE_FORM"), w))
+      moved <- Conv.apTerm(freeHead, back).flatMap(Conv.apTerm(negationHead, _))
+      out <- LogicError.lift(Kernel.eqMp(moved, atW)).flatMap(rules.gen(w, _))
+    } yield out)
+
+    val e = Term.variable("e", Type.fun(numbers, numbers))
+    val decided = force(rules.specAll(fact(Truth.ProvesBounded), List(e, formula))
+      .flatMap(rules.mp(_, isFormula)).flatMap(rules.mp(_, isBounded)).flatMap(rules.mp(_, isClosed)))
+    decided.hypotheses shouldBe empty
+
+    // true: every value below 2 makes `v_0 = v_0` true, by reflexivity of its value
+    val reading = force(rules.specAll(fact(Truth.TrueAllBelowNumeral), List(e, one, zero, two, term(equation)))
+      .flatMap(rules.mp(_, apart)))
+    val (_, everyValue) = force(Term.destEq(reading.conclusion).toRight("an equation"))
+    val m = Term.variable("m", numbers)
+    val isTrue = force(for {
+      predicate <- logic.destForallPredicate(everyValue).toRight(NotOfForm("a universal", everyValue))
+      atM <- LogicError.lift(Term.app(predicate, m)).flatMap(t => Term.betaReduce(t).toRight(NotOfForm("a redex", t)))
+      sidesOfImp <- logic.destImp(atM).toRight(NotOfForm("an implication", atM))
+      below = sidesOfImp._1
+      environment = sidesOfImp._2 match { case App(_, env) => env; case other => other }
+      clauseAt <- rules.specAll(fact(Truth.TrueEquality), List(environment, term("NUM_CODE 0 0"), term("NUM_CODE 0 0")))
+      valueSide = force(Term.destEq(clauseAt.conclusion).map(_._2).flatMap(Term.destEq).map(_._1).toRight("a value"))
+      bodyHolds <- Conv.sym(clauseAt).flatMap(c => LogicError.lift(Kernel.eqMp(c, Kernel.refl(valueSide))))
+      every <- rules.disch(below, bodyHolds).flatMap(rules.gen(m, _))
+      back <- Conv.sym(reading)
+      out <- LogicError.lift(Kernel.eqMp(back, every))
+    } yield out)
+    val proved = force(rules.conjElim1(decided).flatMap(rules.mp(_, isTrue)))
+    proved.hypotheses shouldBe empty
+    proved.conclusion shouldBe holds("NUM_PROV", formula)
+  }
+
+  "A universal below a numeral" should "be true where its body is true at every value below" in {
+    // NUM_ALL_BELOW 1 0 3 p, the order's witness apart from the index by 1 and 0 differing, which
+    // is the condition the fact asks for and is discharged here rather than assumed.
+    val e = Term.variable("e", Type.fun(numbers, numbers))
+    val body = term("NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))")
+    val apart = force(chain.successor.distinct(term("1:num"), term("0:num")))
+    val read = force(rules.specAll(fact(Truth.TrueAllBelowNumeral), List(e, term("1:num"), term("0:num"),
+      term("3:num"), body)).flatMap(rules.mp(_, apart)))
+    read.hypotheses shouldBe empty
+    read.conclusion shouldBe proposition(
+      s"NUM_TRUE (NUM_ALL_BELOW 1 0 (NUM_NUMERAL 3) ($body)) (e:num -> num) = " +
+        s"(!m:num. m < 3 ==> NUM_TRUE ($body) (\\j:num. COND (j = 0) m ((e:num -> num) j)))")
+    // and the order's code alone, read at the variable's value
+    val less = force(rules.specAll(fact(Truth.TrueLessNumeral), List(e, term("1:num"), term("0:num"),
+      term("3:num"))).flatMap(rules.mp(_, apart)))
+    less.hypotheses shouldBe empty
+    less.conclusion shouldBe proposition(
+      "NUM_TRUE (NUM_LESS 1 (NUM_CODE 0 0) (NUM_NUMERAL 3)) (e:num -> num) = (e:num -> num) 0 < 3")
+  }
+
   "The graph of the triangle" should "hold where the value is the triangle, fail elsewhere" in {
     val graph = fact(Truth.TriangleGraphTrue)
     val arithmetic = Vector(

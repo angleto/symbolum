@@ -909,8 +909,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // before the run; the definition is the register's. Four of the five bind two or more leading
     // quantifiers of `num` and the negation's clause binds one, so `AGENTS.md`'s figures move by
     // five, four and four.
-    library.entries.size shouldBe 1187
-    library.names.distinct.size shouldBe 1184
+    // 1192 and 1189 with completeness for the closed bounded formulas, 2026-11-22, card
+    // `4102f131`: five facts under five new names from `Truth.Statements`,
+    // `NUM_FREE_TERM_SUBST_NUMERAL`, `NUM_FREE_FORM_SUBST_NUMERAL`, `NUM_TRUE_LESS_NUMERAL`,
+    // `NUM_TRUE_ALL_BELOW_NUMERAL` and `NUM_PROV_BOUNDED`, derived before the run. All five bind two
+    // or more leading quantifiers and four of them two of `num`, `NUM_PROV_BOUNDED` binding an
+    // environment and a code, so `AGENTS.md`'s figures move by five, five and four.
+    library.entries.size shouldBe 1192
+    library.names.distinct.size shouldBe 1189
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

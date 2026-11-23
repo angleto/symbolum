@@ -779,10 +779,12 @@ cases are for is `NUM_BOUNDED`, also since 2026-11-21. It is built from equation
 implication and the universal below a variable or a numeral, and `NUM_BOUNDED_ALL` reads a universal
 in it as a `NUM_ALL_BELOW`. Since 2026-11-22 `NUM_BOUNDED_SUBST_NUMERAL` keeps a formula in the class
 when a numeral is put for a variable. `NUM_RANK` counts a formula's connectives and quantifiers, and
-`NUM_RANK_SUBST_NUMERAL` says that substitution leaves it alone, which is the measure the
-completeness induction will descend on.
+`NUM_RANK_SUBST_NUMERAL` says that substitution leaves it alone. On that measure
+`NUM_PROV_BOUNDED` is completeness for the closed bounded formulas: PA proves every true one and
+refutes every false one, closed meaning that no variable is free in it.
 
-Not written above that: completeness for bounded formulas itself; any
+Not written above that: completeness for a sentence with unbounded existentials in front of a
+bounded body, the Sigma-1 form the decoding of provability needs; any
 representation other than
 `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own

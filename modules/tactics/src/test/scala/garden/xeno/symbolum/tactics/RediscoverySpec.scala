@@ -474,7 +474,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `NUM_BOUNDED_SUBST_NUMERAL`. Plus three.
     // 1065 with the rank, 2026-11-22, card `4102f131`, counted before the run: one antecedent on
     // `NUM_RANK_SUBST_NUMERAL`, the four clauses being equations. Plus one.
-    propose.weakenings.size shouldBe 1065
+    // 1072 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`,
+    // counted before the run: one antecedent each on the two free-variable facts and the two
+    // truth facts, and three on `NUM_PROV_BOUNDED`. Plus seven.
+    propose.weakenings.size shouldBe 1072
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

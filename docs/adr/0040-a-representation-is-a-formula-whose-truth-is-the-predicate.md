@@ -251,6 +251,16 @@ numeral put for a variable leaves it alone, since the substitution changes terms
 none. The code cannot be the measure: an instance of a bounded universal has a numeral where the
 universal has a variable, so its code is larger, and the induction from a universal to its
 instances goes up in the code and down in the rank.
-What remains: the induction on the rank, which consumes the four cases and the facts above, and
-the two facts it needs about a closed formula that are not written: which variables are free
-after a numeral is put for one, and the truth of a universal below a numeral read as its instances.
+The induction on the rank is `NUM_PROV_BOUNDED`, also of 2026-11-22: PA proves every true closed
+formula of the class and refutes every false one, closed meaning that no variable is free in it.
+It needed the two facts this record listed as missing. `NUM_FREE_FORM_SUBST_NUMERAL` says a
+numeral put for a variable brings no variable in and takes that one out, so an instance of a
+closed universal is closed. `NUM_TRUE_ALL_BELOW_NUMERAL` reads a universal below a numeral as its
+body at every value below, through `NUM_TRUE_LESS_NUMERAL` for the order's code. The decision
+above is used once more there: a closed universal of the class has a numeral for its bound,
+because a variable bound would be free in it, so the two facts of `Deduction` about a universal
+below a numeral are the only quantifier facts the induction reads. The two about an existential
+below are not read at all, the class writing that existential as a negated universal.
+What remains of completeness is its Sigma-1 form, a true sentence with unbounded existentials in
+front of a bounded body: a witness for each, the body at the witnesses closed and bounded, and
+`NUM_PROV_EXISTS_INTRO` once per quantifier.
