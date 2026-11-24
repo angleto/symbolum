@@ -76,7 +76,12 @@ session named would be a different tool with the same name.
   it reached by misreading "the satisfiability question was not settled" as "the premises hold up".
   A suite that got slower is how that was found.
 - **One module:** `tools/sbt kernel/test`, `tools/sbt theories/test`, and so on
-- **One suite:** `tools/sbt "core/testOnly garden.xeno.symbolum.CanonicalFormSpec"`
+- **One suite:** `tools/sbt "core/testOnly garden.xeno.symbolum.CanonicalFormSpec"`. **Read its
+  log, not its exit code**: under sbt 2.0.9 a forked test failing with a message longer than about
+  64 KB reaches sbt as no failure, `[success]` and exit 0 over ScalaTest's own `failed 1`, and "the
+  standard chain does not build" is that long as a rule. `test` and `testFull` also read
+  ScalaTest's reports and refuse; `testOnly` and `testQuick` do not. `project/ForkedVerdict.scala`
+  has the measurement, Mycelium card `f0016ec8` the record.
 - **The check that `-Xfatal-warnings` arrives:** `tools/sbt fatalWarnings`, and it is **not a
   command anybody has to remember**: `Test / test` on the root depends on it, so every
   `tools/sbt test` and every CI run of it pays for the check, at no step of its own. It reads the

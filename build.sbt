@@ -196,6 +196,10 @@ lazy val commonSettings = Seq(
 
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
 
+  // Where ScalaTest writes the reports `Test / testFull` reads its verdict from, emptied before each
+  // run. `project/ForkedVerdict.scala` has why, measured on 2026-11-24, Mycelium card f0016ec8.
+  Test / testOptions ++= ForkedVerdict.options(target.value),
+
   /*
    * The corpus measurements run on every `sbt test` and are skipped when measuring coverage.
    *
@@ -234,6 +238,20 @@ lazy val commonSettings = Seq(
    * `TestResult` has no serialisation either.
    */
   Test / test := Def.uncached((Test / testFull).value),
+
+  /*
+   * The whole suite's verdict is also read from ScalaTest's own reports, after sbt's: a failure with
+   * a long message reached sbt's result as none, measured on 2026-11-24, Mycelium card f0016ec8.
+   * Here, on `testFull`, because `test` is this task and the coverage gate calls this task by name.
+   * `project/ForkedVerdict.scala` has the measurement, why it is not a `Tests.Cleanup`, and that
+   * `testOnly` and `testQuick` are not covered.
+   */
+  Test / testFull := Def.uncached {
+    val result = (Test / testFull).value
+    ForkedVerdict.verdict(
+      ForkedVerdict.directory(target.value), (Test / definedTests).value.map(_.name), streams.value.log)
+    result
+  },
 
   /*
    * Each module's tests run in a JVM of their own, one module at a time, and the JVM ends with them.
