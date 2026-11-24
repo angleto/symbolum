@@ -21,6 +21,8 @@ import garden.xeno.symbolum.logic.*
  * environment sending everything to zero, which is exactly where a quantifier that ignored its
  * update would read `0 = 0` and answer the other way; and the graph of the triangle is proved at
  * one environment and refuted at another, which spends both directions of its representation.
+ * The graph of the pairing is too, and the graph of the constructor is refuted where a graph that
+ * forgot its two successors would hold.
  */
 class TruthSpec extends AnyFlatSpec with Matchers {
 
@@ -78,7 +80,7 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
       Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName, Truth.RankName, Truth.SigmaName,
-        Truth.TriangleGraphName)
+        Truth.TriangleGraphName, Truth.PairGraphName, Truth.CodeGraphName)
     truth.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
@@ -655,6 +657,79 @@ class TruthSpec extends AnyFlatSpec with Matchers {
       Conv.sym(bottom).flatMap(rules.notElim(never, _)).flatMap(rules.notIntro(claim, _)))
     refuted.hypotheses shouldBe empty
     refuted.conclusion shouldBe proposition(s"~(NUM_TRUE NUM_TRI_GRAPH (\\k:num. $two))")
+  }
+
+  /** `!a b. NUM_PAIR a b = ...` and `!t p. NUM_CODE t p = ...`, the definitions opened as equations. */
+  private def opened(name: String, first: String, second: String): Kernel.Thm = {
+    val a = Term.variable(first, numbers)
+    val b = Term.variable(second, numbers)
+    force(chain.numbering.definition(name).flatMap(Conv.unfold(_, List(a, b)))
+      .flatMap(rules.gen(b, _)).flatMap(rules.gen(a, _)))
+  }
+
+  private lazy val pairArithmetic: Vector[Kernel.Thm] = Vector(
+    opened(Numbering.PairName, "a", "b"),
+    opened(Numbering.CodeName, "t", "p"),
+    force(chain.numbering.fact(Numbering.TriangleAtZero)),
+    force(chain.numbering.fact(Numbering.TriangleAtSuccessor)),
+    force(chain.peano.fact(Peano.ZeroPlus)),
+    force(chain.peano.fact(Peano.AddAtSuccessor)),
+    force(chain.peano.fact(Peano.AddAtZero)))
+
+  /** `~claim` from `claim = (SUC^k ZERO = SUC^(k+j+1) ZERO)`, peeling the `k` successors off. */
+  private def refuteBySuccessors(claim: Term, reading: Kernel.Thm): Kernel.Thm = {
+    val injective = force(chain.naturals.fact(Natural.SuccessorInjective))
+    def peel(equation: Kernel.Thm): Kernel.Thm = equation.conclusion match {
+      case App(App(_, App(_, left)), App(_, right)) =>
+        peel(force(rules.specAll(injective, List(left, right)).flatMap(rules.mp(_, equation))))
+      case _ => equation
+    }
+    val assumed = force(LogicError.lift(Kernel.assume(claim)))
+    val bottom = peel(force(LogicError.lift(Kernel.eqMp(reading, assumed))))
+    val positive = force(Term.destEq(bottom.conclusion).map(_._2).toRight("an equation")) match {
+      case App(_, predecessor) => predecessor
+      case other => fail(s"not a successor on the right: $other")
+    }
+    val never = force(chain.naturals.fact(Natural.SuccessorNotZero).flatMap(rules.spec(positive, _)))
+    force(Conv.sym(bottom).flatMap(rules.notElim(never, _)).flatMap(rules.notIntro(claim, _)))
+  }
+
+  "The graph of the pairing" should "hold where the value is the pair, fail elsewhere" in {
+    val graph = fact(Truth.PairGraphTrue)
+
+    // At zero everywhere: `NUM_PAIR 0 0` is `NUM_TRI 0 + 0`, zero.
+    val atZero = force(rules.spec(term("\\k:num. ZERO"), graph))
+    val zeroReading = evaluate(rightOf(atZero), pairArithmetic)
+    rightOf(zeroReading) shouldBe proposition("ZERO = ZERO")
+    val holds = force(Conv.trans(atZero, zeroReading).flatMap(Conv.sym)
+      .flatMap(e => LogicError.lift(Kernel.eqMp(e, Kernel.refl(term("ZERO"))))))
+    holds.hypotheses shouldBe empty
+    holds.conclusion shouldBe proposition("NUM_TRUE NUM_PAIR_GRAPH (\\k:num. ZERO)")
+
+    // At one everywhere: `NUM_PAIR 1 1` is `NUM_TRI 2 + 1`, four, and the graph is refuted rather
+    // than left unproved, which is the uniqueness half of the representation spent.
+    val one = "SUC ZERO"
+    val atOne = force(rules.spec(term(s"\\k:num. $one"), graph))
+    val oneReading = evaluate(rightOf(atOne), pairArithmetic)
+    rightOf(oneReading) shouldBe proposition(s"$one = SUC (SUC (SUC ($one)))")
+    val claim = proposition(s"NUM_TRUE NUM_PAIR_GRAPH (\\k:num. $one)")
+    val refuted = refuteBySuccessors(claim, force(Conv.trans(atOne, oneReading)))
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe proposition(s"~(NUM_TRUE NUM_PAIR_GRAPH (\\k:num. $one))")
+  }
+
+  "The graph of the constructor" should "fail at zero, where the pair's graph holds" in {
+    // `NUM_CODE 0 0` is the successor of `NUM_PAIR 0 0`, so at zero everywhere the constructor's
+    // graph reads `0 = 1`. A graph that dropped the two successors of its right side would be the
+    // pair's graph, which holds here.
+    val graph = fact(Truth.CodeGraphTrue)
+    val atZero = force(rules.spec(term("\\k:num. ZERO"), graph))
+    val reading = evaluate(rightOf(atZero), pairArithmetic)
+    rightOf(reading) shouldBe proposition("ZERO = SUC ZERO")
+    val claim = proposition("NUM_TRUE NUM_CODE_GRAPH (\\k:num. ZERO)")
+    val refuted = refuteBySuccessors(claim, force(Conv.trans(atZero, reading)))
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe proposition("~(NUM_TRUE NUM_CODE_GRAPH (\\k:num. ZERO))")
   }
 
   "The value of a numeral" should "be its number at an environment that says nothing about it" in {

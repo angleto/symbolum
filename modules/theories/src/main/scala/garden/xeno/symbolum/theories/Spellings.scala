@@ -174,6 +174,10 @@ object Spellings {
       // hierarchy, every member being Sigma-1, so the row does not write `\\Sigma_{#1}`.
       .delimited("NUM_SIGMA", 2, "\\operatorname{sigma}_{#1}(#2)")
       .delimited("NUM_TRI_GRAPH", 0, "\\ulcorner v_0 + v_0 = v_1 \\cdot S v_1 \\urcorner")
+      .delimited("NUM_PAIR_GRAPH", 0,
+        "\\ulcorner v_0 + v_0 = (v_1 + v_2) \\cdot S (v_1 + v_2) + (v_1 + v_1) \\urcorner")
+      .delimited("NUM_CODE_GRAPH", 0,
+        "\\ulcorner v_0 + v_0 = S S ((v_1 + v_2) \\cdot S (v_1 + v_2) + (v_1 + v_1)) \\urcorner")
       // The object language's derived connectives. Set as named operations rather than with the
       // meta level's own symbols, which is the point of the row: `NUM_AND p q` is a NUMBER that
       // codes a conjunction, and writing it `#1 \\wedge #2` would put it in the same shape as the

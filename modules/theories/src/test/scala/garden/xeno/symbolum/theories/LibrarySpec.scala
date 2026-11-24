@@ -920,8 +920,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `NUM_SIGMA_SUBST_NUMERAL`, `NUM_TRUE_EXISTS` and `NUM_PROV_SIGMA`, derived before the run; the
     // definition is the register's. Five bind two or more leading quantifiers, two of them of `num`
     // in each, and `NUM_SIGMA_ZERO` binds one, so `AGENTS.md`'s figures move by six, five and five.
-    library.entries.size shouldBe 1198
-    library.names.distinct.size shouldBe 1195
+    // 1202 and 1199 with the graphs of the pairing and the constructor, 2026-11-24, card
+    // `4102f131`: four facts under four new names from `Truth.Statements`, `NUM_PAIR_DOUBLE`,
+    // `NUM_PAIR_GRAPH_TRUE`, `NUM_CODE_DOUBLE` and `NUM_CODE_GRAPH_TRUE`, derived before the run; the
+    // two definitions are the register's. The two doublings bind two leading quantifiers of `num`
+    // each and the two graphs one environment each, so `AGENTS.md`'s figures move by four, two and
+    // two.
+    library.entries.size shouldBe 1202
+    library.names.distinct.size shouldBe 1199
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

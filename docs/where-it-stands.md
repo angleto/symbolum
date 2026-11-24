@@ -714,10 +714,10 @@ on the code: each operand is replaced by its numeral under a congruence, and the
 settled by `NUM_PROV_NUMERAL_ADD` or `_MUL`. The congruences it needed on the right of a sum and on
 both sides of a product were not there and are `Deduction`'s now, beside `NUM_PROV_REFL`.
 `NUM_PROV_TRUE_EQ` follows: a true closed equation is provable. That is completeness for the
-atomic formulas that hold and nothing more. `NUM_TRI_GRAPH_TRUE` still says only what its formula
+atomic formulas that hold and nothing more. `NUM_TRI_GRAPH_TRUE` says only what its formula
 means: its instances are equations between terms that are not closed until a numeral is put in
-for each variable, and no lemma here yet relates the truth of a substituted formula to its truth
-at the environment the substitution describes.
+for each variable. The lemma relating the truth of a substituted formula to its truth at the
+environment the substitution describes is `NUM_TRUE_SUBST_NUMERAL`, since 2026-11-21.
 
 **And a false closed equation has a provable negation, since 2026-10-22.** `NUM_PROV_FALSE_EQ` is
 the other half of the atomic case, so PA decides every closed equation. What it needed is PA
@@ -785,10 +785,17 @@ refutes every false one, closed meaning that no variable is free in it. Since 20
 `NUM_PROV_SIGMA` is Sigma-1 completeness: `NUM_SIGMA n p` puts `n` unbounded existentials in front
 of a bounded formula, and PA proves every true closed sentence of it.
 
+**The pairing and the constructor are represented since 2026-11-24, by one equation each.**
+`NUM_PAIR a b` is `NUM_TRI (a + b) + a`, so twice the pair is `(a + b) * S (a + b) + (a + a)` and
+twice `NUM_CODE t p` is that number's second successor: `NUM_PAIR_GRAPH` and `NUM_CODE_GRAPH` are
+`v0 + v0 = ...` with no quantifier, and `NUM_PAIR_GRAPH_TRUE` and `NUM_CODE_GRAPH_TRUE` say their
+truth is `e 0 = NUM_PAIR (e 1) (e 2)` and `e 0 = NUM_CODE (e 1) (e 2)`. `docs/adr/0040` expected
+bounded quantifiers for the pairing; the doubling the triangle already used makes them
+unnecessary, and the three graphs share one proof.
+
 Not written above that: a decoding of provability as a Sigma-1 formula, which is what that
-completeness is for; any
-representation other than
-`NUM_TRI_GRAPH`; the object-level `Prov`, and so
+completeness is for; a fact carrying a representation's truth to PA's proof of its graph at the
+numerals of a value and its arguments; any representation other than the three by doubling; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale

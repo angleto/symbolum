@@ -1337,6 +1337,8 @@ they have least appetite for working out how it is produced.
   NUM_BOUNDED_IMP          !n:num. !m:num. NUM_BOUNDED (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_BOUNDED n /\ NUM_BOUNDED m)
   NUM_BOUNDED_NOT          !n:num. NUM_BOUNDED (NUM_CODE 6 n) = NUM_BOUNDED n
   NUM_BOUNDED_SUBST_NUMERAL !n:num. !m:num. !k:num. NUM_FORM k ==> NUM_BOUNDED k ==> NUM_BOUNDED (NUM_SUBST_FORM n (NUM_NUMERAL m) k)
+  NUM_CODE_DOUBLE          !n:num. !m:num. NUM_CODE n m + NUM_CODE n m = SUC (SUC ((n + m) * SUC (n + m) + (n + n)))
+  NUM_CODE_GRAPH_TRUE      !f:num -> num. NUM_TRUE NUM_CODE_GRAPH f = (f 0 = NUM_CODE (f 1) (f 2))
   NUM_FORM_IMP_PARTS       !n:num. !m:num. NUM_FORM (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_FORM n /\ NUM_FORM m
   NUM_FREE_FORM_SUBST_NUMERAL !n:num. !m:num. !k:num. NUM_FORM k ==> (!i:num. NUM_FREE_FORM i (NUM_SUBST_FORM n (NUM_NUMERAL m) k) ==> NUM_FREE_FORM i k /\ ~(i = n))
   NUM_FREE_TERM_SUBST_NUMERAL !n:num. !m:num. !k:num. NUM_TERM k ==> (!i:num. NUM_FREE_TERM i (NUM_SUBST_TERM n (NUM_NUMERAL m) k) ==> NUM_FREE_TERM i k /\ ~(i = n))
@@ -1344,6 +1346,8 @@ they have least appetite for working out how it is produced.
   NUM_GROUND_EQ            !n:num. !m:num. NUM_GROUND (NUM_CODE 5 (NUM_PAIR n m)) = (NUM_CLOSED n /\ NUM_CLOSED m)
   NUM_GROUND_IMP           !n:num. !m:num. NUM_GROUND (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_GROUND n /\ NUM_GROUND m)
   NUM_GROUND_NOT           !n:num. NUM_GROUND (NUM_CODE 6 n) = NUM_GROUND n
+  NUM_PAIR_DOUBLE          !n:num. !m:num. NUM_PAIR n m + NUM_PAIR n m = (n + m) * SUC (n + m) + (n + n)
+  NUM_PAIR_GRAPH_TRUE      !f:num -> num. NUM_TRUE NUM_PAIR_GRAPH f = (f 0 = NUM_PAIR (f 1) (f 2))
   NUM_PROV_BOUNDED         !f:num -> num. !n:num. NUM_FORM n ==> NUM_BOUNDED n ==> (!m:num. ~(NUM_FREE_FORM m n)) ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))
   NUM_PROV_FALSE_EQ        !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m))) f ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m)))
   NUM_PROV_GROUND          !f:num -> num. !n:num. NUM_FORM n ==> NUM_GROUND n ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))

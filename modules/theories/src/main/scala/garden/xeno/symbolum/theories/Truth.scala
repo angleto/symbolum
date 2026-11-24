@@ -11,9 +11,9 @@ import garden.xeno.symbolum.logic.*
  * constants the Goedel stack uses is a formula of the object language together with a proof that
  * it says what the constant says; this file makes "says" a definition, `NUM_TRUE`, so that the
  * second half is a statement in this logic about a code and not a sentence in a docstring. What
- * turns a true formula into a provable one is completeness for bounded formulas, proved once and
- * above this file; until it is proved, what is here is the semantic half of every representation
- * and nothing about provability, which is said again where it could be misread.
+ * turns a true formula into a provable one is completeness, proved once and in this file: for the
+ * closed bounded formulas, [[Truth.ProvesBounded]], which also refutes the false ones, and for the
+ * closed Sigma-1 sentences, [[Truth.ProvesSigma]], which proves the true ones and nothing more.
  *
  * == The two recursions ==
  *
@@ -37,18 +37,28 @@ import garden.xeno.symbolum.logic.*
  * formula, and a truth predicate that refused a non-formula would have to carry `NUM_FORM` into
  * every clause for nothing.
  *
- * == The first representation ==
+ * == The representations by doubling ==
  *
  * `NUM_TRI_GRAPH` is the code of `v0 + v0 = v1 * S v1`, and [[Truth.TriangleGraphTrue]] says it
  * holds at an environment exactly when `e 0 = NUM_TRI (e 1)`. Variable `0` is the value and
- * variable `1` the argument, which is the convention every representation above will follow. It is
- * quantifier-free because `NUM_TRI n` is the unique solution of `2x = n(n+1)`, so the division the
- * closed form wants is never written; that is the reason `Numbering` defined the triangle by
- * recursion rather than as a quotient, spent a second time.
+ * variables `1`, `2` the arguments in order, which is the convention every representation follows.
+ * It is quantifier-free because `NUM_TRI n` is the unique solution of `2x = n(n+1)`, so the
+ * division the closed form wants is never written; that is the reason `Numbering` defined the
+ * triangle by recursion rather than as a quotient, spent a second time.
  *
- * What it does NOT say, since this is the sentence a reader would round up: that PA proves
- * `v0 + v0 = v1 * S v1` at the numerals of `NUM_TRI n` and `n`. That is `Deduction`'s kind of
- * statement and it follows from completeness for bounded formulas, which is not here.
+ * The pairing and the constructor are spent the same way, a third time. `NUM_PAIR a b` is
+ * `NUM_TRI (a + b) + a`, so twice the pair is `(a + b) * S (a + b) + (a + a)`, and twice
+ * `NUM_CODE t p`, which is the successor of a pair, is that number's second successor. Each graph
+ * is therefore one equation, `v0 + v0 = ...`, with no quantifier: `NUM_PAIR_GRAPH` and
+ * `NUM_CODE_GRAPH`. `docs/adr/0040` predicted bounded quantifiers for the pairing; the doubling
+ * makes them unnecessary, and the projections are where they first appear. The three are one proof,
+ * `graphByDoubling`, which needs only the doubled closed form of the function and the cancellation
+ * of a doubling.
+ *
+ * What these facts do NOT say, since this is the sentence a reader would round up: that PA proves
+ * the graph at the numerals of a value and its arguments. That follows from [[Truth.ProvesBounded]],
+ * after the numerals are put for the variables by [[Truth.TrueAtNumeral]] and
+ * [[Truth.BoundedAtNumeral]], and no fact here states it for any one representation.
  */
 final class Truth private (
   val language: Language,
@@ -79,6 +89,12 @@ object Truth {
 
   /** The code of `v0 + v0 = v1 * S v1`, whose truth is the graph of `NUM_TRI`. */
   val TriangleGraphName: String = "NUM_TRI_GRAPH"
+
+  /** The code of `v0 + v0 = (v1 + v2) * S (v1 + v2) + (v1 + v1)`, the graph of `NUM_PAIR`. */
+  val PairGraphName: String = "NUM_PAIR_GRAPH"
+
+  /** The code of `v0 + v0 = S (S ((v1 + v2) * S (v1 + v2) + (v1 + v1)))`, the graph of `NUM_CODE`. */
+  val CodeGraphName: String = "NUM_CODE_GRAPH"
 
   val ValueVariable: String = "NUM_VALUE_VAR"
   val ValueZero: String = "NUM_VALUE_ZERO"
@@ -123,6 +139,33 @@ object Truth {
    * reader should check, since the right-to-left one only evaluates.
    */
   val TriangleGraphTrue: String = "NUM_TRI_GRAPH_TRUE"
+
+  /**
+   * `|- !a b. NUM_PAIR a b + NUM_PAIR a b = (a + b) * SUC (a + b) + (a + a)`
+   *
+   * Twice the pair, with the triangle's doubling spent on its first summand: the closed form
+   * [[PairGraphTrue]] stands on.
+   */
+  val PairDoubled: String = "NUM_PAIR_DOUBLE"
+
+  /**
+   * `|- !e. NUM_TRUE NUM_PAIR_GRAPH e = (e 0 = NUM_PAIR (e 1) (e 2))`
+   *
+   * The graph of the pairing, as the truth of one equation of the object language. The
+   * left-to-right half is the one to check, as for the triangle: it is the cancellation of a
+   * doubling, and it is what makes the graph single-valued.
+   */
+  val PairGraphTrue: String = "NUM_PAIR_GRAPH_TRUE"
+
+  /**
+   * `|- !t p. NUM_CODE t p + NUM_CODE t p = SUC (SUC ((t + p) * SUC (t + p) + (t + t)))`
+   *
+   * Twice the code, which is the successor of a pair: two successors outside [[PairDoubled]].
+   */
+  val CodeDoubled: String = "NUM_CODE_DOUBLE"
+
+  /** `|- !e. NUM_TRUE NUM_CODE_GRAPH e = (e 0 = NUM_CODE (e 1) (e 2))`, the same for the constructor. */
+  val CodeGraphTrue: String = "NUM_CODE_GRAPH_TRUE"
 
   /**
    * `|- !e t. NUM_TERM t ==> NUM_CLOSED t ==> NUM_PROV (t = numeral (NUM_VALUE t e))`
@@ -503,6 +546,28 @@ object Truth {
       "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))) " +
       "(NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 2 (NUM_CODE 0 1)))))"
 
+  /**
+   * `(v1 + v2) * S (v1 + v2) + (v1 + v1)`, coded: twice the pair of `v1` and `v2`, the right side
+   * both [[PairGraphText]] and [[CodeGraphText]] are written over. Built from named parts because
+   * it is three levels deep and `v1 + v2` occurs twice, which is easier to check named than nested.
+   */
+  private val PairDoubledText: String = {
+    val sum = "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2)))"
+    val product = s"(NUM_CODE 4 (NUM_PAIR $sum (NUM_CODE 2 $sum)))"
+    val first = "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 1)))"
+    s"(NUM_CODE 3 (NUM_PAIR $product $first))"
+  }
+
+  /** `v0 + v0`, coded: the left side of every graph by doubling. */
+  private val ValueDoubledText: String = "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0)))"
+
+  /** `v0 + v0 = (v1 + v2) * S (v1 + v2) + (v1 + v1)`, coded. */
+  val PairGraphText: String = s"NUM_CODE 5 (NUM_PAIR $ValueDoubledText $PairDoubledText)"
+
+  /** `v0 + v0 = S (S ((v1 + v2) * S (v1 + v2) + (v1 + v1)))`, coded. */
+  val CodeGraphText: String =
+    s"NUM_CODE 5 (NUM_PAIR $ValueDoubledText (NUM_CODE 2 (NUM_CODE 2 $PairDoubledText)))"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     ValueVariable -> "!e:num -> num. !j:num. NUM_VALUE (NUM_CODE 0 j) e = e j",
@@ -529,6 +594,14 @@ object Truth {
         "(!n:num. NUM_TRUE p (\\k:num. COND (k = j) n (e k)))"),
     TriangleDoubled -> "!n:num. NUM_ADD (NUM_TRI n) (NUM_TRI n) = NUM_MUL n (SUC n)",
     TriangleGraphTrue -> "!e:num -> num. NUM_TRUE NUM_TRI_GRAPH e = (e 0 = NUM_TRI (e 1))",
+    PairDoubled ->
+      ("!a:num b:num. NUM_ADD (NUM_PAIR a b) (NUM_PAIR a b) = " +
+        "NUM_ADD (NUM_MUL (NUM_ADD a b) (SUC (NUM_ADD a b))) (NUM_ADD a a)"),
+    PairGraphTrue -> "!e:num -> num. NUM_TRUE NUM_PAIR_GRAPH e = (e 0 = NUM_PAIR (e 1) (e 2))",
+    CodeDoubled ->
+      ("!t:num p:num. NUM_ADD (NUM_CODE t p) (NUM_CODE t p) = " +
+        "SUC (SUC (NUM_ADD (NUM_MUL (NUM_ADD t p) (SUC (NUM_ADD t p))) (NUM_ADD t t)))"),
+    CodeGraphTrue -> "!e:num -> num. NUM_TRUE NUM_CODE_GRAPH e = (e 0 = NUM_CODE (e 1) (e 2))",
     ProvesValue ->
       ("!e:num -> num. !t:num. NUM_TERM t ==> NUM_CLOSED t ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR t (NUM_NUMERAL (NUM_VALUE t e))))"),
@@ -725,7 +798,15 @@ object Truth {
 
       graphBody <- Parser.term(sigmaTheory, provability.notation, TriangleGraphText, numbers)
       withGraph <- LogicError.lift(Kernel.defineConstant(sigmaTheory, TriangleGraphName, graphBody))
-      (theory, graphDefinition) = withGraph
+      (triangleTheory, graphDefinition) = withGraph
+      pairGraphBody <- Parser.term(triangleTheory, provability.notation, PairGraphText, numbers)
+      withPairGraph <- LogicError.lift(
+        Kernel.defineConstant(triangleTheory, PairGraphName, pairGraphBody))
+      (pairTheory, pairGraphDefinition) = withPairGraph
+      codeGraphBody <- Parser.term(pairTheory, provability.notation, CodeGraphText, numbers)
+      withCodeGraph <- LogicError.lift(
+        Kernel.defineConstant(pairTheory, CodeGraphName, codeGraphBody))
+      (theory, codeGraphDefinition) = withCodeGraph
       logic <- numbering.logic.over(theory)
 
       statements = new Statements(theory, provability.notation)
@@ -785,9 +866,19 @@ object Truth {
 
       semiring <- Semiring.construct(numbering.peano)
       doubled <- triangleDoubled(logic, statements, naturals, numbering, semiring)
-      graph <- triangleGraph(
-        logic, statements, numbering, graphDefinition, doubled,
-        Vector(valueVariable, valueSuccessor, valueSum, valueProduct, trueEquality))
+      graphEvaluation = Vector(valueVariable, valueSuccessor, valueSum, valueProduct, trueEquality)
+      graph <- graphByDoubling(
+        logic, statements, numbering, TriangleGraphTrue, graphDefinition, doubled, graphEvaluation)
+      pairDefinition <- numbering.definition(Numbering.PairName)
+      pairDoubled <- pairDoubling(logic, statements, pairDefinition, doubled, semiring)
+      pairGraph <- graphByDoubling(
+        logic, statements, numbering, PairGraphTrue, pairGraphDefinition, pairDoubled,
+        graphEvaluation)
+      codeDefinition <- numbering.definition(Numbering.CodeName)
+      codeDoubled <- codeDoubling(logic, statements, numbering.peano, codeDefinition, pairDoubled)
+      codeGraph <- graphByDoubling(
+        logic, statements, numbering, CodeGraphTrue, codeGraphDefinition, codeDoubled,
+        graphEvaluation)
 
       evaluation <- Evaluation.of(
         logic, theory, provability.notation, language, numbering, deduction, statements,
@@ -810,7 +901,9 @@ object Truth {
         BoundedName -> boundedDefinition,
         RankName -> rankDefinition,
         SigmaName -> sigmaDefinition,
-        TriangleGraphName -> graphDefinition
+        TriangleGraphName -> graphDefinition,
+        PairGraphName -> pairGraphDefinition,
+        CodeGraphName -> codeGraphDefinition
       ),
       Map(
         ValueVariable -> valueVariable,
@@ -825,6 +918,10 @@ object Truth {
         TrueUniversal -> trueUniversal,
         TriangleDoubled -> doubled,
         TriangleGraphTrue -> graph,
+        PairDoubled -> pairDoubled,
+        PairGraphTrue -> pairGraph,
+        CodeDoubled -> codeDoubled,
+        CodeGraphTrue -> codeGraph,
         GroundEquality -> groundEquality,
         GroundNegation -> groundNegation,
         GroundImplication -> groundImplication,
@@ -1227,28 +1324,40 @@ object Truth {
   }
 
   /**
-   * [[TriangleGraphTrue]].
+   * A graph whose formula is `v0 + v0 = R`, from the doubled closed form `!x. F x + F x = R x`:
+   * [[TriangleGraphTrue]], [[PairGraphTrue]] and [[CodeGraphTrue]].
    *
    * The graph's truth is first evaluated: unfolding the constant and rewriting with the value and
-   * truth clauses gives `NUM_TRUE NUM_TRI_GRAPH e = (e 0 + e 0 = e 1 * SUC (e 1))`. What is left
-   * is an equivalence between two propositions about numbers, and its two halves are different
-   * kinds of fact. From right to left it is [[TriangleDoubled]] at `e 1` with `e 0` rewritten.
-   * From left to right it is the uniqueness of the solution: `x + x = y + y` gives `x = y`, which
-   * is doubling cancelled, `NUM_MUL_TWO` turning each side into a product by two and
-   * `NUM_MUL_CANCEL_LEFT` taking the two off.
+   * truth clauses gives, for the triangle, `NUM_TRUE NUM_TRI_GRAPH e = (e 0 + e 0 = e 1 * SUC (e 1))`.
+   * What is left is an equivalence between two propositions about numbers, and its two halves are
+   * different kinds of fact. From right to left it is the doubled closed form at the arguments
+   * with `e 0` rewritten. From left to right it is the uniqueness of the solution: `x + x = y + y`
+   * gives `x = y`, which is doubling cancelled, `NUM_MUL_TWO` turning each side into a product by
+   * two and `NUM_MUL_CANCEL_LEFT` taking the two off.
+   *
+   * The arguments are read off the statement, `e 0 = F (e 1) ... (e k)`, and the doubled closed form
+   * is specialised at them in the order `F` takes them, which is the order its quantifiers bind for
+   * all three. If that ever stops being so, the specialised right side differs from the evaluated
+   * one and the final `Conv.trans` refuses rather than proving another statement.
    */
-  private def triangleGraph(
+  private def graphByDoubling(
     logic: Logic,
     statements: Statements,
     numbering: Numbering,
+    name: String,
     graphDefinition: Kernel.Thm,
     doubled: Kernel.Thm,
     evaluation: Vector[Kernel.Thm]
   ): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
 
+    def arguments(applied: Term): List[Term] = applied match {
+      case App(function, last) => arguments(function) :+ last
+      case _ => Nil
+    }
+
     for {
-      statement <- statements.statement(TriangleGraphTrue)
+      statement <- statements.statement(name)
       stripped <- Logic.stripForall(statement)
       environment <- stripped._1.headOption
         .toRight(NotOfForm("a claim about every environment", statement))
@@ -1266,30 +1375,153 @@ object Truth {
         case other => Left(NotOfForm("a sum", other))
       }
       meaningSides <- Term.destEq(meaning).toRight(NotOfForm("an equation", meaning))
-      (value, triangleOfArgument) = meaningSides
-      argument <- triangleOfArgument match {
-        case App(_, inner) => Right(inner)
-        case other => Left(NotOfForm("the triangle of an argument", other))
-      }
-      atArgument <- rules.spec(argument, doubled)
+      (value, functionOfArguments) = meaningSides
+      atArguments <- rules.specAll(doubled, arguments(functionOfArguments))
 
-      // From right to left, under `e 0 = NUM_TRI (e 1)`: `e 0 + e 0` is the doubled triangle.
+      // From right to left, under `e 0 = F (e 1) ...`: `e 0 + e 0` is the doubled closed form.
       assumedMeaning <- LogicError.lift(Kernel.assume(meaning))
       firstSummand <- Conv.apTerm(plus, assumedMeaning).flatMap(Conv.apThm(_, value))
-      plusTriangle <- LogicError.lift(Term.app(plus, triangleOfArgument))
-      secondSummand <- Conv.apTerm(plusTriangle, assumedMeaning)
-      forward <- Conv.trans(firstSummand, secondSummand).flatMap(Conv.trans(_, atArgument))
+      plusValue <- LogicError.lift(Term.app(plus, functionOfArguments))
+      secondSummand <- Conv.apTerm(plusValue, assumedMeaning)
+      forward <- Conv.trans(firstSummand, secondSummand).flatMap(Conv.trans(_, atArguments))
 
-      // From left to right, under the evaluated equation: `x + x = n * SUC n` and
-      // `T + T = n * SUC n` give `x + x = T + T`, and doubling cancels.
+      // From left to right, under the evaluated equation: `x + x = R` and `F + F = R` give
+      // `x + x = F + F`, and doubling cancels.
       assumedEquation <- LogicError.lift(Kernel.assume(equation))
-      same <- Conv.sym(atArgument).flatMap(Conv.trans(assumedEquation, _))
-      backward <- cancelDoubling(logic, numbering.peano, value, triangleOfArgument, same)
+      same <- Conv.sym(atArguments).flatMap(Conv.trans(assumedEquation, _))
+      backward <- cancelDoubling(logic, numbering.peano, value, functionOfArguments, same)
 
       equivalence = Kernel.deductAntisym(forward, backward)
       atEnvironment <- Conv.trans(evaluated, equivalence)
       general <- rules.gen(environment, atEnvironment)
-      result <- statements.checked(TriangleGraphTrue, general)
+      result <- statements.checked(name, general)
+    } yield result
+  }
+
+  /**
+   * [[PairDoubled]].
+   *
+   * The pair unfolds to `T + a` with `T` the triangle at `a + b`, so twice it is
+   * `(T + a) + (T + a)`; the semiring, reading `T` as an atom, regroups that into
+   * `(T + T) + (a + a)`, and [[TriangleDoubled]] at `a + b` replaces the first summand.
+   */
+  private def pairDoubling(
+    logic: Logic,
+    statements: Statements,
+    pairDefinition: Kernel.Thm,
+    triangleDoubled: Kernel.Thm,
+    semiring: Semiring
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    for {
+      statement <- statements.statement(PairDoubled)
+      stripped <- Logic.stripForall(statement)
+      (bound, body) = stripped
+      sides <- Term.destEq(body).toRight(NotOfForm("an equation", body))
+      plus <- sides._1 match {
+        case App(App(head, _), _) => Right(head)
+        case other => Left(NotOfForm("a sum", other))
+      }
+      variables <- bound match {
+        case Vector(a, b) => Right((a, b))
+        case _ => Left(NotOfForm("a claim about two numbers", statement))
+      }
+      (a, b) = variables
+      pair <- sides._1 match {
+        case App(_, second) => Right(second)
+        case other => Left(NotOfForm("a sum", other))
+      }
+
+      // `P + P = (T + a) + (T + a)`
+      opened <- Conv.unfold(pairDefinition, List(a, b))
+      openedValue <- Term.destEq(opened.conclusion).map(_._2)
+        .toRight(NotOfForm("an equation", opened.conclusion))
+      first <- Conv.apTerm(plus, opened).flatMap(Conv.apThm(_, pair))
+      plusOpened <- LogicError.lift(Term.app(plus, openedValue))
+      second <- Conv.apTerm(plusOpened, opened)
+      unfolded <- Conv.trans(first, second)
+
+      // `(T + a) + (T + a) = (T + T) + (a + a)`
+      triangle <- openedValue match {
+        case App(App(_, t), _) => Right(t)
+        case other => Left(NotOfForm("a triangle plus a number", other))
+      }
+      twiceTriangle <- LogicError.lift(Term.appAll(plus, List(triangle, triangle)))
+      twiceA <- LogicError.lift(Term.appAll(plus, List(a, a)))
+      regroupedTarget <- LogicError.lift(Term.appAll(plus, List(twiceTriangle, twiceA)))
+      unfoldedValue <- Term.destEq(unfolded.conclusion).map(_._2)
+        .toRight(NotOfForm("an equation", unfolded.conclusion))
+      regrouped <- semiring.prove(unfoldedValue, regroupedTarget)
+
+      // `(T + T) + (a + a) = (a + b) * SUC (a + b) + (a + a)`
+      sum <- triangle match {
+        case App(_, inner) => Right(inner)
+        case other => Left(NotOfForm("the triangle of a sum", other))
+      }
+      atSum <- rules.spec(sum, triangleDoubled)
+      replaced <- Conv.apTerm(plus, atSum).flatMap(Conv.apThm(_, twiceA))
+
+      proved <- Conv.trans(unfolded, regrouped).flatMap(Conv.trans(_, replaced))
+      general <- rules.gen(b, proved).flatMap(rules.gen(a, _))
+      result <- statements.checked(PairDoubled, general)
+    } yield result
+  }
+
+  /**
+   * [[CodeDoubled]].
+   *
+   * The code unfolds to `SUC P`, and `SUC P + SUC P` is `SUC (SUC (P + P))` by `NUM_SUC_ADD` and
+   * `NUM_ADD_SUC`; [[PairDoubled]] at `t` and `p` replaces `P + P` under the two successors.
+   */
+  private def codeDoubling(
+    logic: Logic,
+    statements: Statements,
+    peano: Peano,
+    codeDefinition: Kernel.Thm,
+    pairDoubled: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    for {
+      statement <- statements.statement(CodeDoubled)
+      stripped <- Logic.stripForall(statement)
+      (bound, body) = stripped
+      sides <- Term.destEq(body).toRight(NotOfForm("an equation", body))
+      variables <- bound match {
+        case Vector(t, p) => Right((t, p))
+        case _ => Left(NotOfForm("a claim about two numbers", statement))
+      }
+      (t, p) = variables
+
+      // `C + C = SUC P + SUC P`, unfolding both occurrences at once.
+      opened <- Conv.unfold(codeDefinition, List(t, p))
+      opening <- Rewrite.Rule.all(logic, Vector(opened))
+      unfolded <- Rewrite.rewrite(opening, sides._1)
+
+      // `SUC P + SUC P = SUC (SUC (P + P))`
+      successors <- Vector(Peano.SuccessorPlus, Peano.AddAtSuccessor)
+        .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
+          carried.flatMap(found => peano.fact(name).map(found :+ _))
+        }
+        .flatMap(Rewrite.Rule.all(logic, _))
+      unfoldedValue <- Term.destEq(unfolded.conclusion).map(_._2)
+        .toRight(NotOfForm("an equation", unfolded.conclusion))
+      lifted <- Rewrite.rewrite(successors, unfoldedValue)
+
+      // `SUC (SUC (P + P)) = SUC (SUC R)`, by congruence under the two successors rather than by
+      // a rewrite: the left side repeats `t` and `p`, and a rule read from it would be a
+      // non-linear pattern.
+      atComponents <- rules.specAll(pairDoubled, List(t, p))
+      liftedValue <- Term.destEq(lifted.conclusion).map(_._2)
+        .toRight(NotOfForm("an equation", lifted.conclusion))
+      successor <- liftedValue match {
+        case App(head, _) => Right(head)
+        case other => Left(NotOfForm("a successor", other))
+      }
+      replaced <- Conv.apTerm(successor, atComponents).flatMap(Conv.apTerm(successor, _))
+
+      proved <- Conv.trans(unfolded, lifted).flatMap(Conv.trans(_, replaced))
+      general <- rules.gen(p, proved).flatMap(rules.gen(t, _))
+      result <- statements.checked(CodeDoubled, general)
     } yield result
   }
 

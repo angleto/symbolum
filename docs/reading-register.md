@@ -184,7 +184,7 @@ together they state a complete ordered field, which no derivation can.
 | `law LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `law COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
-## The definitions (212)
+## The definitions (214)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -259,6 +259,7 @@ axiom mentioning it means.
 | `definition NUM_CHOOSE` | NUM_CHOOSE = select (\f:num -> num -> num. f 0 = (\n:num. COND (n = 0) (SUC 0) 0) /\ (!n:num. f (SUC n) = (\m:num. COND (m = 0) (SUC 0) (f n (PRE m) + f n m)))) | **NOT READ** |  |  |
 | `definition NUM_CLOSED` | NUM_CLOSED = \n:num. !m:num. ~(NUM_FREE_TERM m n) | **NOT READ** |  |  |
 | `definition NUM_CODE` | NUM_CODE = \n:num. \m:num. SUC (NUM_PAIR n m) | **NOT READ** |  |  |
+| `definition NUM_CODE_GRAPH` | NUM_CODE_GRAPH = NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))) (NUM_CODE 2 (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2)))))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 1)))))))) | **NOT READ** |  |  |
 | `definition NUM_CONG` | NUM_CONG = \n:num. \m:num. \k:num. ?i:num. ?j:num. m + n * i = k + n * j | **NOT READ** |  |  |
 | `definition NUM_DIV` | NUM_DIV = \n:num. \m:num. select (\k:num. (?i:num. n = m * k + i /\ i < m) \/ m = 0 /\ k = 0) | **NOT READ** |  |  |
 | `definition NUM_DIVIDES` | NUM_DIVIDES = \n:num. \m:num. ?k:num. m = n * k | **NOT READ** |  |  |
@@ -284,6 +285,7 @@ axiom mentioning it means.
 | `definition NUM_OR` | NUM_OR = \n:num. \m:num. NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 n) m) | **NOT READ** |  |  |
 | `definition NUM_PA` | NUM_PA = \n:num. n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0))))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1)))))))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0)))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))))))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 1 0)))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))) (NUM_CODE 0 0)))))))) \/ (?m:num. ?k:num. NUM_FORM k /\ n = NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM m (NUM_CODE 1 0) k) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR m (NUM_CODE 7 (NUM_PAIR k (NUM_SUBST_FORM m (NUM_CODE 2 (NUM_CODE 0 m)) k))))) (NUM_CODE 8 (NUM_PAIR m k)))))) | **NOT READ** |  |  |
 | `definition NUM_PAIR` | NUM_PAIR = \n:num. \m:num. NUM_TRI (n + m) + n | **NOT READ** |  |  |
+| `definition NUM_PAIR_GRAPH` | NUM_PAIR_GRAPH = NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2)))))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 1)))))) | **NOT READ** |  |  |
 | `definition NUM_PAYLOAD` | NUM_PAYLOAD = \n:num. select (\m:num. ?k:num. n = NUM_CODE k m) | **NOT READ** |  |  |
 | `definition NUM_POW` | NUM_POW = \n:num. select (\f:num -> num. f 0 = SUC 0 /\ (!m:num. f (SUC m) = f m * n)) | **NOT READ** |  |  |
 | `definition NUM_PRIME` | NUM_PRIME = \n:num. SUC 0 < n /\ (!m:num. NUM_DIVIDES m n ==> m = SUC 0 \/ m = n) | **NOT READ** |  |  |
