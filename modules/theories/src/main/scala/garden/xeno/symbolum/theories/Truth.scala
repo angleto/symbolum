@@ -390,6 +390,62 @@ object Truth {
   val ProvesBounded: String = "NUM_PROV_BOUNDED"
 
   /**
+   * `NUM_SIGMA n p`: `p` is `n` unbounded existentials in front of a formula of the bounded class.
+   *
+   * A primitive recursion on `n` rather than a recursion on the code: the class is what a prefix of
+   * existentials does to [[BoundedName]], and the induction that consumes it goes down the prefix
+   * one quantifier at a time. The formula at the bottom is asked to be a formula as well as
+   * bounded, so that every member of the class is a formula ([[SigmaForm]]) without an inversion
+   * of `NUM_FORM` under the existential. A sentence is Sigma-1 when it is in the class at some
+   * `n`, which is the form the decoding of provability is written in.
+   */
+  val SigmaName: String = "NUM_SIGMA"
+
+  /** `|- !p. NUM_SIGMA 0 p = NUM_FORM p /\ NUM_BOUNDED p`. */
+  val SigmaZero: String = "NUM_SIGMA_ZERO"
+
+  /** `|- !n p. NUM_SIGMA (SUC n) p = ?j q. p = NUM_EXISTS j q /\ NUM_SIGMA n q`. */
+  val SigmaSuccessor: String = "NUM_SIGMA_SUC"
+
+  /** `|- !n p. NUM_SIGMA n p ==> NUM_FORM p`, by induction on `n` with `NUM_FORM_EXISTS`. */
+  val SigmaForm: String = "NUM_SIGMA_FORM"
+
+  /**
+   * `|- !n x k p. NUM_SIGMA n p ==> NUM_SIGMA n (p[numeral k/x])`
+   *
+   * The class keeps its members when a numeral is put for a variable, with the same number of
+   * existentials. By induction on `n`: at zero it is [[BoundedAtNumeral]] and the substitution
+   * keeping formulas; at an existential over `x` the substitution stops, and over another index it
+   * goes under and the hypothesis takes the body.
+   */
+  val SigmaAtNumeral: String = "NUM_SIGMA_SUBST_NUMERAL"
+
+  /**
+   * `|- !e j p. NUM_TRUE (NUM_EXISTS j p) e = ?n. NUM_TRUE p e[j := n]`
+   *
+   * The existential is the negation of a universal of a negation, and its truth is read through
+   * the three clauses and the classical equivalence of `~!n. ~P n` with `?n. P n`.
+   */
+  val TrueExists: String = "NUM_TRUE_EXISTS"
+
+  /**
+   * `|- !n e p. NUM_SIGMA n p ==> (!w. ~(NUM_FREE_FORM w p)) ==> NUM_TRUE p e ==> NUM_PROV p`
+   *
+   * Sigma-1 completeness: PA proves every true closed sentence of the class. Only the true half,
+   * unlike [[ProvesBounded]]: a false existential has no witness to refute, and refuting it would
+   * need every instance refuted, of which there are infinitely many.
+   *
+   * By induction on `n`, at a fixed environment. At zero the sentence is a closed formula of the
+   * bounded class and [[ProvesBounded]] proves it. At `SUC n` it is `NUM_EXISTS j q`, true, so
+   * [[TrueExists]] gives a value `m` at which `q` is true with `j` sent to it, which is the truth of
+   * the instance `q[numeral m/j]` (`NUM_TRUE_SUBST_NUMERAL`). The instance is in the class at `n`
+   * ([[SigmaAtNumeral]]) and closed, by [[FreeFormAtNumeral]] and the existential binding `j`, so
+   * the hypothesis proves it, and `NUM_PROV_EXISTS_INTRO` introduces the existential at the
+   * numeral.
+   */
+  val ProvesSigma: String = "NUM_PROV_SIGMA"
+
+  /**
    * The step of the value, as text.
    *
    * Tag `1` has no branch: zero falls through to the last one with every code that is not a term,
@@ -536,7 +592,19 @@ object Truth {
         "(!m:num. m < n ==> NUM_TRUE p (\\j:num. COND (j = i) m (e j)))"),
     ProvesBounded ->
       ("!e:num -> num. !p:num. NUM_FORM p ==> NUM_BOUNDED p ==> (!w:num. ~(NUM_FREE_FORM w p)) ==> " +
-        "(NUM_TRUE p e ==> NUM_PROV p) /\\ (~(NUM_TRUE p e) ==> NUM_PROV (NUM_CODE 6 p))")
+        "(NUM_TRUE p e ==> NUM_PROV p) /\\ (~(NUM_TRUE p e) ==> NUM_PROV (NUM_CODE 6 p))"),
+    SigmaZero -> "!p:num. NUM_SIGMA ZERO p = (NUM_FORM p /\\ NUM_BOUNDED p)",
+    SigmaSuccessor ->
+      "!n:num p:num. NUM_SIGMA (SUC n) p = (?j:num q:num. p = NUM_EXISTS j q /\\ NUM_SIGMA n q)",
+    SigmaForm -> "!n:num p:num. NUM_SIGMA n p ==> NUM_FORM p",
+    SigmaAtNumeral ->
+      "!n:num x:num k:num p:num. NUM_SIGMA n p ==> NUM_SIGMA n (NUM_SUBST_FORM x (NUM_NUMERAL k) p)",
+    TrueExists ->
+      ("!e:num -> num. !j:num. !p:num. " +
+        "NUM_TRUE (NUM_EXISTS j p) e = (?n:num. NUM_TRUE p (\\k:num. COND (k = j) n (e k)))"),
+    ProvesSigma ->
+      ("!n:num e:num -> num p:num. NUM_SIGMA n p ==> (!w:num. ~(NUM_FREE_FORM w p)) ==> " +
+        "NUM_TRUE p e ==> NUM_PROV p")
   )
 
   /** The step of the ground predicate, as text, with the guards the truth's step has. */
@@ -644,8 +712,19 @@ object Truth {
         RankName, RankStepText, numbers, Nil)
       (rankTheory, rankDefinition, rankNamed) = withRank
 
-      graphBody <- Parser.term(rankTheory, provability.notation, TriangleGraphText, numbers)
-      withGraph <- LogicError.lift(Kernel.defineConstant(rankTheory, TriangleGraphName, graphBody))
+      // The Sigma-1 class, a primitive recursion on the number of existentials in front.
+      rankLogic <- numbering.logic.over(rankTheory)
+      onNumbers <- naturals.recursion
+      withSigma <- Recursion.define(
+        rankLogic, naturals, rankTheory, provability.notation, onNumbers, SigmaName,
+        Type.fun(numbers, Type.Bool),
+        "\\p:num. NUM_FORM p /\\ NUM_BOUNDED p",
+        "\\v:num -> bool. \\i:num. \\p:num. ?j:num q:num. p = NUM_EXISTS j q /\\ v q",
+        None)
+      (sigmaTheory, sigmaDefinition, sigmaAtZero, sigmaAtSuccessor) = withSigma
+
+      graphBody <- Parser.term(sigmaTheory, provability.notation, TriangleGraphText, numbers)
+      withGraph <- LogicError.lift(Kernel.defineConstant(sigmaTheory, TriangleGraphName, graphBody))
       (theory, graphDefinition) = withGraph
       logic <- numbering.logic.over(theory)
 
@@ -699,6 +778,8 @@ object Truth {
       rankNegation <- clauses.plain(rankNamed, RankNegation, numbers)
       rankImplication <- clauses.plain(rankNamed, RankImplication, numbers)
       rankUniversal <- clauses.plain(rankNamed, RankUniversal, numbers)
+      sigmaZero <- sigmaClause(logic, statements, SigmaZero, sigmaAtZero)
+      sigmaSuccessor <- sigmaClause(logic, statements, SigmaSuccessor, sigmaAtSuccessor)
       modusPonens <- provability.fact(Provability.ModusPonens)
       doubleNegation <- naturals.classical.fact(Classical.DoubleNegation)
 
@@ -715,7 +796,8 @@ object Truth {
           modusPonens, doubleNegation, naturals.classical, valueVariable, valueNumeral, trueUniversal),
         Bounding(boundedEquality, boundedNegation, boundedImplication, boundedAllBelow, boundedUniversal,
           successor),
-        Ranking(rankEquality, rankNegation, rankImplication, rankUniversal))
+        Ranking(rankEquality, rankNegation, rankImplication, rankUniversal),
+        Sigmas(sigmaZero, sigmaSuccessor))
     } yield new Truth(
       language,
       theory,
@@ -727,6 +809,7 @@ object Truth {
         GroundName -> groundDefinition,
         BoundedName -> boundedDefinition,
         RankName -> rankDefinition,
+        SigmaName -> sigmaDefinition,
         TriangleGraphName -> graphDefinition
       ),
       Map(
@@ -754,9 +837,32 @@ object Truth {
         RankEquality -> rankEquality,
         RankNegation -> rankNegation,
         RankImplication -> rankImplication,
-        RankUniversal -> rankUniversal
+        RankUniversal -> rankUniversal,
+        SigmaZero -> sigmaZero,
+        SigmaSuccessor -> sigmaSuccessor
       ) ++ evaluation
     )
+  }
+
+  /**
+   * A clause of [[SigmaName]] at a code, from the equation `Recursion.define` hands back for the
+   * whole predicate: specialised at its leading quantifiers, applied to `p`, and reduced, then
+   * compared with the statement published.
+   */
+  private def sigmaClause(logic: Logic, statements: Statements, name: String, equation: Kernel.Thm)
+    : Either[LogicError, Kernel.Thm] = {
+    for {
+      stripped <- Logic.stripForall(equation.conclusion)
+      binders = stripped._1.toList
+      p = Conv.freshVariable("p", TyApp(Natural.TypeName, Nil), binders.toSet)
+      opened <- logic.rules.specAll(equation, binders)
+      applied <- Conv.apThm(opened, p)
+      sides <- Term.destEq(applied.conclusion).toRight(NotOfForm("an equation", applied.conclusion))
+      reduced <- Conv.betaNormalise(sides._2)
+      clause <- Conv.trans(applied, reduced)
+      closed <- logic.rules.genAll(clause, binders :+ p)
+      checked <- statements.checked(name, closed)
+    } yield checked
   }
 
   /** The published statements, parsed against the widest theory of this development. */
@@ -1268,6 +1374,9 @@ object Truth {
     universal: Kernel.Thm
   )
 
+  /** The two clauses of [[SigmaName]], which the Sigma-1 facts read. */
+  private final case class Sigmas(zero: Kernel.Thm, successor: Kernel.Thm)
+
   private object Evaluation {
 
     def of(
@@ -1286,7 +1395,8 @@ object Truth {
       trueNegation: Kernel.Thm,
       grounding: Grounding,
       bounding: Bounding,
-      ranking: Ranking
+      ranking: Ranking,
+      sigmas: Sigmas
     ): Either[LogicError, Map[String, Kernel.Thm]] =
       try {
         val built = new Evaluation(
@@ -1308,6 +1418,11 @@ object Truth {
           allBelowTruth <- statements.checked(TrueAllBelowNumeral, built.trueAllBelowNumeral(grounding, lessTruth))
           complete <- statements.checked(ProvesBounded, built.provesBounded(grounding, bounding, ranking, equation,
             denial, parts, truthAt, boundedAt, rankAt, freeFormAt, allBelowTruth))
+          sigmaForm <- statements.checked(SigmaForm, built.sigmaForm(sigmas))
+          sigmaAt <- statements.checked(SigmaAtNumeral, built.sigmaAtNumeral(grounding, sigmas, boundedAt))
+          existsTruth <- statements.checked(TrueExists, built.trueExists(grounding))
+          sigmaComplete <- statements.checked(ProvesSigma, built.provesSigma(grounding, sigmas, sigmaForm, sigmaAt,
+            existsTruth, truthAt, freeFormAt, complete))
         } yield Map(
           ProvesValue -> value,
           ProvesTrueEquation -> equation,
@@ -1322,7 +1437,11 @@ object Truth {
           FreeFormAtNumeral -> freeFormAt,
           TrueLessNumeral -> lessTruth,
           TrueAllBelowNumeral -> allBelowTruth,
-          ProvesBounded -> complete)
+          ProvesBounded -> complete,
+          SigmaForm -> sigmaForm,
+          SigmaAtNumeral -> sigmaAt,
+          TrueExists -> existsTruth,
+          ProvesSigma -> sigmaComplete)
       } catch { case refused: RefusedHere => Left(refused.error) }
   }
 
@@ -3195,6 +3314,245 @@ object Truth {
         force(Conv.apTerm(headOf(headOf(imp(applied(truth, List(less, em)), applied(truth, List(p, em))))), bound).flatMap(Conv.apThm(_, applied(truth, List(p, em))))))
       val result = chained(opening, force(LogicError.lift(Kernel.abs(m, body)).flatMap(Conv.apTerm(universals, _))))
       force(rules.disch(apartTerm, result).flatMap(rules.genAll(_, List(e, z, i, n, p))))
+    }
+
+    /* --------------------------------------------------------- the Sigma-1 class and its truth */
+
+    private val sigmaOf = constant(SigmaName, Type.fun(numbers, property))
+    private def sigma(n: Term, s: Term): Term = applied(sigmaOf, List(n, s))
+    private val zeroNumber = constant(Natural.NumberZero, numbers)
+    private val existsOf = constant(Language.ExistsName, arithmetic)
+    private def exists(j: Term, s: Term): Term = applied(existsOf, List(j, s))
+
+    /** `!n. claim n`, by induction on `n` from the case at zero and the step `!n. claim n ==> claim (SUC n)`. */
+    private def inducted(n: FVar, claim: Term => Term)(base: Kernel.Thm, step: Kernel.Thm): Kernel.Thm = {
+      val induction = force(numbering.peano.naturals.fact(Natural.Induction))
+      val predicate = force(LogicError.lift(Term.abs(n, claim(n))))
+      val instance = force(rules.spec(predicate, induction).flatMap(theorem =>
+        Conv.betaNormalise(theorem.conclusion).flatMap(reduced => LogicError.lift(Kernel.eqMp(reduced, theorem)))))
+      force(rules.mp(instance, force(rules.conjIntro(base, step))))
+    }
+
+    /** `goal`, a chain of existentials, from its body at the witnesses in order. */
+    private def witnessed(goal: Term, witnesses: List[Term], proved: Kernel.Thm): Kernel.Thm = witnesses match {
+      case Nil => proved
+      case witness :: rest =>
+        val predicate = logic.destExistsPredicate(goal)
+          .getOrElse(throw new RefusedHere(NotOfForm("an existential", goal)))
+        val inner = sides(force(LogicError.lift(Term.app(predicate, witness)).flatMap(Conv.betaNormalise)))._2
+        introduced(goal, witness, witnessed(inner, rest, proved))
+    }
+
+    /**
+     * What `NUM_SIGMA (SUC n) s` holds, opened: `proceed` is handed the existential's index `j`, its
+     * body `q`, `s = NUM_EXISTS j q` and `NUM_SIGMA n q`.
+     */
+    private def existentialOf(sig: Sigmas, n: Term, s: Term, held: Kernel.Thm, avoid: Set[FVar])(
+      proceed: (FVar, FVar, Kernel.Thm, Kernel.Thm) => Kernel.Thm
+    ): Kernel.Thm = {
+      val opening = unfold(apply(sig.successor, List(n, s)), held)
+      opened(opening, "j", avoid) { (j, withJ) =>
+        opened(withJ, "q", avoid + j) { (q, both) =>
+          proceed(j, q, force(rules.conjElim1(both)), force(rules.conjElim2(both)))
+        }
+      }
+    }
+
+    /** `NUM_SIGMA (SUC n) (NUM_EXISTS j q)` from `NUM_SIGMA n q`. */
+    private def existentialIn(sig: Sigmas, n: Term, j: Term, q: Term, held: Kernel.Thm): Kernel.Thm = {
+      val shape = exists(j, q)
+      val clause = apply(sig.successor, List(n, shape))
+      fold(clause, witnessed(sides(clause)._2, List(j, q), force(rules.conjIntro(refl(shape), held))))
+    }
+
+    /** [[SigmaForm]]: down the prefix, each existential of a formula being a formula. */
+    def sigmaForm(sig: Sigmas): Kernel.Thm = {
+      val n = Term.variable("n", numbers)
+      val p = Term.variable("p", numbers)
+      def claim(at: Term): Term = force(logic.mkForall(p, imp(sigma(at, p), isFormula(p))))
+
+      val base = {
+        val held = assumed(sigma(zeroNumber, p))
+        val form = force(rules.conjElim1(unfold(apply(sig.zero, List(p)), held)))
+        force(rules.disch(sigma(zeroNumber, p), form).flatMap(rules.gen(p, _)))
+      }
+      val step = {
+        val hypothesis = assumed(claim(n))
+        val above = sigma(applied(successorConstant, List(n)), p)
+        val form = existentialOf(sig, n, p, assumed(above), Set(n, p)) { (j, q, pIs, qSigma) =>
+          val qForm = apply(hypothesis, List(q), qSigma)
+          val whole = apply(languageFact(Language.ExistsFormula), List(j, q), qForm)
+          moved(isFormula, force(Conv.sym(pIs)), whole)
+        }
+        val atSuccessor = force(rules.disch(above, form).flatMap(rules.gen(p, _)))
+        force(rules.disch(claim(n), atSuccessor).flatMap(rules.gen(n, _)))
+      }
+      inducted(n, claim)(base, step)
+    }
+
+    /** [[SigmaAtNumeral]]: down the prefix, the substitution stopping at an existential over `x`. */
+    def sigmaAtNumeral(g: Grounding, sig: Sigmas, boundedAt: Kernel.Thm): Kernel.Thm = {
+      val conditions = new Conditions(g)
+      import conditions.*
+      val n = Term.variable("n", numbers)
+      val x = Term.variable("x", numbers)
+      val k = Term.variable("k", numbers)
+      val p = Term.variable("p", numbers)
+      val nk = numeral(k)
+      def substituted(s: Term): Term = applied(formulaSubstituting, List(x, nk, s))
+      def claim(at: Term): Term =
+        force(logic.mkForall(x, force(logic.mkForall(k, force(logic.mkForall(p,
+          imp(sigma(at, p), sigma(at, substituted(p)))))))))
+
+      val base = {
+        val held = assumed(sigma(zeroNumber, p))
+        val both = unfold(apply(sig.zero, List(p)), held)
+        val form = force(rules.conjElim1(both))
+        val keptForm = apply(languageFact(Language.FormulaSubstituteKeepsFormulas), List(x, nk, p),
+          form, numeralTerm(k))
+        val keptBounded = apply(boundedAt, List(x, k, p), form, force(rules.conjElim2(both)))
+        val kept = fold(apply(sig.zero, List(substituted(p))), force(rules.conjIntro(keptForm, keptBounded)))
+        force(rules.disch(sigma(zeroNumber, p), kept).flatMap(rules.genAll(_, List(x, k, p))))
+      }
+      val step = {
+        val hypothesis = assumed(claim(n))
+        val successorN = applied(successorConstant, List(n))
+        val above = sigma(successorN, p)
+        val kept = existentialOf(sig, n, p, assumed(above), Set(n, x, k, p)) { (j, q, pIs, qSigma) =>
+          val shape = exists(j, q)
+          val through = apply(languageFact(Language.ExistsSubstitute), List(x, nk, j, q))
+          // NUM_SUBST_FORM x nk (NUM_EXISTS j q) = COND (j = x) (NUM_EXISTS j q) (NUM_EXISTS j (subst q))
+          val atShape = split(equal(j, x))(
+            isX => {
+              val stopped = chained(through, taken(isX, shape, exists(j, substituted(q))))
+              moved(t => sigma(successorN, t), force(Conv.sym(stopped)), existentialIn(sig, n, j, q, qSigma))
+            },
+            notX => {
+              val under = chained(through, passed(notX, shape, exists(j, substituted(q))))
+              val inner = apply(hypothesis, List(x, k, q), qSigma)
+              moved(t => sigma(successorN, t), force(Conv.sym(under)),
+                existentialIn(sig, n, j, substituted(q), inner))
+            })
+          moved(t => sigma(successorN, substituted(t)), force(Conv.sym(pIs)), atShape)
+        }
+        val atSuccessor = force(rules.disch(above, kept).flatMap(rules.genAll(_, List(x, k, p))))
+        force(rules.disch(claim(n), atSuccessor).flatMap(rules.gen(n, _)))
+      }
+      inducted(n, claim)(base, step)
+    }
+
+    /** [[TrueExists]]: the existential's code read through its three clauses, then classically. */
+    def trueExists(g: Grounding): Kernel.Thm = {
+      val e = environment
+      val j = Term.variable("j", numbers)
+      val p = Term.variable("p", numbers)
+      val unfolding = apply(languageFact(Language.ExistsCases), List(j, p))
+      val universal = arguments(sides(unfolding)._2)._2 // !v_j. ~p, coded
+      val outer = chained(force(Conv.apTerm(truth, unfolding).flatMap(Conv.apThm(_, e))),
+        apply(trueNegation, List(e, universal))) // = ~TRUE (!v_j. ~p) e
+
+      val m = Conv.freshVariable("m", numbers, Set(e, j, p))
+      val em = updated(e, j, m)
+      val atM = apply(trueNegation, List(em, p)) // TRUE ~p e[j := m] = ~TRUE p e[j := m]
+      val quantified = chained(apply(g.trueUniversal, List(e, j, code(6, p))),
+        force(LogicError.lift(Kernel.abs(m, atM)).flatMap(Conv.apTerm(universals, _))))
+      val read = chained(outer, force(Conv.apTerm(headOf(denial(applied(truth, List(universal, e)))), quantified)))
+      val reading = sides(read)._2 // ~(!m. ~TRUE p e[j := m])
+
+      val holds = applied(truth, List(p, em))
+      val target = force(logic.mkExists(m, holds))
+      val backward = {
+        val denied = force(logic.destNot(reading).toRight(NotOfForm("a negation", reading)))
+        val absurd = opened(assumed(target), "m", Set(e, j, p)) { (w, atW) =>
+          force(rules.spec(w, assumed(denied)).flatMap(rules.notElim(_, atW)))
+        }
+        force(rules.notIntro(denied, absurd)) // under the existential: the reading
+      }
+      val forward = force(g.classical.cases(target, assumed(target), {
+        val never = assumed(denial(target))
+        val w = Conv.freshVariable("w", numbers, Set(e, j, p, m))
+        val atW = applied(truth, List(p, updated(e, j, w)))
+        val refuted = force(rules.notElim(never, introduced(target, w, assumed(atW))).flatMap(rules.notIntro(atW, _)))
+        val everywhere = force(rules.gen(w, refuted))
+        force(rules.notElim(assumed(reading), everywhere).flatMap(rules.falsityElim(target, _)))
+      }))
+      val result = chained(read, Kernel.deductAntisym(backward, forward))
+      force(rules.genAll(result, List(e, j, p)))
+    }
+
+    /** [[ProvesSigma]]: down the prefix at a fixed environment, a witness for each existential. */
+    def provesSigma(
+      g: Grounding,
+      sig: Sigmas,
+      sigmaIsForm: Kernel.Thm,
+      sigmaAt: Kernel.Thm,
+      existsTruth: Kernel.Thm,
+      truthAtNumeral: Kernel.Thm,
+      freeFormAt: Kernel.Thm,
+      complete: Kernel.Thm
+    ): Kernel.Thm = {
+      val propositions = new Propositions(g)
+      import propositions.*
+      val e = environment
+      val n = Term.variable("n", numbers)
+      val p = Term.variable("p", numbers)
+      val w = Term.variable("w", numbers)
+      def closed(s: Term): Term = force(logic.mkForall(w, denial(freeForm(w, s))))
+      def truthAt(s: Term): Term = applied(truth, List(s, e))
+      def claimFor(at: Term, s: Term): Term = imp(sigma(at, s), imp(closed(s), imp(truthAt(s), provable(s))))
+      def claim(at: Term): Term = force(logic.mkForall(p, claimFor(at, p)))
+      def discharged(at: Term, s: Term, proved: Kernel.Thm): Kernel.Thm =
+        force(rules.disch(truthAt(s), proved).flatMap(rules.disch(closed(s), _)).flatMap(rules.disch(sigma(at, s), _)))
+
+      val base = {
+        val both = unfold(apply(sig.zero, List(p)), assumed(sigma(zeroNumber, p)))
+        val decided = apply(complete, List(e, p), force(rules.conjElim1(both)), force(rules.conjElim2(both)),
+          assumed(closed(p)))
+        val proved = force(rules.mp(force(rules.conjElim1(decided)), assumed(truthAt(p))))
+        force(rules.gen(p, discharged(zeroNumber, p, proved)))
+      }
+      val step = {
+        val hypothesis = assumed(claim(n))
+        val successorN = applied(successorConstant, List(n))
+        val pClosed = assumed(closed(p))
+        val proved = existentialOf(sig, n, p, assumed(sigma(successorN, p)), Set(e, n, p)) { (j, q, pIs, qSigma) =>
+          val qForm = apply(sigmaIsForm, List(n, q), qSigma)
+          val shape = exists(j, q)
+          val back = force(Conv.sym(pIs))
+          val shapeTrue = moved(truthAt, pIs, assumed(truthAt(p)))
+          val witnesses = unfold(apply(existsTruth, List(e, j, q)), shapeTrue)
+          opened(witnesses, "m", Set(e, n, p, j, q)) { (m, atM) =>
+            val instance = applied(formulaSubstituting, List(j, numeral(m), q))
+            val instanceTrue = fold(force(rules.specAll(truthAtNumeral, List(j, m, q)).flatMap(rules.mp(_, qForm))
+              .flatMap(rules.spec(e, _))), atM)
+            val instanceSigma = apply(sigmaAt, List(n, j, m, q), qSigma)
+            val instanceClosed = {
+              val f = Conv.freshVariable("f", numbers, Set(e, n, p, j, q, m))
+              val premise = freeForm(f, instance)
+              val survived = force(rules.specAll(freeFormAt, List(j, m, q)).flatMap(rules.mp(_, qForm))
+                .flatMap(rules.spec(f, _)).flatMap(rules.mp(_, assumed(premise)))) // free f q /\ ~(f = j)
+              val (l, r) = Term.destEq(logic.destNot(force(rules.conjElim2(survived)).conclusion).get).get
+              val flipped = equal(r, l)
+              val jNotF = force(rules.notElim(force(rules.conjElim2(survived)), force(Conv.sym(assumed(flipped))))
+                .flatMap(rules.notIntro(flipped, _)))
+              val clause = apply(languageFact(Language.ExistsFree), List(f, j, q))
+              val (_, never, inside) = branches(sides(clause)._2)
+              val atShape = fold(chained(clause, passedAt(jNotF, never, inside)), force(rules.conjElim1(survived)))
+              val atWhole = moved(t => freeForm(f, t), back, atShape)
+              force(rules.spec(f, pClosed).flatMap(rules.notElim(_, atWhole)).flatMap(rules.notIntro(premise, _))
+                .flatMap(rules.gen(f, _)))
+            }
+            val instanceProved = apply(hypothesis, List(instance), instanceSigma, instanceClosed, instanceTrue)
+            val introducedShape = apply(deductionFact(Deduction.ExistentialIntroduction), List(j, numeral(m), q),
+              qForm, numeralTerm(m), numeralClosed(m), instanceProved)
+            moved(provable, back, introducedShape)
+          }
+        }
+        val atSuccessor = force(rules.gen(p, discharged(successorN, p, proved)))
+        force(rules.disch(claim(n), atSuccessor).flatMap(rules.gen(n, _)))
+      }
+      val all = inducted(n, claim)(base, step)
+      force(rules.spec(n, all).flatMap(rules.spec(p, _)).flatMap(rules.genAll(_, List(n, e, p))))
     }
 
     /* --------------------------------------------- completeness for the closed bounded formulas */

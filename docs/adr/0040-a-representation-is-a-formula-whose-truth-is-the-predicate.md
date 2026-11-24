@@ -261,6 +261,13 @@ above is used once more there: a closed universal of the class has a numeral for
 because a variable bound would be free in it, so the two facts of `Deduction` about a universal
 below a numeral are the only quantifier facts the induction reads. The two about an existential
 below are not read at all, the class writing that existential as a negated universal.
-What remains of completeness is its Sigma-1 form, a true sentence with unbounded existentials in
-front of a bounded body: a witness for each, the body at the witnesses closed and bounded, and
-`NUM_PROV_EXISTS_INTRO` once per quantifier.
+Its Sigma-1 form is `NUM_PROV_SIGMA`, of 2026-11-23: PA proves every true closed sentence of
+`NUM_SIGMA n`, which is `n` unbounded existentials in front of a formula of the class. The class is
+a primitive recursion on `n` rather than on the code, so the induction goes down the prefix one
+existential at a time: `NUM_TRUE_EXISTS` gives a witness `m` for the true existential, the instance
+at the numeral of `m` is true, in the class with one existential fewer by
+`NUM_SIGMA_SUBST_NUMERAL`, and closed, and `NUM_PROV_EXISTS_INTRO` introduces the existential from
+its proof. Only the true half holds:
+refuting a false existential would ask for every instance refuted, of which there are infinitely
+many. The bound written as a term, which the decision above gave up, is in this class as
+`?y. y = t /\ !i. i < y ==> p`, a variable bound being allowed.

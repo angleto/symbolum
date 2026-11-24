@@ -512,7 +512,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // predicted before the run: one antecedent each on the two free-variable facts, whose second
     // antecedent sits under `!w` where the generator stops peeling, one each on the two truth
     // facts, and three on `NUM_PROV_BOUNDED`. Plus seven.
-    proposals.size shouldBe 1072
+    // 1077 with Sigma-1 completeness, 2026-11-23, card `4102f131`, predicted before the run: one
+    // antecedent each on `NUM_SIGMA_FORM` and `NUM_SIGMA_SUBST_NUMERAL` and three on
+    // `NUM_PROV_SIGMA`, the two clauses and `NUM_TRUE_EXISTS` being equations. Plus five.
+    proposals.size shouldBe 1077
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1587,7 +1590,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_BOUNDED` or `NUM_SUBST_FORM` that no procedure reads. Plus three.
     // 884 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`, read off
     // the run and not predicted: one of the seven new weakenings. Plus one.
-    open shouldBe 884
+    // 885 with completeness for the closed Sigma-1 sentences, 2026-11-24, card `4102f131`, read
+    // off the run and not predicted: one of the five new weakenings. Plus one.
+    open shouldBe 885
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2039,7 +2044,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 276 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`: the six
     // of the seven new weakenings that `open` above did not take, read off a second run because
     // the first stopped at `open`. One there and six here account for all seven. Plus six.
-    unreadable shouldBe 276
+    // 280 with completeness for the closed Sigma-1 sentences, 2026-11-24, card `4102f131`: the
+    // four of the five new weakenings that `open` above did not take, read off a second run
+    // because the first stopped at `open`. One there and four here account for all five. Plus
+    // four.
+    unreadable shouldBe 280
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

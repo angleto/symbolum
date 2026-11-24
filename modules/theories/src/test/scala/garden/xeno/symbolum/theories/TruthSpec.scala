@@ -77,7 +77,7 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     val below = chain.provability.theory
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
-      Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName, Truth.RankName,
+      Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName, Truth.RankName, Truth.SigmaName,
         Truth.TriangleGraphName)
     truth.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
@@ -502,6 +502,93 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     val proved = force(rules.conjElim1(decided).flatMap(rules.mp(_, isTrue)))
     proved.hypotheses shouldBe empty
     proved.conclusion shouldBe holds("NUM_PROV", formula)
+  }
+
+  "A closed Sigma-1 sentence" should "be provable in PA when it is true, with nothing assumed" in {
+    // `?v_0. v_0 = S 0`, one existential over an equation. In the class at one existential by its two
+    // clauses, closed by walking the code, and true at the witness 1. What comes out is PA's proof
+    // of a sentence with an unbounded quantifier, owing nothing: the step of the induction goes to
+    // the instance `1 = S 0`, which the bounded completeness proves, and introduces the existential.
+    val logic = truth.logic
+    val language = chain.language
+    val zero = term("0:num")
+    val variable = term("NUM_CODE 0 0")
+    val one = term("NUM_CODE 2 (NUM_CODE 1 0)")
+    val body = term("NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 1 0)))")
+    val sentence = term("NUM_EXISTS 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 1 0))))")
+    val count = term("SUC ZERO")
+    def holds(predicate: String, subject: Term): Term =
+      force(LogicError.lift(Term.app(term(predicate), subject)))
+
+    val bodyIsFormula = force(for {
+      atZero <- language.fact(Language.TermVariable).flatMap(rules.spec(zero, _))
+      zeroTerm <- language.fact(Language.TermZero)
+      oneTerm <- language.fact(Language.TermSuccessor).flatMap(rules.spec(term("NUM_CODE 1 0"), _))
+        .flatMap(rules.mp(_, zeroTerm))
+      out <- language.fact(Language.FormulaEquality).flatMap(rules.specAll(_, List(variable, one)))
+        .flatMap(rules.mp(_, atZero)).flatMap(rules.mp(_, oneTerm))
+    } yield out)
+    val bodyBounded = force(rules.specAll(fact(Truth.BoundedEquality), List(variable, one))
+      .flatMap(rules.eqTruthElim))
+    val bottom = force(rules.conjIntro(bodyIsFormula, bodyBounded).flatMap(both =>
+      rules.spec(body, fact(Truth.SigmaZero)).flatMap(Conv.sym)
+        .flatMap(back => LogicError.lift(Kernel.eqMp(back, both)))))
+    bottom.conclusion shouldBe proposition(s"NUM_SIGMA ZERO ($body)")
+
+    val clause = force(rules.specAll(fact(Truth.SigmaSuccessor), List(term("ZERO"), sentence)))
+    val (_, witnessed) = force(Term.destEq(clause.conclusion).toRight("an equation"))
+    val inClass = force(for {
+      outer <- logic.destExistsPredicate(witnessed).toRight(NotOfForm("an existential", witnessed))
+      atIndex <- LogicError.lift(Term.app(outer, zero)).flatMap(Conv.betaNormalise)
+      inner = force(Term.destEq(atIndex.conclusion).map(_._2).toRight("an equation"))
+      innerPredicate <- logic.destExistsPredicate(inner).toRight(NotOfForm("an existential", inner))
+      both <- rules.conjIntro(Kernel.refl(sentence), bottom)
+      atBody <- rules.existsIntro(innerPredicate, body, both)
+      atBoth <- rules.existsIntro(outer, zero, atBody)
+      back <- Conv.sym(clause)
+      out <- LogicError.lift(Kernel.eqMp(back, atBoth))
+    } yield out)
+    inClass.conclusion shouldBe holds("NUM_SIGMA (SUC ZERO)", sentence)
+
+    // closed: the abbreviation unfolded into the code it names, which the walk reads
+    val unfolding = force(language.fact(Language.ExistsCases).flatMap(rules.specAll(_, List(zero, body))))
+    val raw = force(Term.destEq(unfolding.conclusion).map(_._2).toRight("an equation"))
+    val rawClosed = force(language.notFreeIn(raw))
+    val negationHead = force(logic.mkNot(proposition("T"))) match {
+      case App(head, _) => head
+      case other => fail(s"not a negation: $other")
+    }
+    val isClosed = force(for {
+      back <- Conv.sym(unfolding)
+      w = Term.variable("w", numbers)
+      atW <- rules.spec(w, rawClosed)
+      freeHead <- LogicError.lift(Term.app(term("NUM_FREE_FORM"), w))
+      moved <- Conv.apTerm(freeHead, back).flatMap(Conv.apTerm(negationHead, _))
+      out <- LogicError.lift(Kernel.eqMp(moved, atW)).flatMap(rules.gen(w, _))
+    } yield out)
+
+    // true: at the witness 1 both sides of the body are worth 1
+    val e = Term.variable("e", Type.fun(numbers, numbers))
+    val reading = force(rules.specAll(fact(Truth.TrueExists), List(e, zero, body)))
+    val (_, someValue) = force(Term.destEq(reading.conclusion).toRight("an equation"))
+    val isTrue = force(for {
+      predicate <- logic.destExistsPredicate(someValue).toRight(NotOfForm("an existential", someValue))
+      atOne <- LogicError.lift(Term.app(predicate, count)).flatMap(Conv.betaNormalise)
+      instance = force(Term.destEq(atOne.conclusion).map(_._2).toRight("an equation"))
+      zeroIsZero <- rules.eqTruthIntro(Kernel.refl(zero))
+      evaluated = evaluate(instance, Vector(fact(Truth.TrueEquality), fact(Truth.ValueVariable),
+        fact(Truth.ValueSuccessor), fact(Truth.ValueZero), zeroIsZero))
+      _ = rightOf(evaluated) shouldBe proposition("SUC ZERO = SUC ZERO")
+      atInstance <- Conv.sym(evaluated).flatMap(back => LogicError.lift(Kernel.eqMp(back, Kernel.refl(count))))
+      some <- rules.existsIntro(predicate, count, atInstance)
+      back <- Conv.sym(reading)
+      out <- LogicError.lift(Kernel.eqMp(back, some))
+    } yield out)
+
+    val proved = force(rules.specAll(fact(Truth.ProvesSigma), List(count, e, sentence))
+      .flatMap(rules.mp(_, inClass)).flatMap(rules.mp(_, isClosed)).flatMap(rules.mp(_, isTrue)))
+    proved.hypotheses shouldBe empty
+    proved.conclusion shouldBe holds("NUM_PROV", sentence)
   }
 
   "A universal below a numeral" should "be true where its body is true at every value below" in {

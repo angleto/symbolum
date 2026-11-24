@@ -781,10 +781,12 @@ in it as a `NUM_ALL_BELOW`. Since 2026-11-22 `NUM_BOUNDED_SUBST_NUMERAL` keeps a
 when a numeral is put for a variable. `NUM_RANK` counts a formula's connectives and quantifiers, and
 `NUM_RANK_SUBST_NUMERAL` says that substitution leaves it alone. On that measure
 `NUM_PROV_BOUNDED` is completeness for the closed bounded formulas: PA proves every true one and
-refutes every false one, closed meaning that no variable is free in it.
+refutes every false one, closed meaning that no variable is free in it. Since 2026-11-23
+`NUM_PROV_SIGMA` is Sigma-1 completeness: `NUM_SIGMA n p` puts `n` unbounded existentials in front
+of a bounded formula, and PA proves every true closed sentence of it.
 
-Not written above that: completeness for a sentence with unbounded existentials in front of a
-bounded body, the Sigma-1 form the decoding of provability needs; any
+Not written above that: a decoding of provability as a Sigma-1 formula, which is what that
+completeness is for; any
 representation other than
 `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own

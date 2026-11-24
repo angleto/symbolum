@@ -1347,6 +1347,7 @@ they have least appetite for working out how it is produced.
   NUM_PROV_BOUNDED         !f:num -> num. !n:num. NUM_FORM n ==> NUM_BOUNDED n ==> (!m:num. ~(NUM_FREE_FORM m n)) ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))
   NUM_PROV_FALSE_EQ        !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m))) f ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m)))
   NUM_PROV_GROUND          !f:num -> num. !n:num. NUM_FORM n ==> NUM_GROUND n ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))
+  NUM_PROV_SIGMA           !n:num. !f:num -> num. !m:num. NUM_SIGMA n m ==> (!k:num. ~(NUM_FREE_FORM k m)) ==> NUM_TRUE m f ==> NUM_PROV m
   NUM_PROV_TRUE_EQ         !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m))
   NUM_PROV_VALUE           !f:num -> num. !n:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n (NUM_NUMERAL (NUM_VALUE n f))))
   NUM_RANK_ALL             !n:num. !m:num. NUM_RANK (NUM_CODE 8 (NUM_PAIR n m)) = SUC (NUM_RANK m)
@@ -1354,11 +1355,16 @@ they have least appetite for working out how it is produced.
   NUM_RANK_IMP             !n:num. !m:num. NUM_RANK (NUM_CODE 7 (NUM_PAIR n m)) = SUC (NUM_RANK n + NUM_RANK m)
   NUM_RANK_NOT             !n:num. NUM_RANK (NUM_CODE 6 n) = SUC (NUM_RANK n)
   NUM_RANK_SUBST_NUMERAL   !n:num. !m:num. !k:num. NUM_FORM k ==> NUM_RANK (NUM_SUBST_FORM n (NUM_NUMERAL m) k) = NUM_RANK k
+  NUM_SIGMA_FORM           !n:num. !m:num. NUM_SIGMA n m ==> NUM_FORM m
+  NUM_SIGMA_SUBST_NUMERAL  !n:num. !m:num. !k:num. !i:num. NUM_SIGMA n i ==> NUM_SIGMA n (NUM_SUBST_FORM m (NUM_NUMERAL k) i)
+  NUM_SIGMA_SUC            !n:num. !m:num. NUM_SIGMA (SUC n) m = (?k:num. ?i:num. m = NUM_EXISTS k i /\ NUM_SIGMA n i)
+  NUM_SIGMA_ZERO           !n:num. NUM_SIGMA 0 n = (NUM_FORM n /\ NUM_BOUNDED n)
   NUM_TRI_DOUBLE           !n:num. NUM_TRI n + NUM_TRI n = n * SUC n
   NUM_TRI_GRAPH_TRUE       !f:num -> num. NUM_TRUE NUM_TRI_GRAPH f = (f 0 = NUM_TRI (f 1))
   NUM_TRUE_ALL             !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 8 (NUM_PAIR n m)) f = (!k:num. NUM_TRUE m (\i:num. COND (i = n) k (f i)))
   NUM_TRUE_ALL_BELOW_NUMERAL !f:num -> num. !n:num. !m:num. !k:num. !i:num. ~(n = m) ==> NUM_TRUE (NUM_ALL_BELOW n m (NUM_NUMERAL k) i) f = (!j:num. j < k ==> NUM_TRUE i (\n1:num. COND (n1 = m) j (f n1)))
   NUM_TRUE_EQ              !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f = (NUM_VALUE n f = NUM_VALUE m f)
+  NUM_TRUE_EXISTS          !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_EXISTS n m) f = (?k:num. NUM_TRUE m (\i:num. COND (i = n) k (f i)))
   NUM_TRUE_IMP             !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 7 (NUM_PAIR n m)) f = (NUM_TRUE n f ==> NUM_TRUE m f)
   NUM_TRUE_LESS_NUMERAL    !f:num -> num. !n:num. !m:num. !k:num. ~(n = m) ==> NUM_TRUE (NUM_LESS n (NUM_CODE 0 m) (NUM_NUMERAL k)) f = f m < k
   NUM_TRUE_NOT             !f:num -> num. !n:num. NUM_TRUE (NUM_CODE 6 n) f = (~(NUM_TRUE n f))
