@@ -793,9 +793,19 @@ truth is `e 0 = NUM_PAIR (e 1) (e 2)` and `e 0 = NUM_CODE (e 1) (e 2)`. `docs/ad
 bounded quantifiers for the pairing; the doubling the triangle already used makes them
 unnecessary, and the three graphs share one proof.
 
+**What carries a representation's truth into PA is written since 2026-11-26, once for every
+arity.** `NUM_INST n s p` puts the numeral of `s i` for `v_i` at every `i` below `n`, and
+`NUM_INST_TRUE` says the instance is true at `e` when `p` is true at the environment reading `s`
+below `n` and `e` from there up. `NUM_PROV_BOUNDED_INST` is the bridge: a bounded formula whose free
+variables are below `n` is provable in PA at the numerals of `s` when it is true at `s`, and
+refutable there when it is false; `NUM_PROV_SIGMA_INST` is its true half for Sigma-1. For a graph,
+`s 0` is the value and the rest the arguments. These three rest on `ETA` as well as on choice and
+infinity, where every earlier fact of `Truth` rests on the two: the environment with nothing
+substituted is `e` only by it.
+
 Not written above that: a decoding of provability as a Sigma-1 formula, which is what that
-completeness is for; a fact carrying a representation's truth to PA's proof of its graph at the
-numerals of a value and its arguments; any representation other than the three by doubling; the object-level `Prov`, and so
+completeness is for; a corollary per representation stating its graph provable at a point,
+which the bridge leaves to discharging three premises at a code; any representation other than the three by doubling; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale

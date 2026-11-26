@@ -515,7 +515,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 1077 with Sigma-1 completeness, 2026-11-23, card `4102f131`, predicted before the run: one
     // antecedent each on `NUM_SIGMA_FORM` and `NUM_SIGMA_SUBST_NUMERAL` and three on
     // `NUM_PROV_SIGMA`, the two clauses and `NUM_TRUE_EXISTS` being equations. Plus five.
-    proposals.size shouldBe 1077
+    // 1089 with the instantiation and its two bridges, 2026-11-26, card `4102f131`, predicted
+    // before the run: one antecedent each on `NUM_INST_FORM`, `NUM_INST_SIGMA`, `NUM_INST_FREE` and
+    // `NUM_INST_TRUE`, two on `NUM_INST_BOUNDED` and three on each bridge, the two clauses being
+    // equations. Plus twelve.
+    proposals.size shouldBe 1089
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -917,6 +921,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // different and more informative answer, and the two buckets are still counted apart.
     val open = findings.count(_.standing.contains(Novelty.Standing.Open))
     val unreadable = findings.count(_.standing.contains(Novelty.Standing.Unreadable))
+    // Both printed before either is asserted, since a red assertion ends the test and the second
+    // count used to need a run of its own to be read: twice in this file's history, the last on
+    // 2026-11-24, a whole audit paid for one number.
+    info(s"open $open, unreadable $unreadable")
 
     // The subject the address is read on, asserted rather than left to a reading, because this
     // is where the fourth wrong prediction was made and an address is not visible in a count.
@@ -1592,7 +1600,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the run and not predicted: one of the seven new weakenings. Plus one.
     // 885 with completeness for the closed Sigma-1 sentences, 2026-11-24, card `4102f131`, read
     // off the run and not predicted: one of the five new weakenings. Plus one.
-    open shouldBe 885
+    // 890 with the instantiation and its two bridges, 2026-11-26, card `4102f131`, read off the
+    // run and not predicted: five of the twelve new weakenings. Plus five.
+    open shouldBe 890
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2048,7 +2058,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // four of the five new weakenings that `open` above did not take, read off a second run
     // because the first stopped at `open`. One there and four here account for all five. Plus
     // four.
-    unreadable shouldBe 280
+    // 287 with the instantiation and its two bridges, 2026-11-26, card `4102f131`: the seven of the
+    // twelve new weakenings that `open` above did not take, read off the same run as that one, both
+    // being printed before either is asserted. Five there and seven here account for all twelve.
+    // Plus seven.
+    unreadable shouldBe 287
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2428,7 +2442,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 384 with completeness for the closed bounded formulas, 2026-11-22, card `4102f131`, read off
     // the run and not decomposed: two of the seven new weakenings keep a constant of the naturals.
     // Plus two.
-    aboutNumbers.size shouldBe 384
+    // 390 with the instantiation and its two bridges, 2026-11-26, card `4102f131`, read off the run
+    // and not decomposed: six of the twelve new weakenings keep a constant of the naturals. Plus
+    // six.
+    aboutNumbers.size shouldBe 390
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

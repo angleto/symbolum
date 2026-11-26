@@ -56,9 +56,12 @@ import garden.xeno.symbolum.logic.*
  * of a doubling.
  *
  * What these facts do NOT say, since this is the sentence a reader would round up: that PA proves
- * the graph at the numerals of a value and its arguments. That follows from [[Truth.ProvesBounded]],
- * after the numerals are put for the variables by [[Truth.TrueAtNumeral]] and
- * [[Truth.BoundedAtNumeral]], and no fact here states it for any one representation.
+ * the graph at the numerals of a value and its arguments. What carries a graph's truth there is
+ * [[Truth.ProvesBoundedInstance]], once for every arity: the numerals of `s 0`, `s 1`, ... put for
+ * the graph's variables by [[Truth.InstanceName]], provable when the graph is true at `s` and
+ * refutable when it is false. A representation reaches it by discharging three premises at its
+ * code, that it is a formula, bounded, and has its free variables below the arity, and no fact here
+ * does that for any one representation; `TruthSpec` does it for the triangle.
  */
 final class Truth private (
   val language: Language,
@@ -489,6 +492,86 @@ object Truth {
   val ProvesSigma: String = "NUM_PROV_SIGMA"
 
   /**
+   * `NUM_INST n s p`: `p` with the numeral of `s i` put for `v_i` at every `i` below `n`.
+   *
+   * What a representation is asked about at concrete arguments: its graph has its value at
+   * variable `0` and its arguments at `1`, `2`, ..., so the sentence PA is to prove is the graph
+   * with a numeral at each of those, and an environment `s` names the numbers. A primitive
+   * recursion on `n` rather than one constant per arity, so that the bridge from truth to
+   * provability is proved once for every graph however many arguments it has. The substitutions
+   * are made from variable `0` up; since a numeral is closed, the order is invisible to the truth
+   * ([[InstanceTrue]]), and it is fixed only so that the constant has one definition.
+   */
+  val InstanceName: String = "NUM_INST"
+
+  /** `|- !s p. NUM_INST ZERO s p = p`. */
+  val InstanceZero: String = "NUM_INST_ZERO"
+
+  /** `|- !n s p. NUM_INST (SUC n) s p = NUM_SUBST_FORM n (NUM_NUMERAL (s n)) (NUM_INST n s p)`. */
+  val InstanceSuccessor: String = "NUM_INST_SUC"
+
+  /** `|- !n s p. NUM_FORM p ==> NUM_FORM (NUM_INST n s p)`, each substitution keeping formulas. */
+  val InstanceForm: String = "NUM_INST_FORM"
+
+  /**
+   * `|- !n s p. NUM_FORM p ==> NUM_BOUNDED p ==> NUM_BOUNDED (NUM_INST n s p)`, by induction on
+   * `n` with [[BoundedAtNumeral]] at each step and [[InstanceForm]] for the formula it asks for.
+   */
+  val InstanceBounded: String = "NUM_INST_BOUNDED"
+
+  /**
+   * `|- !m n s p. NUM_SIGMA m p ==> NUM_SIGMA m (NUM_INST n s p)`, with [[SigmaAtNumeral]] at each
+   * step: the number of existentials in front does not move.
+   */
+  val InstanceSigma: String = "NUM_INST_SIGMA"
+
+  /**
+   * `|- !n s p. NUM_FORM p ==> !w. NUM_FREE_FORM w (NUM_INST n s p) ==> NUM_FREE_FORM w p /\ ~(w < n)`
+   *
+   * What is free after the substitutions was free before and is not one of the variables
+   * substituted: [[FreeFormAtNumeral]] at each step, and `NUM_LT_SUC_CASES` to read `~(w < SUC n)`
+   * off `~(w < n)` and `~(w = n)`. A formula whose free variables are all below `n` is therefore
+   * closed once instantiated, which is what completeness asks for.
+   */
+  val InstanceFree: String = "NUM_INST_FREE"
+
+  /**
+   * `|- !n s p. NUM_FORM p ==> !e. NUM_TRUE (NUM_INST n s p) e = NUM_TRUE p (\j. COND (j < n) (s j) (e j))`
+   *
+   * The instance is true at `e` exactly when `p` is true at the environment that reads `s` below
+   * `n` and `e` from `n` up. By induction on `n` with [[TrueAtNumeral]] at each step, the induction
+   * hypothesis taken at the environment that step has updated. The two environments are equal at
+   * each point by a case split on whether it is below `n` or is `n`, and the abstraction rule closes
+   * them. At zero the environment is `\j. COND (j < 0) (s j) (e j)`, equal to `\j. e j`, and that is
+   * `e` only by `ETA`: this fact and the two below rest on it, where the truth facts before them do
+   * not.
+   */
+  val InstanceTrue: String = "NUM_INST_TRUE"
+
+  /**
+   * `|- !n s p. NUM_FORM p ==> NUM_BOUNDED p ==> (!w. NUM_FREE_FORM w p ==> w < n) ==>`
+   *   `(NUM_TRUE p s ==> NUM_PROV (NUM_INST n s p)) /\`
+   *   `(~(NUM_TRUE p s) ==> NUM_PROV (NUM_CODE 6 (NUM_INST n s p)))`
+   *
+   * The bridge every bounded representation crosses: a formula of the class whose free variables
+   * are below `n`, true at `s`, is provable in PA with the numerals of `s 0`, ..., `s (n - 1)` put
+   * for its variables, and false at `s`, refutable there. For a graph, `s 0` is the value and the
+   * rest the arguments. It is [[ProvesBounded]] at the instance, which is a formula
+   * ([[InstanceForm]]), in the class ([[InstanceBounded]]) and closed ([[InstanceFree]]), and whose
+   * truth at `s` is `p`'s at `\j. COND (j < n) (s j) (s j)` ([[InstanceTrue]]), which is `s`.
+   */
+  val ProvesBoundedInstance: String = "NUM_PROV_BOUNDED_INST"
+
+  /**
+   * `|- !m n s p. NUM_SIGMA m p ==> (!w. NUM_FREE_FORM w p ==> w < n) ==> NUM_TRUE p s ==>`
+   *   `NUM_PROV (NUM_INST n s p)`
+   *
+   * The same bridge for a Sigma-1 formula, through [[ProvesSigma]] and [[InstanceSigma]], and with
+   * only its true half, as there.
+   */
+  val ProvesSigmaInstance: String = "NUM_PROV_SIGMA_INST"
+
+  /**
    * The step of the value, as text.
    *
    * Tag `1` has no branch: zero falls through to the last one with every code that is not a term,
@@ -677,7 +760,29 @@ object Truth {
         "NUM_TRUE (NUM_EXISTS j p) e = (?n:num. NUM_TRUE p (\\k:num. COND (k = j) n (e k)))"),
     ProvesSigma ->
       ("!n:num e:num -> num p:num. NUM_SIGMA n p ==> (!w:num. ~(NUM_FREE_FORM w p)) ==> " +
-        "NUM_TRUE p e ==> NUM_PROV p")
+        "NUM_TRUE p e ==> NUM_PROV p"),
+    InstanceZero -> "!s:num -> num. !p:num. NUM_INST ZERO s p = p",
+    InstanceSuccessor ->
+      ("!n:num. !s:num -> num. !p:num. " +
+        "NUM_INST (SUC n) s p = NUM_SUBST_FORM n (NUM_NUMERAL (s n)) (NUM_INST n s p)"),
+    InstanceForm -> "!n:num s:num -> num p:num. NUM_FORM p ==> NUM_FORM (NUM_INST n s p)",
+    InstanceBounded ->
+      "!n:num s:num -> num p:num. NUM_FORM p ==> NUM_BOUNDED p ==> NUM_BOUNDED (NUM_INST n s p)",
+    InstanceSigma -> "!m:num n:num s:num -> num p:num. NUM_SIGMA m p ==> NUM_SIGMA m (NUM_INST n s p)",
+    InstanceFree ->
+      ("!n:num s:num -> num p:num. NUM_FORM p ==> !w:num. " +
+        "NUM_FREE_FORM w (NUM_INST n s p) ==> NUM_FREE_FORM w p /\\ ~(w < n)"),
+    InstanceTrue ->
+      ("!n:num s:num -> num p:num. NUM_FORM p ==> !e:num -> num. " +
+        "NUM_TRUE (NUM_INST n s p) e = NUM_TRUE p (\\j:num. COND (j < n) (s j) (e j))"),
+    ProvesBoundedInstance ->
+      ("!n:num s:num -> num p:num. NUM_FORM p ==> NUM_BOUNDED p ==> " +
+        "(!w:num. NUM_FREE_FORM w p ==> w < n) ==> " +
+        "(NUM_TRUE p s ==> NUM_PROV (NUM_INST n s p)) /\\ " +
+        "(~(NUM_TRUE p s) ==> NUM_PROV (NUM_CODE 6 (NUM_INST n s p)))"),
+    ProvesSigmaInstance ->
+      ("!m:num n:num s:num -> num p:num. NUM_SIGMA m p ==> " +
+        "(!w:num. NUM_FREE_FORM w p ==> w < n) ==> NUM_TRUE p s ==> NUM_PROV (NUM_INST n s p)")
   )
 
   /** The step of the ground predicate, as text, with the guards the truth's step has. */
@@ -806,7 +911,19 @@ object Truth {
       codeGraphBody <- Parser.term(pairTheory, provability.notation, CodeGraphText, numbers)
       withCodeGraph <- LogicError.lift(
         Kernel.defineConstant(pairTheory, CodeGraphName, codeGraphBody))
-      (theory, codeGraphDefinition) = withCodeGraph
+      (codeTheory, codeGraphDefinition) = withCodeGraph
+
+      // The instantiation, a primitive recursion on how many variables have had a numeral put for
+      // them, the environment and the formula being the arguments of the function it produces.
+      codeLogic <- numbering.logic.over(codeTheory)
+      withInstance <- Recursion.define(
+        codeLogic, naturals, codeTheory, provability.notation, onNumbers, InstanceName,
+        Type.fun(environments, Type.fun(numbers, numbers)),
+        "\\s:num -> num. \\p:num. p",
+        "\\v:(num -> num) -> num -> num. \\i:num. \\s:num -> num. \\p:num. " +
+          "NUM_SUBST_FORM i (NUM_NUMERAL (s i)) (v s p)",
+        None)
+      (theory, instanceDefinition, instanceAtZero, instanceAtSuccessor) = withInstance
       logic <- numbering.logic.over(theory)
 
       statements = new Statements(theory, provability.notation)
@@ -859,8 +976,14 @@ object Truth {
       rankNegation <- clauses.plain(rankNamed, RankNegation, numbers)
       rankImplication <- clauses.plain(rankNamed, RankImplication, numbers)
       rankUniversal <- clauses.plain(rankNamed, RankUniversal, numbers)
-      sigmaZero <- sigmaClause(logic, statements, SigmaZero, sigmaAtZero)
-      sigmaSuccessor <- sigmaClause(logic, statements, SigmaSuccessor, sigmaAtSuccessor)
+      sigmaZero <- recursionClause(logic, statements, SigmaZero, sigmaAtZero, List("p" -> numbers))
+      sigmaSuccessor <- recursionClause(
+        logic, statements, SigmaSuccessor, sigmaAtSuccessor, List("p" -> numbers))
+      instanceZero <- recursionClause(
+        logic, statements, InstanceZero, instanceAtZero, List("s" -> environments, "p" -> numbers))
+      instanceSuccessor <- recursionClause(
+        logic, statements, InstanceSuccessor, instanceAtSuccessor,
+        List("s" -> environments, "p" -> numbers))
       modusPonens <- provability.fact(Provability.ModusPonens)
       doubleNegation <- naturals.classical.fact(Classical.DoubleNegation)
 
@@ -888,7 +1011,8 @@ object Truth {
         Bounding(boundedEquality, boundedNegation, boundedImplication, boundedAllBelow, boundedUniversal,
           successor),
         Ranking(rankEquality, rankNegation, rankImplication, rankUniversal),
-        Sigmas(sigmaZero, sigmaSuccessor))
+        Sigmas(sigmaZero, sigmaSuccessor),
+        Instances(instanceZero, instanceSuccessor))
     } yield new Truth(
       language,
       theory,
@@ -901,6 +1025,7 @@ object Truth {
         BoundedName -> boundedDefinition,
         RankName -> rankDefinition,
         SigmaName -> sigmaDefinition,
+        InstanceName -> instanceDefinition,
         TriangleGraphName -> graphDefinition,
         PairGraphName -> pairGraphDefinition,
         CodeGraphName -> codeGraphDefinition
@@ -936,28 +1061,39 @@ object Truth {
         RankImplication -> rankImplication,
         RankUniversal -> rankUniversal,
         SigmaZero -> sigmaZero,
-        SigmaSuccessor -> sigmaSuccessor
+        SigmaSuccessor -> sigmaSuccessor,
+        InstanceZero -> instanceZero,
+        InstanceSuccessor -> instanceSuccessor
       ) ++ evaluation
     )
   }
 
   /**
-   * A clause of [[SigmaName]] at a code, from the equation `Recursion.define` hands back for the
-   * whole predicate: specialised at its leading quantifiers, applied to `p`, and reduced, then
-   * compared with the statement published.
+   * A clause of a primitive recursion on the naturals, from the equation `Recursion.define` hands
+   * back for the whole function: specialised at its leading quantifiers, applied to fresh
+   * variables named and typed by `arguments`, and reduced, then compared with the statement
+   * published. [[SigmaName]] takes the formula, [[InstanceName]] the environment and the formula.
    */
-  private def sigmaClause(logic: Logic, statements: Statements, name: String, equation: Kernel.Thm)
-    : Either[LogicError, Kernel.Thm] = {
+  private def recursionClause(
+    logic: Logic,
+    statements: Statements,
+    name: String,
+    equation: Kernel.Thm,
+    arguments: List[(String, Type)]
+  ): Either[LogicError, Kernel.Thm] = {
     for {
       stripped <- Logic.stripForall(equation.conclusion)
       binders = stripped._1.toList
-      p = Conv.freshVariable("p", TyApp(Natural.TypeName, Nil), binders.toSet)
+      fresh = arguments.foldLeft(List.empty[FVar]) { case (taken, (wanted, ty)) =>
+        taken :+ Conv.freshVariable(wanted, ty, binders.toSet ++ taken)
+      }
       opened <- logic.rules.specAll(equation, binders)
-      applied <- Conv.apThm(opened, p)
+      applied <- fresh.foldLeft[Either[LogicError, Kernel.Thm]](Right(opened))((carried, argument) =>
+        carried.flatMap(Conv.apThm(_, argument)))
       sides <- Term.destEq(applied.conclusion).toRight(NotOfForm("an equation", applied.conclusion))
       reduced <- Conv.betaNormalise(sides._2)
       clause <- Conv.trans(applied, reduced)
-      closed <- logic.rules.genAll(clause, binders :+ p)
+      closed <- logic.rules.genAll(clause, binders ++ fresh)
       checked <- statements.checked(name, closed)
     } yield checked
   }
@@ -1609,6 +1745,9 @@ object Truth {
   /** The two clauses of [[SigmaName]], which the Sigma-1 facts read. */
   private final case class Sigmas(zero: Kernel.Thm, successor: Kernel.Thm)
 
+  /** The two clauses of [[InstanceName]], which the instantiation's inductions read. */
+  private final case class Instances(zero: Kernel.Thm, successor: Kernel.Thm)
+
   private object Evaluation {
 
     def of(
@@ -1628,7 +1767,8 @@ object Truth {
       grounding: Grounding,
       bounding: Bounding,
       ranking: Ranking,
-      sigmas: Sigmas
+      sigmas: Sigmas,
+      instances: Instances
     ): Either[LogicError, Map[String, Kernel.Thm]] =
       try {
         val built = new Evaluation(
@@ -1655,6 +1795,18 @@ object Truth {
           existsTruth <- statements.checked(TrueExists, built.trueExists(grounding))
           sigmaComplete <- statements.checked(ProvesSigma, built.provesSigma(grounding, sigmas, sigmaForm, sigmaAt,
             existsTruth, truthAt, freeFormAt, complete))
+          instanceForm <- statements.checked(InstanceForm, built.instanceForm(instances))
+          instanceBounded <- statements.checked(InstanceBounded,
+            built.instanceBounded(instances, instanceForm, boundedAt))
+          instanceSigma <- statements.checked(InstanceSigma, built.instanceSigma(instances, sigmaAt))
+          instanceFree <- statements.checked(InstanceFree,
+            built.instanceFree(grounding, instances, instanceForm, freeFormAt))
+          instanceTrue <- statements.checked(InstanceTrue,
+            built.instanceTrue(grounding, instances, instanceForm, truthAt))
+          boundedBridge <- statements.checked(ProvesBoundedInstance, built.provesBoundedInstance(grounding,
+            instanceForm, instanceBounded, instanceFree, instanceTrue, complete))
+          sigmaBridge <- statements.checked(ProvesSigmaInstance, built.provesSigmaInstance(grounding,
+            sigmaForm, instanceForm, instanceSigma, instanceFree, instanceTrue, sigmaComplete))
         } yield Map(
           ProvesValue -> value,
           ProvesTrueEquation -> equation,
@@ -1673,7 +1825,14 @@ object Truth {
           SigmaForm -> sigmaForm,
           SigmaAtNumeral -> sigmaAt,
           TrueExists -> existsTruth,
-          ProvesSigma -> sigmaComplete)
+          ProvesSigma -> sigmaComplete,
+          InstanceForm -> instanceForm,
+          InstanceBounded -> instanceBounded,
+          InstanceSigma -> instanceSigma,
+          InstanceFree -> instanceFree,
+          InstanceTrue -> instanceTrue,
+          ProvesBoundedInstance -> boundedBridge,
+          ProvesSigmaInstance -> sigmaBridge)
       } catch { case refused: RefusedHere => Left(refused.error) }
   }
 
@@ -3785,6 +3944,312 @@ object Truth {
       }
       val all = inducted(n, claim)(base, step)
       force(rules.spec(n, all).flatMap(rules.spec(p, _)).flatMap(rules.genAll(_, List(n, e, p))))
+    }
+
+    /* ----------------------------------- a numeral put for each variable below n, and the bridge */
+
+    private val instanceOf =
+      constant(InstanceName, Type.fun(numbers, Type.fun(environments, Type.fun(numbers, numbers))))
+    private def instance(n: Term, s: Term, p: Term): Term = applied(instanceOf, List(n, s, p))
+    private val instanceSource = Term.variable("s", environments)
+    private def sent(s: Term, i: Term): Term = applied(s, List(i))
+
+    /** `INST 0 s p = p` and `INST (SUC n) s p = SUBST n (numeral (s n)) (INST n s p)`. */
+    private def atZero(ins: Instances, s: Term, p: Term): Kernel.Thm = force(rules.specAll(ins.zero, List(s, p)))
+    private def atSuccessor(ins: Instances, n: Term, s: Term, p: Term): Kernel.Thm =
+      force(rules.specAll(ins.successor, List(n, s, p)))
+
+    /** `!n. claim n` from the case at zero and the step, the induction every fact here makes. */
+    private def onInstances(claim: Term => Term)(base: Kernel.Thm)(step: (FVar, Kernel.Thm) => Kernel.Thm)
+      : Kernel.Thm = {
+      val n = Term.variable("n", numbers)
+      val reached = step(n, assumed(claim(n)))
+      inducted(n, claim)(base, force(rules.disch(claim(n), reached).flatMap(rules.gen(n, _))))
+    }
+
+    /** [[InstanceForm]]: each substitution of a numeral keeps a formula a formula. */
+    def instanceForm(ins: Instances): Kernel.Thm = {
+      val s = instanceSource
+      val p = Term.variable("p", numbers)
+      def claim(at: Term): Term = force(logic.mkForall(s, force(logic.mkForall(p,
+        imp(isFormula(p), isFormula(instance(at, s, p)))))))
+      val held = assumed(isFormula(p))
+      val base = force(rules.disch(isFormula(p), moved(isFormula, force(Conv.sym(atZero(ins, s, p))), held))
+        .flatMap(rules.genAll(_, List(s, p))))
+      onInstances(claim)(base) { (n, hypothesis) =>
+        val below = apply(hypothesis, List(s, p), held)
+        val kept = apply(languageFact(Language.FormulaSubstituteKeepsFormulas),
+          List(n, numeral(sent(s, n)), instance(n, s, p)), below, numeralTerm(sent(s, n)))
+        val whole = moved(isFormula, force(Conv.sym(atSuccessor(ins, n, s, p))), kept)
+        force(rules.disch(isFormula(p), whole).flatMap(rules.genAll(_, List(s, p))))
+      }
+    }
+
+    /** [[InstanceBounded]]: [[BoundedAtNumeral]] at each step. */
+    def instanceBounded(ins: Instances, instanceIsForm: Kernel.Thm, boundedAt: Kernel.Thm): Kernel.Thm = {
+      val s = instanceSource
+      val p = Term.variable("p", numbers)
+      def claim(at: Term): Term = force(logic.mkForall(s, force(logic.mkForall(p,
+        imp(isFormula(p), imp(bounded(p), bounded(instance(at, s, p))))))))
+      val form = assumed(isFormula(p))
+      val held = assumed(bounded(p))
+      def discharged(proved: Kernel.Thm): Kernel.Thm =
+        force(rules.disch(bounded(p), proved).flatMap(rules.disch(isFormula(p), _)).flatMap(rules.genAll(_, List(s, p))))
+      val base = discharged(moved(bounded, force(Conv.sym(atZero(ins, s, p))), held))
+      onInstances(claim)(base) { (n, hypothesis) =>
+        val belowForm = apply(instanceIsForm, List(n, s, p), form)
+        val belowBounded = apply(hypothesis, List(s, p), form, held)
+        val kept = apply(boundedAt, List(n, sent(s, n), instance(n, s, p)), belowForm, belowBounded)
+        discharged(moved(bounded, force(Conv.sym(atSuccessor(ins, n, s, p))), kept))
+      }
+    }
+
+    /** [[InstanceSigma]]: [[SigmaAtNumeral]] at each step, the index of the class held fixed. */
+    def instanceSigma(ins: Instances, sigmaAt: Kernel.Thm): Kernel.Thm = {
+      val s = instanceSource
+      val p = Term.variable("p", numbers)
+      val m = Term.variable("m", numbers)
+      def claim(at: Term): Term = force(logic.mkForall(s, force(logic.mkForall(p,
+        imp(sigma(m, p), sigma(m, instance(at, s, p)))))))
+      val held = assumed(sigma(m, p))
+      def inClass(t: Term): Term = sigma(m, t)
+      def discharged(proved: Kernel.Thm): Kernel.Thm =
+        force(rules.disch(sigma(m, p), proved).flatMap(rules.genAll(_, List(s, p))))
+      val base = discharged(moved(inClass, force(Conv.sym(atZero(ins, s, p))), held))
+      val all = onInstances(claim)(base) { (n, hypothesis) =>
+        val below = apply(hypothesis, List(s, p), held)
+        val kept = apply(sigmaAt, List(m, n, sent(s, n), instance(n, s, p)), below)
+        discharged(moved(inClass, force(Conv.sym(atSuccessor(ins, n, s, p))), kept))
+      }
+      val n = Term.variable("n", numbers)
+      force(rules.specAll(all, List(n, s, p)).flatMap(rules.genAll(_, List(m, n, s, p))))
+    }
+
+    /** [[InstanceFree]]: [[FreeFormAtNumeral]] at each step, and the range grown by one. */
+    def instanceFree(g: Grounding, ins: Instances, instanceIsForm: Kernel.Thm, freeFormAt: Kernel.Thm)
+      : Kernel.Thm = {
+      val s = instanceSource
+      val p = Term.variable("p", numbers)
+      val w = Term.variable("w", numbers)
+      def lt(a: Term, b: Term): Term = applied(below, List(a, b))
+      def conclusion(at: Term): Term = conj(freeForm(w, p), denial(lt(w, at)))
+      def claim(at: Term): Term = force(logic.mkForall(s, force(logic.mkForall(p, imp(isFormula(p),
+        force(logic.mkForall(w, imp(freeForm(w, instance(at, s, p)), conclusion(at)))))))))
+      val form = assumed(isFormula(p))
+      def discharged(at: Term, proved: Kernel.Thm): Kernel.Thm =
+        force(rules.disch(freeForm(w, instance(at, s, p)), proved).flatMap(rules.gen(w, _))
+          .flatMap(rules.disch(isFormula(p), _)).flatMap(rules.genAll(_, List(s, p))))
+
+      val base = {
+        val held = assumed(freeForm(w, instance(zeroNumber, s, p)))
+        val freeInP = moved(t => freeForm(w, t), atZero(ins, s, p), held)
+        val nowhere = force(rules.spec(w, force(numbering.peano.fact(Peano.NotBelowZero))))
+        discharged(zeroNumber, force(rules.conjIntro(freeInP, nowhere)))
+      }
+      onInstances(claim)(base) { (n, hypothesis) =>
+        val successorN = applied(successorConstant, List(n))
+        val held = assumed(freeForm(w, instance(successorN, s, p)))
+        val freeInStep = moved(t => freeForm(w, t), atSuccessor(ins, n, s, p), held)
+        val belowForm = apply(instanceIsForm, List(n, s, p), form)
+        val survived = force(rules.specAll(freeFormAt, List(n, sent(s, n), instance(n, s, p)))
+          .flatMap(rules.mp(_, belowForm)).flatMap(rules.spec(w, _)).flatMap(rules.mp(_, freeInStep)))
+        val notN = force(rules.conjElim2(survived)) // ~(w = n)
+        val earlier = force(rules.spec(w, apply(hypothesis, List(s, p), form))
+          .flatMap(rules.mp(_, force(rules.conjElim1(survived))))) // free w p /\ ~(w < n)
+        val notBelowN = force(rules.conjElim2(earlier))
+        val atTop = lt(w, successorN)
+        val peeled = apply(force(numbering.peano.fact(Peano.BelowSuccessorCases)), List(n, w), assumed(atTop))
+        val absurd = force(rules.disjElim(peeled,
+          force(rules.notElim(notBelowN, assumed(lt(w, n)))),
+          force(rules.notElim(notN, assumed(equal(w, n))))))
+        val notBelowTop = force(rules.notIntro(atTop, absurd))
+        discharged(successorN, force(rules.conjIntro(force(rules.conjElim1(earlier)), notBelowTop)))
+      }
+    }
+
+    /** `\j. COND (j < n) (s j) (e j)`: `s` below `n` and `e` from `n` up. */
+    private def readBelow(n: Term, s: Term, e: Term): Term = {
+      val j = Conv.freshVariable("j", numbers, Term.freeVariables(n) ++ Term.freeVariables(s) ++ Term.freeVariables(e))
+      force(LogicError.lift(Term.abs(j, cond(applied(below, List(j, n)), sent(s, j), sent(e, j)))))
+    }
+
+    /** `(\j. f j) = f` at an environment, which is `ETA` and the one place this section spends it. */
+    private def etaAt(g: Grounding, f: Term): Kernel.Thm = {
+      val eta = Kernel.instType(
+        Map(Classical.TypeVariable -> numbers, Classical.CodomainVariable -> numbers),
+        force(g.classical.axiom(Classical.Eta)))
+      force(rules.spec(f, eta))
+    }
+
+    /** `\j. f j`, the abstraction `ETA` equates with `f`. */
+    private def expanded(f: Term): Term = {
+      val j = Conv.freshVariable("j", numbers, Term.freeVariables(f))
+      force(LogicError.lift(Term.abs(j, sent(f, j))))
+    }
+
+    /** [[InstanceTrue]]: [[TrueAtNumeral]] at each step, and the two environments met pointwise. */
+    def instanceTrue(g: Grounding, ins: Instances, instanceIsForm: Kernel.Thm, truthAtNumeral: Kernel.Thm)
+      : Kernel.Thm = {
+      val conditions = new Conditions(g)
+      import conditions.*
+      val s = instanceSource
+      val p = Term.variable("p", numbers)
+      val e = environment
+      def claim(at: Term): Term = force(logic.mkForall(s, force(logic.mkForall(p, imp(isFormula(p),
+        force(logic.mkForall(e, equal(applied(truth, List(instance(at, s, p), e)),
+          applied(truth, List(p, readBelow(at, s, e)))))))))))
+      val form = assumed(isFormula(p))
+      def readAt(environmentEquation: Kernel.Thm): Kernel.Thm =
+        force(Conv.apTerm(applied(truth, List(p)), environmentEquation))
+      def discharged(proved: Kernel.Thm): Kernel.Thm =
+        force(rules.gen(e, proved).flatMap(rules.disch(isFormula(p), _)).flatMap(rules.genAll(_, List(s, p))))
+      val avoid = Set(s, p, e)
+
+      val base = {
+        val unfolded = force(Conv.apTerm(truth, atZero(ins, s, p)).flatMap(Conv.apThm(_, e))) // = TRUE p e
+        val nowhere = force(numbering.peano.fact(Peano.NotBelowZero))
+        val pointwise = extensional(readBelow(zeroNumber, s, e), expanded(e), avoid) { m =>
+          passed(force(rules.spec(m, nowhere)), sent(s, m), sent(e, m))
+        }
+        val toE = chained(pointwise, etaAt(g, e)) // readBelow 0 s e = e
+        discharged(chained(unfolded, readAt(force(Conv.sym(toE)))))
+      }
+      onInstances(claim)(base) { (n, hypothesis) =>
+        val successorN = applied(successorConstant, List(n))
+        val q = instance(n, s, p)
+        val belowForm = apply(instanceIsForm, List(n, s, p), form)
+        val unfolded = force(Conv.apTerm(truth, atSuccessor(ins, n, s, p)).flatMap(Conv.apThm(_, e)))
+        val substituted = force(rules.specAll(truthAtNumeral, List(n, sent(s, n), q))
+          .flatMap(rules.mp(_, belowForm)).flatMap(rules.spec(e, _))) // = TRUE q e[n := s n]
+        val updatedAtN = arguments(sides(substituted)._2)._2
+        val inner = force(rules.spec(updatedAtN, apply(hypothesis, List(s, p), form))) // = TRUE p (...)
+        val reached = arguments(sides(inner)._2)._2
+        val lt = (a: Term, b: Term) => applied(below, List(a, b))
+        val transitive = force(numbering.peano.fact(Peano.StrictTransitive))
+        val toTop = force(rules.spec(n, force(numbering.peano.fact(Peano.BelowSuccessor)))) // n < SUC n
+        val pointwise = extensional(reached, readBelow(successorN, s, e), avoid + n) { m =>
+          val sm = sent(s, m)
+          val em = sent(e, m)
+          val rest = cond(equal(m, n), sent(s, n), em)
+          split(lt(m, n))(
+            isBelow => {
+              val left = taken(isBelow, sm, rest)
+              val stillBelow = apply(transitive, List(m, n, successorN), force(rules.conjIntro(isBelow, toTop)))
+              same(left, taken(stillBelow, sm, em))
+            },
+            notBelow =>
+              split(equal(m, n))(
+                isTop => {
+                  val left = chained(passed(notBelow, sm, rest), taken(isTop, sent(s, n), em))
+                  val stillBelow = moved(x => lt(x, successorN), force(Conv.sym(isTop)), toTop)
+                  val right = chained(taken(stillBelow, sm, em), force(Conv.apTerm(s, isTop)))
+                  same(left, right)
+                },
+                notTop => {
+                  val left = chained(passed(notBelow, sm, rest), passed(notTop, sent(s, n), em))
+                  val atTop = lt(m, successorN)
+                  val peeled = apply(force(numbering.peano.fact(Peano.BelowSuccessorCases)), List(n, m), assumed(atTop))
+                  val absurd = force(rules.disjElim(peeled,
+                    force(rules.notElim(notBelow, assumed(lt(m, n)))),
+                    force(rules.notElim(notTop, assumed(equal(m, n))))))
+                  val outside = force(rules.notIntro(atTop, absurd))
+                  same(left, passed(outside, sm, em))
+                }))
+        }
+        discharged(chained(unfolded, substituted, inner, readAt(pointwise)))
+      }
+    }
+
+    /** `NUM_TRUE (INST n s p) s = NUM_TRUE p s`: [[InstanceTrue]] at `s`, whose reading of itself is itself. */
+    private def truthAtItself(g: Grounding, instanceIsTrue: Kernel.Thm, n: Term, s: Term, p: Term, form: Kernel.Thm)
+      : Kernel.Thm = {
+      val conditions = new Conditions(g)
+      import conditions.*
+      val read = force(rules.spec(s, apply(instanceIsTrue, List(n, s, p), form)))
+      val environment = arguments(sides(read)._2)._2
+      val pointwise = extensional(environment, expanded(s), Set(n, s, p).flatMap(Term.freeVariables)) { m =>
+        val sm = sent(s, m)
+        val guard = applied(below, List(m, n))
+        split(guard)(isBelow => taken(isBelow, sm, sm), notBelow => passed(notBelow, sm, sm))
+      }
+      chained(read, force(Conv.apTerm(applied(truth, List(p)), chained(pointwise, etaAt(g, s)))))
+    }
+
+    /** `!w. ~NUM_FREE_FORM w (INST n s p)` from `NUM_FORM p` and every free variable of `p` below `n`. */
+    private def instanceClosed(
+      instanceIsFree: Kernel.Thm, n: Term, s: Term, p: Term, form: Kernel.Thm, covered: Kernel.Thm
+    ): Kernel.Thm = {
+      val w = Conv.freshVariable("w", numbers, Set(n, s, p).flatMap(Term.freeVariables) ++
+        covered.hypotheses.flatMap(Term.freeVariables) ++ form.hypotheses.flatMap(Term.freeVariables))
+      val premise = freeForm(w, instance(n, s, p))
+      val survived = force(rules.spec(w, apply(instanceIsFree, List(n, s, p), form))
+        .flatMap(rules.mp(_, assumed(premise)))) // free w p /\ ~(w < n)
+      val inRange = force(rules.spec(w, covered).flatMap(rules.mp(_, force(rules.conjElim1(survived)))))
+      force(rules.notElim(force(rules.conjElim2(survived)), inRange)
+        .flatMap(rules.notIntro(premise, _)).flatMap(rules.gen(w, _)))
+    }
+
+    /** `!w. NUM_FREE_FORM w p ==> w < n`: every free variable of `p` is one the instance replaces. */
+    private def coveredBy(n: Term, p: Term): Term = {
+      val w = Conv.freshVariable("w", numbers, Term.freeVariables(n) ++ Term.freeVariables(p))
+      force(logic.mkForall(w, imp(freeForm(w, p), applied(below, List(w, n)))))
+    }
+
+    /** [[ProvesBoundedInstance]]: [[ProvesBounded]] at the instance, read back at `s`. */
+    def provesBoundedInstance(
+      g: Grounding,
+      instanceIsForm: Kernel.Thm,
+      instanceIsBounded: Kernel.Thm,
+      instanceIsFree: Kernel.Thm,
+      instanceIsTrue: Kernel.Thm,
+      complete: Kernel.Thm
+    ): Kernel.Thm = {
+      val n = Term.variable("n", numbers)
+      val s = instanceSource
+      val p = Term.variable("p", numbers)
+      val q = instance(n, s, p)
+      val form = assumed(isFormula(p))
+      val inClass = assumed(bounded(p))
+      val covered = assumed(coveredBy(n, p))
+      val decided = apply(complete, List(s, q), apply(instanceIsForm, List(n, s, p), form),
+        apply(instanceIsBounded, List(n, s, p), form, inClass),
+        instanceClosed(instanceIsFree, n, s, p, form, covered))
+      val truthEquation = truthAtItself(g, instanceIsTrue, n, s, p, form) // TRUE q s = TRUE p s
+      val holds = applied(truth, List(p, s))
+      val proved = force(rules.mp(force(rules.conjElim1(decided)), fold(truthEquation, assumed(holds)))
+        .flatMap(rules.disch(holds, _)))
+      val fails = denial(holds)
+      val refuted = force(rules.mp(force(rules.conjElim2(decided)),
+        moved(denial, force(Conv.sym(truthEquation)), assumed(fails))).flatMap(rules.disch(fails, _)))
+      force(rules.conjIntro(proved, refuted)
+        .flatMap(rules.disch(coveredBy(n, p), _)).flatMap(rules.disch(bounded(p), _))
+        .flatMap(rules.disch(isFormula(p), _)).flatMap(rules.genAll(_, List(n, s, p))))
+    }
+
+    /** [[ProvesSigmaInstance]]: [[ProvesSigma]] at the instance, read back at `s`. */
+    def provesSigmaInstance(
+      g: Grounding,
+      sigmaIsForm: Kernel.Thm,
+      instanceIsForm: Kernel.Thm,
+      instanceIsSigma: Kernel.Thm,
+      instanceIsFree: Kernel.Thm,
+      instanceIsTrue: Kernel.Thm,
+      sigmaComplete: Kernel.Thm
+    ): Kernel.Thm = {
+      val m = Term.variable("m", numbers)
+      val n = Term.variable("n", numbers)
+      val s = instanceSource
+      val p = Term.variable("p", numbers)
+      val q = instance(n, s, p)
+      val inClass = assumed(sigma(m, p))
+      val form = apply(sigmaIsForm, List(m, p), inClass)
+      val covered = assumed(coveredBy(n, p))
+      val holds = applied(truth, List(p, s))
+      val instanceHolds = fold(truthAtItself(g, instanceIsTrue, n, s, p, form), assumed(holds))
+      val proved = apply(sigmaComplete, List(m, s, q), apply(instanceIsSigma, List(m, n, s, p), inClass),
+        instanceClosed(instanceIsFree, n, s, p, form, covered), instanceHolds)
+      force(rules.disch(holds, proved).flatMap(rules.disch(coveredBy(n, p), _))
+        .flatMap(rules.disch(sigma(m, p), _)).flatMap(rules.genAll(_, List(m, n, s, p))))
     }
 
     /* --------------------------------------------- completeness for the closed bounded formulas */

@@ -80,7 +80,7 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
       Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName, Truth.RankName, Truth.SigmaName,
-        Truth.TriangleGraphName, Truth.PairGraphName, Truth.CodeGraphName)
+        Truth.TriangleGraphName, Truth.PairGraphName, Truth.CodeGraphName, Truth.InstanceName)
     truth.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
@@ -102,8 +102,15 @@ class TruthSpec extends AnyFlatSpec with Matchers {
       }
       .mkString("; ")
     info(report)
+    // Three facts spend `ETA` as well, measured on 2026-11-26 with the instantiation, card
+    // `4102f131`: at no variable substituted the environment `\j. COND (j < 0) (s j) (e j)` is
+    // `e` only by `ETA`, and the bridges read `NUM_INST_TRUE` at `s`, where `\j. s j` is `s` by
+    // it again. Every fact before them is unchanged.
+    val withEta = Set(Truth.InstanceTrue, Truth.ProvesBoundedInstance, Truth.ProvesSigmaInstance)
     val expected: Map[String, Set[Term]] =
-      Truth.Statements.map { case (name, _) => name -> Set(choice, infinity) }.toMap
+      Truth.Statements.map { case (name, _) =>
+        name -> (if (withEta(name)) Set(choice, infinity, eta) else Set(choice, infinity))
+      }.toMap
     withClue(s"per fact: $report\n") {
       perFact.toMap shouldBe expected
     }
@@ -613,30 +620,31 @@ class TruthSpec extends AnyFlatSpec with Matchers {
       "NUM_TRUE (NUM_LESS 1 (NUM_CODE 0 0) (NUM_NUMERAL 3)) (e:num -> num) = (e:num -> num) 0 < 3")
   }
 
-  "The graph of the triangle" should "hold where the value is the triangle, fail elsewhere" in {
-    val graph = fact(Truth.TriangleGraphTrue)
-    val arithmetic = Vector(
-      force(chain.numbering.fact(Numbering.TriangleAtZero)),
-      force(chain.numbering.fact(Numbering.TriangleAtSuccessor)),
-      force(chain.peano.fact(Peano.ZeroPlus)),
-      force(chain.peano.fact(Peano.AddAtSuccessor)),
-      force(chain.peano.fact(Peano.AddAtZero)))
-
+  /** `NUM_TRUE NUM_TRI_GRAPH (\k. ZERO)`, read off the representation at zero everywhere. */
+  private lazy val triangleHoldsAtZero: Kernel.Thm = {
     // At zero everywhere: `0 = NUM_TRI 0`, which is the triangle's first equation.
-    val atZero = force(rules.spec(term("\\k:num. ZERO"), graph))
-    val zeroReading = evaluate(rightOf(atZero), arithmetic)
+    val atZero = force(rules.spec(term("\\k:num. ZERO"), fact(Truth.TriangleGraphTrue)))
+    val zeroReading = evaluate(rightOf(atZero), triangleArithmetic)
     rightOf(zeroReading) shouldBe proposition("ZERO = ZERO")
-    val holds = force(Conv.trans(atZero, zeroReading).flatMap(Conv.sym)
+    force(Conv.trans(atZero, zeroReading).flatMap(Conv.sym)
       .flatMap(e => LogicError.lift(Kernel.eqMp(e, Kernel.refl(term("ZERO"))))))
-    holds.hypotheses shouldBe empty
-    holds.conclusion shouldBe proposition("NUM_TRUE NUM_TRI_GRAPH (\\k:num. ZERO)")
+  }
 
-    // At two everywhere: `2 = NUM_TRI 2`, and the triangle of two is three. This is the direction
-    // that spends the uniqueness half of the representation: the graph is refuted, not merely
-    // left unproved.
-    val two = "SUC (SUC ZERO)"
-    val atTwo = force(rules.spec(term(s"\\k:num. $two"), graph))
-    val twoReading = evaluate(rightOf(atTwo), arithmetic)
+  private lazy val triangleArithmetic: Vector[Kernel.Thm] = Vector(
+    force(chain.numbering.fact(Numbering.TriangleAtZero)),
+    force(chain.numbering.fact(Numbering.TriangleAtSuccessor)),
+    force(chain.peano.fact(Peano.ZeroPlus)),
+    force(chain.peano.fact(Peano.AddAtSuccessor)),
+    force(chain.peano.fact(Peano.AddAtZero)))
+
+  private val two = "SUC (SUC ZERO)"
+
+  /** `~NUM_TRUE NUM_TRI_GRAPH (\k. 2)`: the triangle of two is three, so the graph is refuted. */
+  private lazy val triangleFailsAtTwo: Kernel.Thm = {
+    // This is the direction that spends the uniqueness half of the representation: the graph is
+    // refuted, not merely left unproved.
+    val atTwo = force(rules.spec(term(s"\\k:num. $two"), fact(Truth.TriangleGraphTrue)))
+    val twoReading = evaluate(rightOf(atTwo), triangleArithmetic)
     rightOf(twoReading) shouldBe proposition(s"$two = SUC ($two)")
     val claim = proposition(s"NUM_TRUE NUM_TRI_GRAPH (\\k:num. $two)")
     val assumed = force(LogicError.lift(Kernel.assume(claim)))
@@ -653,10 +661,96 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     val bottom = peel(peel(reached))
     val never = force(
       chain.naturals.fact(Natural.SuccessorNotZero).flatMap(rules.spec(term("ZERO"), _)))
-    val refuted = force(
-      Conv.sym(bottom).flatMap(rules.notElim(never, _)).flatMap(rules.notIntro(claim, _)))
+    force(Conv.sym(bottom).flatMap(rules.notElim(never, _)).flatMap(rules.notIntro(claim, _)))
+  }
+
+  "The graph of the triangle" should "hold where the value is the triangle, fail elsewhere" in {
+    triangleHoldsAtZero.hypotheses shouldBe empty
+    triangleHoldsAtZero.conclusion shouldBe proposition("NUM_TRUE NUM_TRI_GRAPH (\\k:num. ZERO)")
+    triangleFailsAtTwo.hypotheses shouldBe empty
+    triangleFailsAtTwo.conclusion shouldBe proposition(s"~(NUM_TRUE NUM_TRI_GRAPH (\\k:num. $two))")
+  }
+
+  it should "be provable in PA at the numerals of a point on it, and refutable at a point off it" in {
+    // The bridge at a real representation, both halves, owing nothing. The graph is a formula, in
+    // the bounded class and has its free variables among `v_0` and `v_1`, each shown by walking
+    // its code; then `NUM_PROV_BOUNDED_INST` at two variables proves the instance at all-zero, where
+    // the graph holds, and refutes the one at all-two, where it fails. What would make this vacuous
+    // is a bridge whose premises nothing can discharge at a concrete graph, and that is what the
+    // walk is here to rule out.
+    val graph = term(Truth.TriangleGraphName)
+    val definition = force(truth.definition(Truth.TriangleGraphName)) // NUM_TRI_GRAPH = code
+    def ofGraph(predicate: String, atCode: Kernel.Thm): Kernel.Thm = force(
+      Conv.sym(definition).flatMap(Conv.apTerm(term(predicate), _))
+        .flatMap(e => LogicError.lift(Kernel.eqMp(e, atCode))))
+    val language = chain.language
+    val v0 = term("NUM_CODE 0 0")
+    val v1 = term("NUM_CODE 0 1")
+    val left = term("NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))")
+    val right = term("NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 2 (NUM_CODE 0 1)))")
+
+    val isFormula = ofGraph("NUM_FORM", force(for {
+      variable <- language.fact(Language.TermVariable)
+      zeroTerm <- rules.spec(term("0:num"), variable)
+      oneTerm <- rules.spec(term("1:num"), variable)
+      sum <- language.fact(Language.TermSum).flatMap(rules.specAll(_, List(v0, v0)))
+        .flatMap(rules.mp(_, zeroTerm)).flatMap(rules.mp(_, zeroTerm))
+      next <- language.fact(Language.TermSuccessor).flatMap(rules.spec(v1, _)).flatMap(rules.mp(_, oneTerm))
+      product <- language.fact(Language.TermProduct).flatMap(rules.specAll(_, List(v1, term("NUM_CODE 2 (NUM_CODE 0 1)"))))
+        .flatMap(rules.mp(_, oneTerm)).flatMap(rules.mp(_, next))
+      out <- language.fact(Language.FormulaEquality).flatMap(rules.specAll(_, List(left, right)))
+        .flatMap(rules.mp(_, sum)).flatMap(rules.mp(_, product))
+    } yield out))
+    val isBounded = ofGraph("NUM_BOUNDED",
+      force(rules.specAll(fact(Truth.BoundedEquality), List(left, right)).flatMap(rules.eqTruthElim)))
+
+    // covered: what is free in the code is `0` or `1`, each below two
+    val w = Term.variable("w", numbers)
+    val freeAtGraph = force(LogicError.lift(Term.app(term("NUM_FREE_FORM"), w)).flatMap(head =>
+      LogicError.lift(Term.app(head, graph))))
+    val freeAtCode = force(Conv.apTerm(force(LogicError.lift(Term.app(term("NUM_FREE_FORM"), w))), definition))
+    val reading = force(Conv.trans(freeAtCode, evaluate(rightOf(freeAtCode), Vector(
+      force(language.fact(Language.FormulaFreeEquality)), force(language.fact(Language.FreeSum)),
+      force(language.fact(Language.FreeProduct)), force(language.fact(Language.FreeSuccessor)),
+      force(language.fact(Language.FreeVariable))))))
+    val below = (a: Term, b: Term) => force(LogicError.lift(Term.appAll(term("NUM_LT"), List(a, b))))
+    val bound = term(two)
+    val oneBelow = force(chain.peano.fact(Peano.BelowSuccessor).flatMap(rules.spec(term("SUC ZERO"), _)))
+    val zeroBelow = force(chain.peano.fact(Peano.StrictTransitive)
+      .flatMap(rules.specAll(_, List(term("ZERO"), term("SUC ZERO"), bound)))
+      .flatMap(t => chain.peano.fact(Peano.BelowSuccessor).flatMap(rules.spec(term("ZERO"), _))
+        .flatMap(rules.conjIntro(_, oneBelow)).flatMap(rules.mp(t, _))))
+    val numeralOne = force(chain.peano.fact(Peano.NumeralOneIsSuccessorOfZero)) // NUM_ONE = SUC ZERO
+    def along(template: Term => Term, equation: Kernel.Thm, held: Kernel.Thm): Kernel.Thm = {
+      val (from, _) = force(Term.destEq(equation.conclusion).toRight("an equation"))
+      val hole = Term.variable("hole", Term.typeOf(from))
+      force(LogicError.lift(Term.abs(hole, template(hole))).flatMap(Conv.apTerm(_, equation))
+        .flatMap(Conv.betaSides).flatMap(e => LogicError.lift(Kernel.eqMp(e, held))))
+    }
+    val atOne = along(x => below(x, bound), force(Conv.sym(numeralOne)), oneBelow) // NUM_ONE < 2
+    def inRange(held: Kernel.Thm): Kernel.Thm = truth.logic.destDisj(held.conclusion) match {
+      case Some((l, r)) =>
+        force(rules.disjElim(held, inRange(force(LogicError.lift(Kernel.assume(l)))),
+          inRange(force(LogicError.lift(Kernel.assume(r))))))
+      case None =>
+        val (index, _) = force(Term.destEq(held.conclusion).toRight("an equation"))
+        along(x => below(x, bound), held, if (index == term("0:num")) zeroBelow else atOne)
+    }
+    val premise = force(LogicError.lift(Kernel.assume(freeAtGraph)))
+    val covered = force(LogicError.lift(Kernel.eqMp(reading, premise)).map(inRange)
+      .flatMap(rules.disch(freeAtGraph, _)).flatMap(rules.gen(w, _)))
+    covered.hypotheses shouldBe empty
+
+    def bridged(environment: String): Kernel.Thm = force(rules.specAll(fact(Truth.ProvesBoundedInstance),
+      List(bound, term(environment), graph)).flatMap(rules.mp(_, isFormula)).flatMap(rules.mp(_, isBounded))
+      .flatMap(rules.mp(_, covered)))
+    val proved = force(rules.conjElim1(bridged("\\k:num. ZERO")).flatMap(rules.mp(_, triangleHoldsAtZero)))
+    proved.hypotheses shouldBe empty
+    proved.conclusion shouldBe proposition(s"NUM_PROV (NUM_INST ($two) (\\k:num. ZERO) NUM_TRI_GRAPH)")
+    val refuted = force(rules.conjElim2(bridged(s"\\k:num. $two")).flatMap(rules.mp(_, triangleFailsAtTwo)))
     refuted.hypotheses shouldBe empty
-    refuted.conclusion shouldBe proposition(s"~(NUM_TRUE NUM_TRI_GRAPH (\\k:num. $two))")
+    refuted.conclusion shouldBe
+      proposition(s"NUM_PROV (NUM_CODE 6 (NUM_INST ($two) (\\k:num. $two) NUM_TRI_GRAPH))")
   }
 
   /** `!a b. NUM_PAIR a b = ...` and `!t p. NUM_CODE t p = ...`, the definitions opened as equations. */

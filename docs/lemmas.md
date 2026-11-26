@@ -1346,12 +1346,21 @@ they have least appetite for working out how it is produced.
   NUM_GROUND_EQ            !n:num. !m:num. NUM_GROUND (NUM_CODE 5 (NUM_PAIR n m)) = (NUM_CLOSED n /\ NUM_CLOSED m)
   NUM_GROUND_IMP           !n:num. !m:num. NUM_GROUND (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_GROUND n /\ NUM_GROUND m)
   NUM_GROUND_NOT           !n:num. NUM_GROUND (NUM_CODE 6 n) = NUM_GROUND n
+  NUM_INST_BOUNDED         !n:num. !f:num -> num. !m:num. NUM_FORM m ==> NUM_BOUNDED m ==> NUM_BOUNDED (NUM_INST n f m)
+  NUM_INST_FORM            !n:num. !f:num -> num. !m:num. NUM_FORM m ==> NUM_FORM (NUM_INST n f m)
+  NUM_INST_FREE            !n:num. !f:num -> num. !m:num. NUM_FORM m ==> (!k:num. NUM_FREE_FORM k (NUM_INST n f m) ==> NUM_FREE_FORM k m /\ ~(k < n))
+  NUM_INST_SIGMA           !n:num. !m:num. !f:num -> num. !k:num. NUM_SIGMA n k ==> NUM_SIGMA n (NUM_INST m f k)
+  NUM_INST_SUC             !n:num. !f:num -> num. !m:num. NUM_INST (SUC n) f m = NUM_SUBST_FORM n (NUM_NUMERAL (f n)) (NUM_INST n f m)
+  NUM_INST_TRUE            !n:num. !f:num -> num. !m:num. NUM_FORM m ==> (!g:num -> num. NUM_TRUE (NUM_INST n f m) g = NUM_TRUE m (\k:num. COND (k < n) (f k) (g k)))
+  NUM_INST_ZERO            !f:num -> num. !n:num. NUM_INST 0 f n = n
   NUM_PAIR_DOUBLE          !n:num. !m:num. NUM_PAIR n m + NUM_PAIR n m = (n + m) * SUC (n + m) + (n + n)
   NUM_PAIR_GRAPH_TRUE      !f:num -> num. NUM_TRUE NUM_PAIR_GRAPH f = (f 0 = NUM_PAIR (f 1) (f 2))
   NUM_PROV_BOUNDED         !f:num -> num. !n:num. NUM_FORM n ==> NUM_BOUNDED n ==> (!m:num. ~(NUM_FREE_FORM m n)) ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))
+  NUM_PROV_BOUNDED_INST    !n:num. !f:num -> num. !m:num. NUM_FORM m ==> NUM_BOUNDED m ==> (!k:num. NUM_FREE_FORM k m ==> k < n) ==> (NUM_TRUE m f ==> NUM_PROV (NUM_INST n f m)) /\ (~(NUM_TRUE m f) ==> NUM_PROV (NUM_CODE 6 (NUM_INST n f m)))
   NUM_PROV_FALSE_EQ        !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m))) f ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m)))
   NUM_PROV_GROUND          !f:num -> num. !n:num. NUM_FORM n ==> NUM_GROUND n ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))
   NUM_PROV_SIGMA           !n:num. !f:num -> num. !m:num. NUM_SIGMA n m ==> (!k:num. ~(NUM_FREE_FORM k m)) ==> NUM_TRUE m f ==> NUM_PROV m
+  NUM_PROV_SIGMA_INST      !n:num. !m:num. !f:num -> num. !k:num. NUM_SIGMA n k ==> (!i:num. NUM_FREE_FORM i k ==> i < m) ==> NUM_TRUE k f ==> NUM_PROV (NUM_INST m f k)
   NUM_PROV_TRUE_EQ         !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m))
   NUM_PROV_VALUE           !f:num -> num. !n:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n (NUM_NUMERAL (NUM_VALUE n f))))
   NUM_RANK_ALL             !n:num. !m:num. NUM_RANK (NUM_CODE 8 (NUM_PAIR n m)) = SUC (NUM_RANK m)

@@ -173,6 +173,11 @@ object Spellings {
       // The index counts the existentials in front and is not a level of the arithmetical
       // hierarchy, every member being Sigma-1, so the row does not write `\\Sigma_{#1}`.
       .delimited("NUM_SIGMA", 2, "\\operatorname{sigma}_{#1}(#2)")
+      // The numerals of `s 0`, ..., `s (n - 1)` put for the first `n` variables: the substitution's
+      // own bracket with the range and the environment inside it, so it reads as `NUM_SUBST_FORM`
+      // iterated rather than as a new operation, and at that row's precedence, since it opens with
+      // an argument as that row does.
+      .operator("NUM_INST", 3, "#3[\\ulcorner #2 \\urcorner_{< #1}]", Multiplicative + 5)
       .delimited("NUM_TRI_GRAPH", 0, "\\ulcorner v_0 + v_0 = v_1 \\cdot S v_1 \\urcorner")
       .delimited("NUM_PAIR_GRAPH", 0,
         "\\ulcorner v_0 + v_0 = (v_1 + v_2) \\cdot S (v_1 + v_2) + (v_1 + v_1) \\urcorner")
