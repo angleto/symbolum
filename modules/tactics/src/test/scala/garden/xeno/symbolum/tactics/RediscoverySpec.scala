@@ -26,7 +26,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
 
   private val propose = Propose.standard
   private val recoveries = propose.recoveries
-  private lazy val readings = recoveries.flatMap(recovery => propose.novelty.of(recovery.proposal.claim).toOption)
+  // Through the generator's own memory of its readings, so the three questions below about the
+  // same twenty claims are asked once, and of the same answers `ProposeSpec`'s audit reads.
+  private lazy val taken = propose.readings(recoveries.map(_.proposal))
+  private lazy val readings = taken.flatMap(_.reading)
 
   "The generator" should "reproduce lemmas the library holds, from lemmas it does not" in {
     // 16 pairs reaching 12 distinct lemmas, measured on the tree of 2026-09-12 with 233 entries.
@@ -673,7 +676,7 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // neither, so both came back `Unsettled` where `Ask` proved them. Card `cab4b920` gave
     // `Novelty.standard` the prover the whole chain deserves, as `Ask` has, and the exception went
     // with the limit, as this test said it would.
-    val inside = recoveries.flatMap(r => propose.novelty.of(r.proposal.claim).toOption)
+    val inside = taken.flatMap(_.reading)
 
     readings.size shouldBe 20
     inside.size shouldBe 20
@@ -688,11 +691,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     val logic = chain.widest.logic.over(chain.widest.theory)
       .fold(error => fail(s"the logic does not widen: $error"), identity)
 
-    val known = recoveries.flatMap(recovery =>
-      propose.novelty.of(recovery.proposal.claim).toOption
-        .filter(_.standing == Novelty.Standing.Known)
-        .map(recovery -> _)
-    )
+    val known = recoveries.zip(taken).flatMap { case (recovery, read) =>
+      read.reading.filter(_.standing == Novelty.Standing.Known).map(recovery -> _)
+    }
     known should have size 16
 
     known.foreach { case (recovery, reading) =>

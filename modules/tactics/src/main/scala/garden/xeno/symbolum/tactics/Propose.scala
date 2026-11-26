@@ -197,10 +197,40 @@ final class Propose private (val novelty: Novelty, val library: Library, val log
    * what came back uninteresting is what says whether the loop is worth running.
    */
   def audit: Vector[Finding] =
-    proposals.map { proposal =>
-      val reading = novelty.of(proposal.claim).toOption
-      Finding(proposal, reading.map(_.standing), reading)
+    proposals.zip(readings(proposals)).map { case (proposal, taken) =>
+      Finding(proposal, taken.reading.map(_.standing), taken.reading)
     }
+
+  /**
+   * What the novelty scale said of each proposal's claim, in the order given, and what saying it
+   * cost: the claims not read before are put to it in parallel ([[Parallel]]), and every reading is
+   * kept for the life of this generator.
+   *
+   * **Kept because two passes asked the same questions.** `audit` and `Sweep.run` each put
+   * every proposal of the standard generator to the prover, in one JVM, one after the other, and
+   * on 2026-11-24 the suites over them took 38.9 minutes each of a whole run of about 110. A
+   * reading is a function of the claim alone, the scale holding no state between questions and no
+   * procedure under it a clock, so the second pass reads the first's answers rather than paying
+   * for them again. Keyed by the claim and not the proposal: two lemmas proposing one claim are one
+   * question.
+   *
+   * **The cost travels with the reading**, in [[Propose.Taken.milliseconds]], so a caller that
+   * reports what a pass spent reports what the prover spent on its claims, whichever pass happened
+   * to ask first. What the memory costs is every reading held; `ProposeSpec` held all of them for
+   * the life of its suite already.
+   */
+  def readings(of: Vector[Proposal]): Vector[Taken] = {
+    val unread = of.map(_.claim).distinct.filterNot(read.containsKey)
+    Parallel.map(unread) { claim =>
+      val started = System.nanoTime()
+      val reading = novelty.of(claim).toOption
+      Taken(reading, (System.nanoTime() - started) / 1000000L)
+    }.zip(unread).foreach { case (taken, claim) => read.putIfAbsent(claim, taken) }
+    of.map(proposal => read.get(proposal.claim))
+  }
+
+  /** The readings taken so far, by claim. */
+  private val read = new java.util.concurrent.ConcurrentHashMap[Term, Taken]
 
   /* --------------------------------------------------------------- the plumbing */
 
@@ -290,6 +320,12 @@ object Propose {
 
   /** A claim to put to the prover, where it came from, and what was done to it. */
   final case class Proposal(from: String, source: Source, change: String, claim: Term)
+
+  /**
+   * One claim's reading, `None` where the scale refused to read it, and the milliseconds the
+   * reading took on the thread that took it.
+   */
+  final case class Taken(reading: Option[Novelty.Reading], milliseconds: Long)
 
   /**
    * A lemma the library holds, produced by mutating a different one.

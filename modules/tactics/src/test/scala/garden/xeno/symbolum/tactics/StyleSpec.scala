@@ -264,6 +264,16 @@ class StyleSpec extends AnyFlatSpec with Matchers {
         "`HashMap`s beside them number the types and the terms, keyed by structural equality and " +
         "not by identity, which is the opposite choice from the theorems above it and is the " +
         "right one: two equal types are one type and the record is meant to name it once"),
+    "Propose.scala" ->
+      ("a `ConcurrentHashMap` from a claim to its novelty reading and what it cost, since " +
+        "2026-11-26: `audit` and `Sweep.run` put the same claims to the prover in one JVM, 38.9 " +
+        "minutes each of a whole run, and a reading is a function of the claim alone. Keyed by " +
+        "structural equality of terms; filled from a parallel map with `putIfAbsent`, so two " +
+        "readings of one claim racing leave one, and what it holds is immutable. It lives as long " +
+        "as the generator, `Propose.standard` for the suites"),
+    "Parallel.scala" ->
+      ("one `AtomicInteger` numbering the pool's threads by name, which is all it does, and the " +
+        "pool itself is made and shut down inside each `map`, so nothing it holds outlives a call"),
     "Conv.scala" ->
       ("the reflexivity cache, bounded at `Conv.Atoms` for the reason its docstring measures, " +
         "read through `Option` at the boundary because the map is a Java one and both of its " +

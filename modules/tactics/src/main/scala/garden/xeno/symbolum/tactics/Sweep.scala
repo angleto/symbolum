@@ -52,21 +52,30 @@ final class Sweep private (val propose: Propose, val ledger: Ledger) {
    * that, for the reason that file gives.
    */
   def run(): Report = {
+    // The claims the file does not answer are read first, all of them and in parallel, one per
+    // printed statement since that is the ledger's key; the walk below is then the sequential one
+    // it always was, and writes the file in the proposals' order.
+    val unanswered = propose.proposals
+      .filter(proposal => ledger.settled(reals.show(proposal.claim)).isEmpty)
+      .distinctBy(proposal => reals.show(proposal.claim))
+    val taken = unanswered.map(_.claim).zip(propose.readings(unanswered)).toMap
+
     val tallies = propose.proposals
       .groupBy(_.source)
       .toVector
       .sortBy(_._1.toString)
       .map { case (source, proposals) =>
-        val started = System.nanoTime()
-
         val outcomes = proposals.map { proposal =>
           val statement = reals.show(proposal.claim)
 
           ledger.settled(statement) match {
-            case Some(entry) => (true, Some(entry.verdict))
+            case Some(entry) => (true, Some(entry.verdict), 0L)
             case None =>
-              propose.novelty.of(proposal.claim).toOption match {
-                case Some(reading) => (false, Some(ledger.record(statement, reading).verdict))
+              // A claim missing from what was read first prints as one that was, and that one was
+              // refused, so the file has no entry for either: it is read on its own, as before.
+              val read = taken.getOrElse(proposal.claim, propose.readings(Vector(proposal)).head)
+              read.reading match {
+                case Some(reading) => (false, Some(ledger.record(statement, reading).verdict), read.milliseconds)
                 // A claim the novelty scale refused to *read*, which is not the same as one it
                 // read and no procedure could take: that second one is a reading, its standing is
                 // `Unreadable`, and it lands in the file as `Outside`. This is the reading itself
@@ -74,7 +83,7 @@ final class Sweep private (val propose: Propose, val ledger: Ledger) {
                 // again give a different answer", and about a claim that never became a question
                 // this pass produced no answer. Counted so that a source producing nothing but
                 // these is visible as such.
-                case None => (false, None)
+                case None => (false, None, read.milliseconds)
               }
           }
         }
@@ -83,12 +92,12 @@ final class Sweep private (val propose: Propose, val ledger: Ledger) {
           source = source,
           offered = proposals.size,
           remembered = outcomes.count(_._1),
-          refused = outcomes.count { case (remembered, verdict) => !remembered && verdict.isEmpty },
+          refused = outcomes.count { case (remembered, verdict, _) => !remembered && verdict.isEmpty },
           verdicts = outcomes
-            .collect { case (false, Some(verdict)) => verdict }
+            .collect { case (false, Some(verdict), _) => verdict }
             .groupBy(identity)
             .map { case (verdict, held) => (verdict, held.size) },
-          milliseconds = (System.nanoTime() - started) / 1000000L
+          milliseconds = outcomes.map(_._3).sum
         )
       }
 
@@ -117,6 +126,11 @@ object Sweep {
     remembered: Int,
     refused: Int,
     verdicts: Map[Ledger.Verdict, Int],
+    // What the prover spent reading the claims this pass settled or was refused, summed over the
+    // claims rather than read off a wall clock: the readings run in parallel, and a claim another
+    // pass of the same generator already read costs here what it cost there. Until 2026-11-26 it
+    // was the wall clock around the source's walk, which was the same thing while the walk was
+    // sequential and the readings were not shared.
     milliseconds: Long
   ) {
 

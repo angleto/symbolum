@@ -1579,7 +1579,9 @@ Those two lines are a **photograph** of one run against this repository's own li
 and every number in them moves when the library does. What `DocumentationSpec` runs is the example
 and what it pins is the shape: a line per source, the sources named, and a rate on each. A figure
 worth pinning would have to be about something that does not change every time somebody proves a
-lemma.
+lemma. The milliseconds in them were the wall clock around each source's walk; since 2026-11-26
+they are what the prover spent on that source's claims, summed claim by claim, because the claims
+are read in parallel and a claim the same generator already read for `audit` is not read again.
 
 Run it again against the same file and it settles nothing: every proposal is found and the cost is a
 lookup. The last figure on each line is the one the ledger was built to make askable — how many

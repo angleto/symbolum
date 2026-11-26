@@ -292,6 +292,12 @@ lazy val commonSettings = Seq(
    */
   Test / fork := true,
   Test / javaOptions ++= Seq("-Xmx1024m", "-Xss4M"),
+  // How many proposals the corpus suites put to the prover at once inside the fork. Unset, the
+  // fork uses every processor it sees, which is `Parallel.threads`' own default and is read there,
+  // in one place; set, `SYMBOLUM_THREADS` is handed over as it is and refused there by name if it
+  // is not a positive whole number. One fork with threads rather than several forks, because the
+  // threads share the one chain the fork builds: `Parallel`'s comment has the measurement.
+  Test / javaOptions ++= sys.env.get("SYMBOLUM_THREADS").map(value => s"-Dsymbolum.threads=$value").toSeq,
   // Uncached, because sbt 2 caches a task's result by serialising it and `ForkOptions` has no
   // serialisation; the value is recomputed on every run, which costs nothing.
   Test / forkOptions := Def.uncached(
