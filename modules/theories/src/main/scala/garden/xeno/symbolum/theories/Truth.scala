@@ -51,9 +51,17 @@ import garden.xeno.symbolum.logic.*
  * `NUM_CODE t p`, which is the successor of a pair, is that number's second successor. Each graph
  * is therefore one equation, `v0 + v0 = ...`, with no quantifier: `NUM_PAIR_GRAPH` and
  * `NUM_CODE_GRAPH`. `docs/adr/0040` predicted bounded quantifiers for the pairing; the doubling
- * makes them unnecessary, and the projections are where they first appear. The three are one proof,
- * `graphByDoubling`, which needs only the doubled closed form of the function and the cancellation
- * of a doubling.
+ * makes them unnecessary. The three are one proof, `graphByDoubling`, which needs only the doubled
+ * closed form of the function and the cancellation of a doubling.
+ *
+ * == The projections, where the bounded quantifier first appears ==
+ *
+ * `NUM_FST_GRAPH` and `NUM_SND_GRAPH` say that `v0` is a component of `v1` by a universal below
+ * `v1`: no other component below the argument makes it the pair, so the argument does. The doubling
+ * is spent a fourth time inside the body, and what is new is that the bound is a variable, which
+ * [[Truth.TrueAllBelowVariable]] reads, and that the pairing has to be onto, which
+ * `Numbering.NUM_PAIR_ONTO` says: a projection is chosen, and at a number nobody has shown to be a
+ * pair it says nothing. [[Truth.FirstGraphTrue]] has the argument.
  *
  * What these facts do NOT say, since this is the sentence a reader would round up: that PA proves
  * the graph at the numerals of a value and its arguments. What carries a graph's truth there is
@@ -62,8 +70,10 @@ import garden.xeno.symbolum.logic.*
  * refutable when it is false. A representation reaches it by discharging three premises at its
  * code, that it is a formula, bounded, and has its free variables below the arity, and
  * [[Truth.TriangleRepresented]], [[Truth.PairRepresented]] and [[Truth.CodeRepresented]] are the
- * three graphs above having done so: the walk of their codes that discharges the premises is
- * `Representing`, and it reads one equation between terms and refuses any other code by name.
+ * graphs by doubling having done so, and [[Truth.FirstRepresented]] and
+ * [[Truth.SecondRepresented]] the two projections: the walk of their codes that discharges the premises is `Representing`, which
+ * reads equations, negations, implications and the bounded universal, sees through the other
+ * abbreviations of `Language`, and refuses any other code by name.
  */
 final class Truth private (
   val language: Language,
@@ -100,6 +110,23 @@ object Truth {
 
   /** The code of `v0 + v0 = S (S ((v1 + v2) * S (v1 + v2) + (v1 + v1)))`, the graph of `NUM_CODE`. */
   val CodeGraphName: String = "NUM_CODE_GRAPH"
+
+  /**
+   * The code of `(!v2. v2 < v1 ==> ~(v1 + v1 = 2 * NUM_PAIR v0 v2)) ==> v1 + v1 = 2 * NUM_PAIR v0 v1`,
+   * the graph of `NUM_FST`, each doubled pair written as its closed form, as the pairing's graph
+   * writes it.
+   *
+   * The first formula of the four with a quantifier, and it is bounded by the argument: `v0` is the
+   * first component of `v1` when some `b` at most `v1` makes `v1` the pair of `v0` and `b`, since a
+   * component is never above its pair. "Some `b` below `v1`, or `b` is `v1`" is written as the
+   * implication from "no `b` below" to the case `b = v1`, which is the same in a classical reading
+   * and needs no disjunction. The argument is the bound, and not its successor, because the class
+   * admits a variable or a numeral as a bound and no other term.
+   */
+  val FirstGraphName: String = "NUM_FST_GRAPH"
+
+  /** The same for `NUM_SND`, with the quantified component in the first slot: `v0` second of `v1`. */
+  val SecondGraphName: String = "NUM_SND_GRAPH"
 
   val ValueVariable: String = "NUM_VALUE_VAR"
   val ValueZero: String = "NUM_VALUE_ZERO"
@@ -171,6 +198,23 @@ object Truth {
 
   /** `|- !e. NUM_TRUE NUM_CODE_GRAPH e = (e 0 = NUM_CODE (e 1) (e 2))`, the same for the constructor. */
   val CodeGraphTrue: String = "NUM_CODE_GRAPH_TRUE"
+
+  /**
+   * `|- !e. NUM_TRUE NUM_FST_GRAPH e = (e 0 = NUM_FST (e 1))`
+   *
+   * The graph is evaluated through [[TrueAllBelowVariable]], and what is left is that "no `b` below
+   * `e 1` makes `e 1` the pair of `e 0` and `b`, so `e 1` does" holds exactly when `e 0` is the first
+   * component. From right to left the pair `e 1` is, by `NUM_PAIR_ONTO`, has `e 0` first and some
+   * `b` second with `b` at most `e 1`: below it the premise is refuted at `b`, and at it the
+   * conclusion is the doubled closed form. From left to right, either half reaching an equation
+   * between `e 1` doubled and a doubled pair cancels the doubling and projects. This is where the
+   * pairing being onto is spent, and the only place: at a number not known to be a pair,
+   * `NUM_FST` says nothing.
+   */
+  val FirstGraphTrue: String = "NUM_FST_GRAPH_TRUE"
+
+  /** `|- !e. NUM_TRUE NUM_SND_GRAPH e = (e 0 = NUM_SND (e 1))`, the same proof at the other slot. */
+  val SecondGraphTrue: String = "NUM_SND_GRAPH_TRUE"
 
   /**
    * `|- !e t. NUM_TERM t ==> NUM_CLOSED t ==> NUM_PROV (t = numeral (NUM_VALUE t e))`
@@ -417,6 +461,25 @@ object Truth {
   val TrueAllBelowNumeral: String = "NUM_TRUE_ALL_BELOW_NUMERAL"
 
   /**
+   * `|- !e z i k. ~(z = i) ==> ~(k = z) ==> NUM_TRUE (NUM_LESS z v_i v_k) e = e i < e k`
+   *
+   * [[TrueLessNumeral]] below a variable rather than a numeral, which is what a formula with free
+   * variables is read through before any numeral has been put for them: the graph of a projection
+   * bounds its quantifier by its argument. The bound must not be the witness, or the existential
+   * the order abbreviates would bind it.
+   */
+  val TrueLessVariable: String = "NUM_TRUE_LESS_VAR"
+
+  /**
+   * `|- !e z i k p. ~(z = i) ==> ~(k = i) ==> ~(k = z) ==>`
+   *   `NUM_TRUE (NUM_ALL_BELOW z i v_k p) e = !m. m < e k ==> NUM_TRUE p e[i := m]`
+   *
+   * [[TrueAllBelowNumeral]] below a variable, under the three conditions [[BoundedAllBelow]] puts on
+   * a variable bound, so that every universal of the bounded class has a reading.
+   */
+  val TrueAllBelowVariable: String = "NUM_TRUE_ALL_BELOW_VAR"
+
+  /**
    * `|- !e p. NUM_FORM p ==> NUM_BOUNDED p ==> (!w. ~(NUM_FREE_FORM w p)) ==>`
    *   `(NUM_TRUE p e ==> NUM_PROV p) /\ (~(NUM_TRUE p e) ==> NUM_PROV ~p)`
    *
@@ -591,6 +654,12 @@ object Truth {
   /** [[TriangleRepresented]] for the constructor, at three variables, through [[CodeGraphTrue]]. */
   val CodeRepresented: String = "NUM_CODE_REPR"
 
+  /** [[CodeRepresented]] for `NUM_FST`: the first quantified graph to reach the bridge. */
+  val FirstRepresented: String = "NUM_FST_REPR"
+
+  /** The same for `NUM_SND`. */
+  val SecondRepresented: String = "NUM_SND_REPR"
+
   /**
    * The step of the value, as text.
    *
@@ -654,12 +723,40 @@ object Truth {
    * both [[PairGraphText]] and [[CodeGraphText]] are written over. Built from named parts because
    * it is three levels deep and `v1 + v2` occurs twice, which is easier to check named than nested.
    */
-  private val PairDoubledText: String = {
-    val sum = "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 2)))"
+  private val PairDoubledText: String = doubledPairText(1, 2)
+
+  /**
+   * `(v_a + v_b) * S (v_a + v_b) + (v_a + v_a)`, coded: twice the pair of `v_a` and `v_b`, which
+   * [[PairDoubledText]] is at `1` and `2` and the projections' graphs are at the variables they
+   * read.
+   */
+  private def doubledPairText(a: Int, b: Int): String = {
+    val sum = s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 $a) (NUM_CODE 0 $b)))"
     val product = s"(NUM_CODE 4 (NUM_PAIR $sum (NUM_CODE 2 $sum)))"
-    val first = "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 1)))"
+    val first = s"(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 $a) (NUM_CODE 0 $a)))"
     s"(NUM_CODE 3 (NUM_PAIR $product $first))"
   }
+
+  /** `v1 + v1`, coded: twice the argument a projection is read at. */
+  private val ArgumentDoubledText: String = "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 0 1)))"
+
+  /**
+   * `(!v2. v2 < v1 ==> ~(v1 + v1 = 2 * NUM_PAIR v_a v_b)) ==> v1 + v1 = 2 * NUM_PAIR v_a' v_b'`,
+   * coded, with the quantified component at `v2` in the body and at `v1` in the conclusion; the
+   * order's witness is `v3`. The graph of a projection, `left` saying which slot `v0` is.
+   */
+  private def projectionGraphText(left: Boolean): String = {
+    def doubled(other: Int): String = if (left) doubledPairText(0, other) else doubledPairText(other, 0)
+    val body = s"(NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR $ArgumentDoubledText ${doubled(2)})))"
+    val conclusion = s"(NUM_CODE 5 (NUM_PAIR $ArgumentDoubledText ${doubled(1)}))"
+    s"NUM_CODE 7 (NUM_PAIR (NUM_ALL_BELOW 3 2 (NUM_CODE 0 1) $body) $conclusion)"
+  }
+
+  /** [[FirstGraphName]]'s code: `v0` is the first component of `v1`. */
+  val FirstGraphText: String = projectionGraphText(left = true)
+
+  /** [[SecondGraphName]]'s code: `v0` is the second component of `v1`. */
+  val SecondGraphText: String = projectionGraphText(left = false)
 
   /** `v0 + v0`, coded: the left side of every graph by doubling. */
   private val ValueDoubledText: String = "(NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0)))"
@@ -766,6 +863,13 @@ object Truth {
       ("!e:num -> num. !z:num i:num n:num p:num. ~(z = i) ==> " +
         "NUM_TRUE (NUM_ALL_BELOW z i (NUM_NUMERAL n) p) e = " +
         "(!m:num. m < n ==> NUM_TRUE p (\\j:num. COND (j = i) m (e j)))"),
+    TrueLessVariable ->
+      ("!e:num -> num. !z:num i:num k:num. ~(z = i) ==> ~(k = z) ==> " +
+        "NUM_TRUE (NUM_LESS z (NUM_CODE 0 i) (NUM_CODE 0 k)) e = e i < e k"),
+    TrueAllBelowVariable ->
+      ("!e:num -> num. !z:num i:num k:num p:num. ~(z = i) ==> ~(k = i) ==> ~(k = z) ==> " +
+        "NUM_TRUE (NUM_ALL_BELOW z i (NUM_CODE 0 k) p) e = " +
+        "(!m:num. m < e k ==> NUM_TRUE p (\\j:num. COND (j = i) m (e j)))"),
     ProvesBounded ->
       ("!e:num -> num. !p:num. NUM_FORM p ==> NUM_BOUNDED p ==> (!w:num. ~(NUM_FREE_FORM w p)) ==> " +
         "(NUM_TRUE p e ==> NUM_PROV p) /\\ (~(NUM_TRUE p e) ==> NUM_PROV (NUM_CODE 6 p))"),
@@ -811,7 +915,15 @@ object Truth {
         "(~(s 0 = NUM_PAIR (s 1) (s 2)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 3 s NUM_PAIR_GRAPH)))"),
     CodeRepresented ->
       ("!s:num -> num. (s 0 = NUM_CODE (s 1) (s 2) ==> NUM_PROV (NUM_INST 3 s NUM_CODE_GRAPH)) /\\ " +
-        "(~(s 0 = NUM_CODE (s 1) (s 2)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 3 s NUM_CODE_GRAPH)))")
+        "(~(s 0 = NUM_CODE (s 1) (s 2)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 3 s NUM_CODE_GRAPH)))"),
+    FirstGraphTrue -> "!e:num -> num. NUM_TRUE NUM_FST_GRAPH e = (e 0 = NUM_FST (e 1))",
+    SecondGraphTrue -> "!e:num -> num. NUM_TRUE NUM_SND_GRAPH e = (e 0 = NUM_SND (e 1))",
+    FirstRepresented ->
+      ("!s:num -> num. (s 0 = NUM_FST (s 1) ==> NUM_PROV (NUM_INST 2 s NUM_FST_GRAPH)) /\\ " +
+        "(~(s 0 = NUM_FST (s 1)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 2 s NUM_FST_GRAPH)))"),
+    SecondRepresented ->
+      ("!s:num -> num. (s 0 = NUM_SND (s 1) ==> NUM_PROV (NUM_INST 2 s NUM_SND_GRAPH)) /\\ " +
+        "(~(s 0 = NUM_SND (s 1)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 2 s NUM_SND_GRAPH)))")
   )
 
   /** The step of the ground predicate, as text, with the guards the truth's step has. */
@@ -941,12 +1053,18 @@ object Truth {
       withCodeGraph <- LogicError.lift(
         Kernel.defineConstant(pairTheory, CodeGraphName, codeGraphBody))
       (codeTheory, codeGraphDefinition) = withCodeGraph
+      firstGraphBody <- Parser.term(codeTheory, provability.notation, FirstGraphText, numbers)
+      withFirstGraph <- LogicError.lift(Kernel.defineConstant(codeTheory, FirstGraphName, firstGraphBody))
+      (firstTheory, firstGraphDefinition) = withFirstGraph
+      secondGraphBody <- Parser.term(firstTheory, provability.notation, SecondGraphText, numbers)
+      withSecondGraph <- LogicError.lift(Kernel.defineConstant(firstTheory, SecondGraphName, secondGraphBody))
+      (graphsTheory, secondGraphDefinition) = withSecondGraph
 
       // The instantiation, a primitive recursion on how many variables have had a numeral put for
       // them, the environment and the formula being the arguments of the function it produces.
-      codeLogic <- numbering.logic.over(codeTheory)
+      codeLogic <- numbering.logic.over(graphsTheory)
       withInstance <- Recursion.define(
-        codeLogic, naturals, codeTheory, provability.notation, onNumbers, InstanceName,
+        codeLogic, naturals, graphsTheory, provability.notation, onNumbers, InstanceName,
         Type.fun(environments, Type.fun(numbers, numbers)),
         "\\s:num -> num. \\p:num. p",
         "\\v:(num -> num) -> num -> num. \\i:num. \\s:num -> num. \\p:num. " +
@@ -1045,11 +1163,24 @@ object Truth {
 
       // Each representation, the bridge at its graph, with the graph's three premises walked.
       bridge <- evaluation.get(ProvesBoundedInstance).toRight(MissingDefinition(ProvesBoundedInstance))
+      bounding = Bounding(boundedEquality, boundedNegation, boundedImplication, boundedAllBelow, boundedUniversal,
+        successor)
       representing = new Representing(logic, theory, provability.notation, language, numbering.peano,
-        successor, statements, boundedEquality, bridge)
+        successor, naturals.classical, statements, bounding, bridge)
       triangleRepresented <- representing.of(TriangleRepresented, graphDefinition, graph)
       pairRepresented <- representing.of(PairRepresented, pairGraphDefinition, pairGraph)
       codeRepresented <- representing.of(CodeRepresented, codeGraphDefinition, codeGraph)
+
+      // The projections' graphs, the first with a quantifier: their truth reads the universal below
+      // a variable, which the evaluation proved, so they come after it rather than beside the others.
+      allBelowVariable <- evaluation.get(TrueAllBelowVariable).toRight(MissingDefinition(TrueAllBelowVariable))
+      projectionGraphs = new ProjectionGraphs(logic, theory, provability.notation, numbering, successor,
+        naturals.classical, statements, pairDoubled, graphEvaluation ++ Vector(trueImplication, trueNegation),
+        allBelowVariable)
+      firstGraph <- projectionGraphs.of(FirstGraphTrue, firstGraphDefinition)
+      secondGraph <- projectionGraphs.of(SecondGraphTrue, secondGraphDefinition)
+      firstRepresented <- representing.of(FirstRepresented, firstGraphDefinition, firstGraph)
+      secondRepresented <- representing.of(SecondRepresented, secondGraphDefinition, secondGraph)
     } yield new Truth(
       language,
       theory,
@@ -1065,7 +1196,9 @@ object Truth {
         InstanceName -> instanceDefinition,
         TriangleGraphName -> graphDefinition,
         PairGraphName -> pairGraphDefinition,
-        CodeGraphName -> codeGraphDefinition
+        CodeGraphName -> codeGraphDefinition,
+        FirstGraphName -> firstGraphDefinition,
+        SecondGraphName -> secondGraphDefinition
       ),
       Map(
         ValueVariable -> valueVariable,
@@ -1103,7 +1236,11 @@ object Truth {
         InstanceSuccessor -> instanceSuccessor,
         TriangleRepresented -> triangleRepresented,
         PairRepresented -> pairRepresented,
-        CodeRepresented -> codeRepresented
+        CodeRepresented -> codeRepresented,
+        FirstGraphTrue -> firstGraph,
+        SecondGraphTrue -> secondGraph,
+        FirstRepresented -> firstRepresented,
+        SecondRepresented -> secondRepresented
       ) ++ evaluation
     )
   }
@@ -1789,114 +1926,58 @@ object Truth {
   private final case class Instances(zero: Kernel.Thm, successor: Kernel.Thm)
 
   /**
-   * A representation in PA, from the graph's truth and [[ProvesBoundedInstance]]: what
-   * [[TriangleRepresented]], [[PairRepresented]] and [[CodeRepresented]] are each an instance of.
+   * What the direct-style derivations over a graph's code share: refusal, the constants of the
+   * coding and of the order, carrying a theorem across an equation, and two numerals compared.
    *
-   * The bridge asks three things of the graph, and each is shown by walking its code rather than
-   * stated for it: that it is a formula, by the term and formula rules of `Language` at each
-   * constructor; that it is in the bounded class, by its clause for an equation; and that what is
-   * free in it is below the number of variables put for, by rewriting `NUM_FREE_FORM w` through the
-   * freeness clauses into a disjunction of `j = w`, one per variable occurring, and putting each `j`
-   * below the bound in the successor form `Successor.spell` gives both. The bound is read off the
-   * published statement, so it is written once.
-   *
-   * **What the walk reads is a graph that is one equation between terms without the constant
-   * zero**, which is what the graphs by doubling are. A code with any other constructor is refused
-   * by name rather than guessed at; the projections, whose graphs carry bounded quantifiers, are
-   * the first that will need the walk widened.
+   * A numeral is put below a larger one through their successor forms, which `Successor.spell`
+   * gives both, by a chain of `n < SUC n` joined by transitivity; two different numerals are apart
+   * by `Successor.distinct`.
    */
-  private final class Representing(
-    logic: Logic,
-    theory: Theory,
-    notation: Notation,
-    language: Language,
-    peano: Peano,
-    successor: Successor,
-    statements: Statements,
-    boundedEquality: Kernel.Thm,
-    bridge: Kernel.Thm
-  ) {
-    private val rules = logic.rules
-    private val numbers = TyApp(Natural.TypeName, Nil)
-    private val environments = Type.fun(numbers, numbers)
+  private abstract class Direct(logic: Logic, theory: Theory, notation: Notation, peano: Peano, successor: Successor) {
+    protected val rules: Rules = logic.rules
+    protected val numbers: Type = TyApp(Natural.TypeName, Nil)
+    protected val environments: Type = Type.fun(numbers, numbers)
 
-    private def force[T](result: Either[LogicError, T]): T =
+    protected def force[T](result: Either[LogicError, T]): T =
       result.fold(error => throw new RefusedHere(error), identity)
-    private def constant(name: String, ty: Type): Term =
+    protected def refused(error: LogicError): Nothing = throw new RefusedHere(error)
+    protected def constant(name: String, ty: Type): Term =
       force(LogicError.lift(theory.constant(name, ty)))
-    private def applied(head: Term, arguments: List[Term]): Term =
+    protected def applied(head: Term, arguments: List[Term]): Term =
       force(LogicError.lift(Term.appAll(head, arguments)))
-    private def fact(name: String): Kernel.Thm = force(language.fact(name))
-    private def sides(theorem: Kernel.Thm): (Term, Term) =
+    protected def sides(theorem: Kernel.Thm): (Term, Term) =
       force(Term.destEq(theorem.conclusion).toRight(NotOfForm("an equation", theorem.conclusion)))
+    protected def assumed(claim: Term): Kernel.Thm = force(LogicError.lift(Kernel.assume(claim)))
+    protected def equal(left: Term, right: Term): Term = force(LogicError.lift(Term.eq(left, right)))
+    protected def denial(claim: Term): Term = force(logic.mkNot(claim))
 
-    private val coding = constant(Numbering.CodeName, Type.fun(numbers, Type.fun(numbers, numbers)))
-    private val pairing = constant(Numbering.PairName, Type.fun(numbers, Type.fun(numbers, numbers)))
-    private val below = constant(Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
-    private val freeIn = constant(Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
-    private val tags: Vector[Term] =
-      (0 to 5).toVector.map(k => force(Parser.term(theory, notation, k.toString, numbers)))
+    protected val coding: Term = constant(Numbering.CodeName, Type.fun(numbers, Type.fun(numbers, numbers)))
+    protected val pairing: Term = constant(Numbering.PairName, Type.fun(numbers, Type.fun(numbers, numbers)))
+    protected val below: Term = constant(Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+    protected val plus: Term = constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+    protected val tags: Vector[Term] =
+      (0 to 8).toVector.map(k => force(Parser.term(theory, notation, k.toString, numbers)))
 
-    /** `(tag, payload)` of a code written `NUM_CODE tag payload`, the tag's value read off [[tags]]. */
-    private def opened(code: Term): Option[(Int, Term)] = code match {
-      case App(App(head, tag), payload) if head == coding && tags.contains(tag) =>
-        Some((tags.indexOf(tag), payload))
-      case _ => None
-    }
-    private def halves(payload: Term): Option[(Term, Term)] = payload match {
-      case App(App(head, left), right) if head == pairing => Some((left, right))
-      case _ => None
-    }
-    private def refused(error: LogicError): Nothing = throw new RefusedHere(error)
-
-    /** `|- NUM_TERM t` for a term code built from variables, successors, sums and products. */
-    private def termOf(code: Term): Kernel.Thm = opened(code) match {
-      case Some((0, index)) => force(rules.spec(index, fact(Language.TermVariable)))
-      case Some((2, inner)) => force(rules.spec(inner, fact(Language.TermSuccessor)).flatMap(rules.mp(_, termOf(inner))))
-      case Some((tag @ (3 | 4), payload)) => halves(payload) match {
-        case Some((left, right)) =>
-          force(rules.specAll(fact(if (tag == 3) Language.TermSum else Language.TermProduct), List(left, right))
-            .flatMap(rules.mp(_, termOf(left))).flatMap(rules.mp(_, termOf(right))))
-        case None => refused(NotOfForm("a sum or a product of two codes", code))
-      }
-      case _ => refused(NotOfForm("a term code of a variable, a successor, a sum or a product", code))
-    }
-
-    /** `(left, right)` of the code of an equation, which is all this walk reads as a formula. */
-    private def equationOf(code: Term): (Term, Term) = opened(code) match {
-      case Some((5, payload)) => halves(payload).getOrElse(refused(NotOfForm("an equation between two codes", code)))
-      case _ => refused(NotOfForm("the code of an equation, the only formula this walk reads", code))
-    }
-
-    private def formOf(code: Term): Kernel.Thm = {
-      val (left, right) = equationOf(code)
-      force(rules.specAll(fact(Language.FormulaEquality), List(left, right))
-        .flatMap(rules.mp(_, termOf(left))).flatMap(rules.mp(_, termOf(right))))
-    }
-
-    private def boundedOf(code: Term): Kernel.Thm = {
-      val (left, right) = equationOf(code)
-      force(rules.specAll(boundedEquality, List(left, right)).flatMap(rules.eqTruthElim))
-    }
+    protected def lessThan(left: Term, right: Term): Term = applied(below, List(left, right))
 
     /** `|- held[to/from]` from `|- from = to` and `|- held`, `held` being `template(from)`. */
-    private def along(template: Term => Term, equation: Kernel.Thm, held: Kernel.Thm): Kernel.Thm = {
+    protected def along(template: Term => Term, equation: Kernel.Thm, held: Kernel.Thm): Kernel.Thm = {
       val (from, _) = sides(equation)
       val hole = Term.variable("hole", Term.typeOf(from))
       force(LogicError.lift(Term.abs(hole, template(hole))).flatMap(Conv.apTerm(_, equation))
         .flatMap(Conv.betaSides).flatMap(e => LogicError.lift(Kernel.eqMp(e, held))))
     }
 
-    private def lessThan(left: Term, right: Term): Term = applied(below, List(left, right))
+    private def depth(term: Term): Int = term match {
+      case App(_, inner) => 1 + depth(inner)
+      case _ => 0
+    }
+    private def spelled(numeral: Term): Kernel.Thm = force(successor.spell(numeral))
 
     /** `|- j < n` for two numerals with `j` the smaller, through their successor forms. */
-    private def numeralBelow(j: Term, n: Term): Kernel.Thm = {
-      val (spelledJ, spelledN) = (force(successor.spell(j)), force(successor.spell(n)))
+    protected def numeralBelow(j: Term, n: Term): Kernel.Thm = {
+      val (spelledJ, spelledN) = (spelled(j), spelled(n))
       val (from, to) = (sides(spelledJ)._2, sides(spelledN)._2)
-      def depth(term: Term): Int = term match {
-        case App(_, inner) => 1 + depth(inner)
-        case _ => 0
-      }
       if (depth(from) >= depth(to)) refused(NotOfForm("a variable below the bound the representation states", j))
       val step = force(peano.fact(Peano.BelowSuccessor)) // !n. n < SUC n
       val transitive = force(peano.fact(Peano.StrictTransitive))
@@ -1917,27 +1998,180 @@ object Truth {
       along(x => lessThan(j, x), force(Conv.sym(spelledN)), atJ)
     }
 
+    /** `|- ~(a = b)` for two different numerals, which `Successor.distinct` settles. */
+    protected def apart(a: Term, b: Term): Kernel.Thm = force(successor.distinct(a, b))
+  }
+
+  /**
+   * A representation in PA, from the graph's truth and [[ProvesBoundedInstance]]: what
+   * [[TriangleRepresented]], [[PairRepresented]], [[CodeRepresented]], [[FirstRepresented]] and
+   * [[SecondRepresented]] are each an instance of.
+   *
+   * The bridge asks three things of the graph, and each is shown by walking its code rather than
+   * stated for it: that it is a formula, by the term and formula rules of `Language` at each
+   * constructor; that it is in the bounded class, by its clause at each constructor; and that what
+   * is free in it is below the number of variables put for. The bound is read off the published
+   * statement, so it is written once.
+   *
+   * **What the walk reads, and the three readings do not read the same codes.** That the code is a
+   * formula is `Language.wellFormedIn`, which reads every constructor of the grammar, the constant
+   * zero and a numeral among them, and every abbreviation of `Language` through its equation. That
+   * it is bounded is read here: equations, negations, implications, and a universal only written as
+   * `NUM_ALL_BELOW`, where its clause is applied with the witness and the index apart and the bound
+   * a variable apart from both or a numeral; the other abbreviations are read through their
+   * equations, and a raw universal, an order or an existential outside one is not in the class and
+   * is refused as such. That its free variables are below the bound is the freeness reading below,
+   * whose rules hold no clause for the constant zero: a code with zero in it passes the first two
+   * readings and is refused at this one, by the shape left standing. No graph here writes zero, so
+   * that refusal has never been met; adding `NUM_FREE_TERM_ZERO` to the rules is what a graph
+   * written with zero would need first.
+   *
+   * **The freeness is the one reading with a case split.** `NUM_FREE_FORM w` is rewritten through
+   * the freeness clauses and the abbreviations, and what comes back is built from disjunctions,
+   * `j = w` for each variable occurring, and, at each binder over `v_j`, `COND (j = w) F q`. Each
+   * `j = w` is put below the bound, unless a binder over `v_j` encloses it, and then the binder's
+   * guard `~(j = w)` refutes it; a binder's `COND` is split on its guard, and the side where `w` is
+   * the bound variable is `F`.
+   */
+  private final class Representing(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    language: Language,
+    peano: Peano,
+    successor: Successor,
+    classical: Classical,
+    statements: Statements,
+    bounding: Bounding,
+    bridge: Kernel.Thm
+  ) extends Direct(logic, theory, notation, peano, successor) {
+    private def fact(name: String): Kernel.Thm = force(language.fact(name))
+
+    private val freeIn = constant(Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+    private val numeralOf = constant(Language.NumeralName, Type.fun(numbers, numbers))
+    private val binary = Type.fun(numbers, Type.fun(numbers, numbers))
+    private val allBelow = constant(Language.AllBelowName, Type.fun(numbers, Type.fun(numbers, binary)))
+    private val less = constant(Language.LessName, Type.fun(numbers, binary))
+    private val existsOf = constant(Language.ExistsName, binary)
+
+    /** `(tag, payload)` of a code written `NUM_CODE tag payload`, the tag's value read off [[tags]]. */
+    private def opened(code: Term): Option[(Int, Term)] = code match {
+      case App(App(head, tag), payload) if head == coding && tags.contains(tag) =>
+        Some((tags.indexOf(tag), payload))
+      case _ => None
+    }
+    private def halves(payload: Term): Option[(Term, Term)] = payload match {
+      case App(App(head, left), right) if head == pairing => Some((left, right))
+      case _ => None
+    }
+    private def pairOf(code: Term, payload: Term): (Term, Term) =
+      halves(payload).getOrElse(refused(NotOfForm("a code whose payload is a pair", code)))
+
+    private val boundedness = constant(BoundedName, Type.fun(numbers, Type.Bool))
+
+    /** `|- NUM_FORM code`, which `Language` walks, abbreviations included. */
+    private def formOf(code: Term): Kernel.Thm = force(language.wellFormedIn(code))
+
+    /** `|- NUM_BOUNDED code`, the bounded universal read by its own clause. */
+    private def boundedOf(code: Term): Kernel.Thm = {
+      def carried(clause: Kernel.Thm, proved: Kernel.Thm): Kernel.Thm =
+        force(Conv.sym(clause).flatMap(back => LogicError.lift(Kernel.eqMp(back, proved))))
+      opened(code) match {
+        case Some((5, payload)) =>
+          val (left, right) = pairOf(code, payload)
+          force(rules.specAll(bounding.equality, List(left, right)).flatMap(rules.eqTruthElim))
+        case Some((6, inner)) =>
+          carried(force(rules.spec(inner, bounding.negation)), boundedOf(inner))
+        case Some((7, payload)) =>
+          val (left, right) = pairOf(code, payload)
+          carried(force(rules.specAll(bounding.implication, List(left, right))),
+            force(rules.conjIntro(boundedOf(left), boundedOf(right))))
+        case _ => code match {
+          case App(App(App(App(head, z), i), t), p) if head == allBelow =>
+            val clause = force(rules.specAll(bounding.allBelow, List(z, i, t, p)))
+            val (_, conditions) = sides(clause)
+            val (_, rest) = force(logic.destConj(conditions).toRight(NotOfForm("a conjunction", conditions)))
+            val (boundShape, _) = force(logic.destConj(rest).toRight(NotOfForm("a conjunction", rest)))
+            val (asVariable, asNumeral) = force(logic.destDisj(boundShape).toRight(NotOfForm("a disjunction", boundShape)))
+            def witnessed(existential: Term, witness: Term, proof: Term => Kernel.Thm): Kernel.Thm = {
+              val predicate = force(logic.destExistsPredicate(existential).toRight(NotOfForm("an existential", existential)))
+              val instance = sides(force(LogicError.lift(Term.app(predicate, witness)).flatMap(Conv.betaNormalise)))._2
+              force(rules.existsIntro(predicate, witness, proof(instance)))
+            }
+            val shape = opened(t) match {
+              case Some((0, index)) =>
+                val atIndex = witnessed(asVariable, index, _ =>
+                  force(rules.conjIntro(apart(index, i), apart(index, z)).flatMap(rules.conjIntro(Conv.refl(t), _))))
+                force(rules.disjIntro1(asNumeral, atIndex))
+              case _ => t match {
+                case App(head, n) if head == numeralOf =>
+                  force(rules.disjIntro2(asVariable, witnessed(asNumeral, n, _ => Conv.refl(t))))
+                case _ => refused(NotOfForm("a bound that is a variable or a numeral", t))
+              }
+            }
+            carried(clause, force(rules.conjIntro(shape, boundedOf(p)).flatMap(rules.conjIntro(apart(z, i), _))))
+          case _ => language.unfolding(code) match {
+            case Some(opened) if !isUnbounded(code) =>
+              val unfolding = force(opened)
+              along(x => applied(boundedness, List(x)), force(Conv.sym(unfolding)), boundedOf(sides(unfolding)._2))
+            case _ => refused(NotOfForm("a formula of the bounded class: a universal only as NUM_ALL_BELOW", code))
+          }
+        }
+      }
+    }
+
+    /** An order or an existential standing alone, which unfolds to a universal the class refuses. */
+    private def isUnbounded(code: Term): Boolean = code match {
+      case App(App(App(head, _), _), _) if head == less => true
+      case App(App(head, _), _) if head == existsOf => true
+      case _ => false
+    }
+
+    private val atBool = Map(Classical.TypeVariable -> Type.Bool)
+    private val condTrue = Kernel.instType(atBool, force(classical.fact(Classical.CondTrue)))
+    private val condFalse = Kernel.instType(atBool, force(classical.fact(Classical.CondFalse)))
+    private val conditional = constant(Classical.Conditional, Type.fun(Type.Bool, Type.fun(Type.Bool, Type.fun(Type.Bool, Type.Bool))))
+
     /** `|- !w. NUM_FREE_FORM w G ==> w < n`, from `G = code`. */
     private def coveredBy(graph: Term, definition: Kernel.Thm, bound: Term): Kernel.Thm = {
       val w = Term.variable("w", numbers)
       val atW = applied(freeIn, List(w))
       val atCode = force(Conv.apTerm(atW, definition)) // NUM_FREE_FORM w G = NUM_FREE_FORM w code
-      val freeness = Vector(Language.FormulaFreeEquality, Language.FreeSum, Language.FreeProduct,
-        Language.FreeSuccessor, Language.FreeVariable).map(fact)
+      val freeness = Vector(Language.FormulaFreeEquality, Language.FormulaFreeNegation,
+        Language.FormulaFreeImplication, Language.FormulaFreeUniversal, Language.FreeSum, Language.FreeProduct,
+        Language.FreeSuccessor, Language.FreeVariable).map(fact) ++
+        Language.Abbreviations.values.map(_._1).toVector.sorted.map(fact)
       val reading = force(Rewrite.Rule.all(logic, freeness).flatMap(Rewrite.rewrite(_, sides(atCode)._2))
         .flatMap(Conv.trans(atCode, _)))
-      def inRange(held: Kernel.Thm): Kernel.Thm = logic.destDisj(held.conclusion) match {
-        case Some((l, r)) =>
-          force(rules.disjElim(held, inRange(force(LogicError.lift(Kernel.assume(l)))),
-            inRange(force(LogicError.lift(Kernel.assume(r))))))
-        case None =>
+      val goal = lessThan(w, bound)
+      def falsum(held: Kernel.Thm): Kernel.Thm = force(rules.falsityElim(goal, held))
+      // `held` is a reading of the freeness under the guards of the binders enclosing it
+      def inRange(held: Kernel.Thm, guards: Map[Term, Kernel.Thm]): Kernel.Thm = held.conclusion match {
+        case c if c == logic.falsity => falsum(held)
+        case App(App(App(head, guard), yes), no) if head == conditional && yes == logic.falsity =>
+          val reached = force(classical.cases(guard,
+            falsum(force(rules.specAll(condTrue, List(guard, yes, no)).flatMap(rules.mp(_, assumed(guard)))
+              .flatMap(e => LogicError.lift(Kernel.eqMp(e, held))))), {
+              val denied = assumed(denial(guard))
+              val passed = force(rules.specAll(condFalse, List(guard, yes, no)).flatMap(rules.mp(_, denied))
+                .flatMap(e => LogicError.lift(Kernel.eqMp(e, held))))
+              inRange(passed, guards.updated(guard, denied))
+            }))
+          reached
+        case disjunction if logic.destDisj(disjunction).isDefined =>
+          val (l, r) = logic.destDisj(disjunction).get
+          force(rules.disjElim(held, inRange(assumed(l), guards), inRange(assumed(r), guards)))
+        case _ =>
           val (index, other) = sides(held)
           if (other != w) refused(NotOfForm("a variable equal to the one asked about", held.conclusion))
-          along(x => lessThan(x, bound), held, numeralBelow(index, bound))
+          guards.get(held.conclusion) match {
+            case Some(denied) => falsum(force(rules.notElim(denied, held)))
+            case None => along(x => lessThan(x, bound), held, numeralBelow(index, bound))
+          }
       }
       val free = applied(freeIn, List(w, graph))
-      val premise = force(LogicError.lift(Kernel.assume(free)))
-      force(LogicError.lift(Kernel.eqMp(reading, premise)).map(inRange)
+      val premise = assumed(free)
+      force(LogicError.lift(Kernel.eqMp(reading, premise)).map(inRange(_, Map.empty))
         .flatMap(rules.disch(free, _)).flatMap(rules.gen(w, _)))
     }
 
@@ -1970,6 +2204,163 @@ object Truth {
             logic.mkNot(held).flatMap(logic.mkImp(_, refuted)).flatMap(logic.mkConj(l, _)))),
           meaning, decided)
         statements.checked(name, force(rules.gen(s, read)))
+      } catch { case refusal: RefusedHere => Left(refusal.error) }
+  }
+
+  /**
+   * [[FirstGraphTrue]] and [[SecondGraphTrue]], one derivation at the slot the statement names.
+   *
+   * The graph's truth is evaluated by the truth's and the value's clauses, with
+   * [[TrueAllBelowVariable]] at the bounded universal, its three conditions discharged as numerals
+   * apart, and the updated environment read at `0`, `1` and `2` past the update at `2`. What is
+   * left is `(!m. m < e 1 ==> ~A m) ==> A (e 1)`, `A m` saying that `e 1` doubled is the pair of
+   * `e 0` and `m` doubled, or of `m` and `e 0` for the second slot, in the pair's doubled closed
+   * form. Each `A x` gives the projection: cancel the doubling and project, which is the lemma both
+   * halves spend. The docstring of [[FirstGraphTrue]] has the two halves.
+   */
+  private final class ProjectionGraphs(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    numbering: Numbering,
+    successor: Successor,
+    classical: Classical,
+    statements: Statements,
+    pairDoubled: Kernel.Thm,
+    evaluation: Vector[Kernel.Thm],
+    allBelowVariable: Kernel.Thm
+  ) extends Direct(logic, theory, notation, numbering.peano, successor) {
+    private val peano = numbering.peano
+    private def numberingFact(name: String): Kernel.Thm = force(numbering.fact(name))
+    private val atNumbers = Map(Classical.TypeVariable -> numbers)
+    private val condTrue = Kernel.instType(atNumbers, force(classical.fact(Classical.CondTrue)))
+    private val condFalse = Kernel.instType(atNumbers, force(classical.fact(Classical.CondFalse)))
+
+    /** `|- !x y. COND (a = 2) x y = ...`, the update at `2` read at the index `a`. */
+    private def readAt(a: Term): Kernel.Thm = {
+      val x = Term.variable("x", numbers)
+      val y = Term.variable("y", numbers)
+      val guard = equal(a, tags(2))
+      val read =
+        if (a == tags(2)) force(rules.specAll(condTrue, List(guard, x, y)).flatMap(rules.mp(_, Conv.refl(a))))
+        else force(rules.specAll(condFalse, List(guard, x, y)).flatMap(rules.mp(_, apart(a, tags(2)))))
+      force(rules.genAll(read, List(x, y)))
+    }
+
+    def of(name: String, definition: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      try {
+        val left = name match {
+          case FirstGraphTrue => true
+          case SecondGraphTrue => false
+          case other => refused(MissingDefinition(other))
+        }
+        val statement = force(statements.statement(name))
+        val (bound, body) = force(Logic.stripForall(statement))
+        val e = bound.headOption.getOrElse(refused(NotOfForm("a claim about every environment", statement)))
+        val (truthOfGraph, meaning) = force(Term.destEq(body).toRight(NotOfForm("an equation", body)))
+        val (e0, projected) = force(Term.destEq(meaning).toRight(NotOfForm("an equation", meaning)))
+        val (projection, e1) = projected match {
+          case App(head, argument) => (head, argument)
+          case other => refused(NotOfForm("a projection at one argument", other))
+        }
+
+        // TRUE G e = ((!m. m < e 1 ==> ~A m) ==> A (e 1))
+        val p = Term.variable("p", numbers)
+        val universal = force(rules.specAll(allBelowVariable, List(e, tags(3), tags(2), tags(1), p))
+          .flatMap(rules.mp(_, apart(tags(3), tags(2)))).flatMap(rules.mp(_, apart(tags(1), tags(2))))
+          .flatMap(rules.mp(_, apart(tags(1), tags(3)))).flatMap(rules.gen(p, _)))
+        val evaluated = force(Rewrite.Rule.all(logic, Vector(definition, universal) ++ evaluation ++
+          Vector(tags(0), tags(1), tags(2)).map(readAt)).flatMap(Rewrite.rewrite(_, truthOfGraph)))
+        val reading = sides(evaluated)._2
+        val (premise, conclusion) = force(logic.destImp(reading).toRight(NotOfForm("an implication", reading)))
+
+        /** `A x`, read off the premise at `x` rather than written again. */
+        def claim(x: Term): Term = {
+          val instance = force(rules.spec(x, assumed(premise))).conclusion
+          val (_, denied) = force(logic.destImp(instance).toRight(NotOfForm("an implication", instance)))
+          force(logic.destNot(denied).toRight(NotOfForm("a negation", denied)))
+        }
+        if (claim(e1) != conclusion) refused(NotOfForm("the premise's claim at the argument", conclusion))
+
+        def components(other: Term): List[Term] = if (left) List(e0, other) else List(other, e0)
+        val ofPair = numberingFact(if (left) Numbering.FirstOfPair else Numbering.SecondOfPair)
+
+        // A x ==> e 0 = proj (e 1): cancel the doubling, then project
+        def projects(x: Term): Kernel.Thm = {
+          val held = assumed(claim(x))
+          val doubled = force(rules.specAll(pairDoubled, components(x))) // P + P = R
+          val (twice, _) = sides(doubled)
+          val pair = twice match {
+            case App(App(_, summand), _) => summand
+            case other => refused(NotOfForm("a doubled pair", other))
+          }
+          val same = force(Conv.sym(doubled).flatMap(Conv.trans(held, _))) // e 1 + e 1 = P + P
+          val identified = force(cancelDoubling(logic, peano, e1, pair, same)) // e 1 = P
+          val reached = force(Conv.apTerm(projection, identified)
+            .flatMap(Conv.trans(_, force(rules.specAll(ofPair, components(x)))))
+            .flatMap(Conv.sym))
+          force(rules.disch(claim(x), reached))
+        }
+
+        // from the reading to the projection, by contradiction
+        val forward = {
+          val deniedTerm = denial(meaning)
+          val denied = assumed(deniedTerm)
+          val (variables, _) = force(Logic.stripForall(premise))
+          val m = variables.headOption.getOrElse(refused(NotOfForm("a universal", premise)))
+          val nowhere = force(rules.notIntro(claim(m),
+            force(rules.mp(projects(m), assumed(claim(m))).flatMap(rules.notElim(denied, _)))))
+          val everywhere = force(rules.disch(lessThan(m, e1), nowhere).flatMap(rules.gen(m, _)))
+          val atArgument = force(rules.mp(assumed(reading), everywhere))
+          val absurd = force(rules.mp(projects(e1), atArgument).flatMap(rules.notElim(denied, _)))
+          force(classical.contradiction(meaning, absurd))
+        }
+
+        // from the projection to the reading: the pair `e 1` is, below the argument or at it
+        val backward = {
+          val onto = force(rules.spec(e1, numberingFact(Numbering.PairOnto)))
+          def opening(existential: Kernel.Thm, label: String, avoid: Set[FVar])(proceed: (FVar, Kernel.Thm) => Kernel.Thm)
+            : Kernel.Thm = {
+            val predicate = force(logic.destExistsPredicate(existential.conclusion)
+              .toRight(NotOfForm("an existential", existential.conclusion)))
+            val witness = Conv.freshVariable(label, numbers, avoid ++ Term.freeVariables(existential.conclusion))
+            val instance = sides(force(LogicError.lift(Term.app(predicate, witness)).flatMap(Conv.betaNormalise)))._2
+            force(rules.existsElim(existential, witness, proceed(witness, assumed(instance))))
+          }
+          val avoid = Term.freeVariables(reading) ++ Set(e)
+          opening(onto, "a", avoid) { (a, rest) =>
+            opening(rest, "b", avoid + a) { (b, shape) => // e 1 = NUM_PAIR a b
+              val (component, other) = if (left) (a, b) else (b, a)
+              val projectedIs = force(Conv.apTerm(projection, shape)
+                .flatMap(Conv.trans(_, force(rules.specAll(ofPair, List(a, b)))))) // proj (e 1) = component
+              val toComponent = force(Conv.trans(assumed(meaning), projectedIs)) // e 0 = component
+              def pairAt(x: Term): Term = applied(pairing, if (left) List(x, other) else List(other, x))
+              val reshaped = along(x => equal(e1, pairAt(x)), force(Conv.sym(toComponent)), shape) // e 1 = pair at e 0
+              val doubledPair = force(rules.specAll(pairDoubled, components(other)))
+              val atOther = force(Conv.apTerm(plus, reshaped).flatMap(Conv.apThm(_, e1))
+                .flatMap(first => Conv.apTerm(applied(plus, List(pairAt(e0))), reshaped).flatMap(Conv.trans(first, _)))
+                .flatMap(Conv.trans(_, doubledPair))) // A other
+              if (atOther.conclusion != claim(other)) refused(NotOfForm("the premise's claim at the other component", atOther.conclusion))
+              val componentBound = force(rules.specAll(numberingFact(if (left) Numbering.PairRight else Numbering.PairLeft),
+                components(other)))
+              val atMostArgument = along(x => applied(componentBound.conclusion match {
+                case App(App(order, _), _) => order
+                case shapeless => refused(NotOfForm("an order", shapeless))
+              }, List(other, x)), force(Conv.sym(reshaped)), componentBound) // other <= e 1
+              val split = force(peano.fact(Peano.BelowOrEqual).flatMap(rules.specAll(_, List(other, e1)))
+                .flatMap(rules.mp(_, atMostArgument))) // other < e 1 \/ other = e 1
+              val belowCase = {
+                val refutedThere = force(rules.spec(other, assumed(premise)).flatMap(rules.mp(_, assumed(lessThan(other, e1)))))
+                force(rules.notElim(refutedThere, atOther).flatMap(rules.falsityElim(conclusion, _)))
+              }
+              val atCase = along(claim, assumed(equal(other, e1)), atOther)
+              force(rules.disjElim(split, belowCase, atCase).flatMap(rules.disch(premise, _)))
+            }
+          }
+        }
+
+        val equivalence = Kernel.deductAntisym(backward, forward) // reading = meaning
+        statements.checked(name, force(Conv.trans(evaluated, equivalence).flatMap(rules.gen(e, _))))
       } catch { case refusal: RefusedHere => Left(refusal.error) }
   }
 
@@ -2013,6 +2404,9 @@ object Truth {
           freeFormAt <- statements.checked(FreeFormAtNumeral, built.freeFormAtNumeral(grounding, freeTermAt))
           lessTruth <- statements.checked(TrueLessNumeral, built.trueLessNumeral(grounding))
           allBelowTruth <- statements.checked(TrueAllBelowNumeral, built.trueAllBelowNumeral(grounding, lessTruth))
+          lessVariable <- statements.checked(TrueLessVariable, built.trueLessVariable(grounding))
+          allBelowVariable <- statements.checked(TrueAllBelowVariable,
+            built.trueAllBelowVariable(grounding, lessVariable))
           complete <- statements.checked(ProvesBounded, built.provesBounded(grounding, bounding, ranking, equation,
             denial, parts, truthAt, boundedAt, rankAt, freeFormAt, allBelowTruth))
           sigmaForm <- statements.checked(SigmaForm, built.sigmaForm(sigmas))
@@ -2046,6 +2440,8 @@ object Truth {
           FreeFormAtNumeral -> freeFormAt,
           TrueLessNumeral -> lessTruth,
           TrueAllBelowNumeral -> allBelowTruth,
+          TrueLessVariable -> lessVariable,
+          TrueAllBelowVariable -> allBelowVariable,
           ProvesBounded -> complete,
           SigmaForm -> sigmaForm,
           SigmaAtNumeral -> sigmaAt,
@@ -3827,19 +4223,57 @@ object Truth {
       case other => throw new RefusedHere(NotOfForm("an application", other))
     }
 
+    /**
+     * What the order's bound is, for the two facts each about the order and the bounded universal:
+     * a numeral, worth `n` everywhere, or a variable `v_k`, worth `e k` wherever the witness `z` and
+     * the quantified index are not `k`. Everything else in the two proofs is the same, and is written
+     * once in [[lessTruth]] and [[allBelowTruth]] with this deciding the three places they differ: the
+     * code of the bound, its value, and the conditions it costs.
+     */
+    private sealed trait Bound {
+      /** The bound's own variable, `n` or `k`, quantified in the statement after `z` and `i`. */
+      def variable: FVar
+      def code: Term
+      def valueAt(e: Term): Term
+    }
+    private object Bound {
+      final class AtNumeral extends Bound {
+        val variable: FVar = Term.variable("n", numbers)
+        val code: Term = numeral(variable)
+        def valueAt(e: Term): Term = variable
+      }
+      final class AtVariable extends Bound {
+        val variable: FVar = Term.variable("k", numbers)
+        val code: Term = Evaluation.this.code(0, variable)
+        def valueAt(e: Term): Term = applied(e, List(variable))
+      }
+    }
+
     /** [[TrueLessNumeral]], the order's code read through the existential it abbreviates. */
-    def trueLessNumeral(g: Grounding): Kernel.Thm = {
+    def trueLessNumeral(g: Grounding): Kernel.Thm = lessTruth(g, new Bound.AtNumeral)
+
+    /** [[TrueLessVariable]], the same below a variable that is not the witness. */
+    def trueLessVariable(g: Grounding): Kernel.Thm = lessTruth(g, new Bound.AtVariable)
+
+    private def lessTruth(g: Grounding, bound: Bound): Kernel.Thm = {
       val conditions = new Conditions(g)
       import conditions.*
       val e = environment
       val z = Term.variable("z", numbers)
       val i = Term.variable("i", numbers)
-      val n = Term.variable("n", numbers)
-      val nn = numeral(n)
+      val n = bound.variable
+      val nn = bound.code
+      val limit = bound.valueAt(e)
       val apartTerm = denial(equal(z, i))
       val apart = assumed(apartTerm)
       val notIZ = force(rules.notIntro(equal(i, z),
         force(rules.notElim(apart, force(Conv.sym(assumed(equal(i, z))))))))
+      // a variable bound is read at the witness's update, which passes it by when it is not `z`
+      val boundApartTerm = denial(equal(n, z))
+      val boundPassed: Vector[Kernel.Thm] = bound match {
+        case _: Bound.AtNumeral => Vector(g.valueNumeral)
+        case _: Bound.AtVariable => Vector.empty
+      }
 
       // NUM_LESS z v_i n = NUM_EXISTS z body = ~(!v_z. ~body), coded
       val lessUnfold = apply(languageFact(Language.LessCases), List(z, code(0, i), nn))
@@ -3852,25 +4286,29 @@ object Truth {
 
       val d = Conv.freshVariable("d", numbers, Set(e, z, i, n))
       val ei = applied(e, List(i))
+      val passedBound = bound match {
+        case _: Bound.AtNumeral => Vector.empty
+        case _: Bound.AtVariable => Vector(passed(assumed(boundApartTerm), d, limit))
+      }
       val atD = unfolded(
-        Vector(trueNegation, trueEquality, valueSum, valueSuccessor, g.valueVariable, g.valueNumeral,
-          passed(notIZ, d, ei), taken(refl(z), d, applied(e, List(z)))),
-        applied(truth, List(code(6, body), updated(e, z, d)))) // = ~(e i + SUC d = n)
+        Vector(trueNegation, trueEquality, valueSum, valueSuccessor, g.valueVariable) ++ boundPassed ++
+          passedBound ++ Vector(passed(notIZ, d, ei), taken(refl(z), d, applied(e, List(z)))),
+        applied(truth, List(code(6, body), updated(e, z, d)))) // = ~(e i + SUC d = limit)
       val quantified = chained(apply(g.trueUniversal, List(e, z, code(6, body))),
         force(LogicError.lift(Kernel.abs(d, atD)).flatMap(Conv.apTerm(universals, _))))
       val read = chained(outer, force(Conv.apTerm(headOf(denial(applied(truth, List(universal, e)))), quantified)))
-      val reading = sides(read)._2 // ~(!d. ~(e i + SUC d = n))
+      val reading = sides(read)._2 // ~(!d. ~(e i + SUC d = limit))
 
-      // `e i < n` is `NUM_LE (SUC (e i)) n`, which is `?d. SUC (e i) + d = n`, and the shift moves
-      // the successor across.
-      val lt = applied(below, List(ei, n))
+      // `e i < limit` is `NUM_LE (SUC (e i)) limit`, which is `?d. SUC (e i) + d = limit`, and the
+      // shift moves the successor across.
+      val lt = applied(below, List(ei, limit))
       val gap = force(for {
         strict <- numbering.peano.definition(Peano.StrictOrder)
         atMost <- numbering.peano.definition(Peano.NonStrictOrder)
-        first <- Conv.unfold(strict, List(ei, n))
-        second <- Conv.unfold(atMost, List(applied(successorConstant, List(ei)), n))
+        first <- Conv.unfold(strict, List(ei, limit))
+        second <- Conv.unfold(atMost, List(applied(successorConstant, List(ei)), limit))
         joined <- Conv.trans(first, second)
-      } yield joined) // e i < n = ?d. SUC (e i) + d = n
+      } yield joined) // e i < limit = ?d. SUC (e i) + d = limit
       val shift = force(numbering.peano.fact(Peano.Shift))
       def shifted(at: Term): Kernel.Thm = force(rules.specAll(shift, List(ei, at))) // e i + SUC d = SUC (e i) + d
 
@@ -3878,7 +4316,7 @@ object Truth {
         val held = assumed(lt)
         val denied = force(logic.destNot(reading).toRight(NotOfForm("a negation", reading)))
         val absurd = opened(unfold(gap, held), "d", Set(e, z, i, n)) { (w, atW) =>
-          val atWitness = chained(shifted(w), atW) // e i + SUC w = n
+          val atWitness = chained(shifted(w), atW) // e i + SUC w = limit
           val instance = force(rules.spec(w, assumed(denied)))
           force(rules.notElim(instance, atWitness))
         }
@@ -3886,11 +4324,10 @@ object Truth {
       }
       val forward = {
         val held = assumed(reading)
-        val denied = force(logic.destNot(reading).toRight(NotOfForm("a negation", reading)))
         force(g.classical.cases(lt, assumed(lt), {
           val notLt = assumed(denial(lt))
           val w = Conv.freshVariable("w", numbers, Set(e, z, i, n, d))
-          val sum = equal(applied(arithmeticSum, List(ei, applied(successorConstant, List(w)))), n)
+          val sum = equal(applied(arithmeticSum, List(ei, applied(successorConstant, List(w)))), limit)
           val reached = fold(gap, introduced(sides(gap)._2, w, chained(force(Conv.sym(shifted(w))), assumed(sum))))
           val never = force(rules.notElim(notLt, reached).flatMap(rules.notIntro(sum, _)))
           val everywhere = force(rules.gen(w, never))
@@ -3899,21 +4336,34 @@ object Truth {
       }
       val equivalent = Kernel.deductAntisym(backward, forward) // reading = lt
       val result = chained(read, equivalent)
-      force(rules.disch(apartTerm, result).flatMap(rules.genAll(_, List(e, z, i, n))))
+      val discharged = bound match {
+        case _: Bound.AtNumeral => result
+        case _: Bound.AtVariable => force(rules.disch(boundApartTerm, result))
+      }
+      force(rules.disch(apartTerm, discharged).flatMap(rules.genAll(_, List(e, z, i, n))))
     }
 
     /** [[TrueAllBelowNumeral]]: the universal's truth read at each instance below the numeral. */
-    def trueAllBelowNumeral(g: Grounding, lessTruth: Kernel.Thm): Kernel.Thm = {
+    def trueAllBelowNumeral(g: Grounding, lessTruth: Kernel.Thm): Kernel.Thm =
+      allBelowTruth(g, lessTruth, new Bound.AtNumeral)
+
+    /** [[TrueAllBelowVariable]]: the same below a variable that is neither the index nor the witness. */
+    def trueAllBelowVariable(g: Grounding, lessTruth: Kernel.Thm): Kernel.Thm =
+      allBelowTruth(g, lessTruth, new Bound.AtVariable)
+
+    private def allBelowTruth(g: Grounding, lessTruth: Kernel.Thm, bound: Bound): Kernel.Thm = {
       val conditions = new Conditions(g)
       import conditions.*
       val e = environment
       val z = Term.variable("z", numbers)
       val i = Term.variable("i", numbers)
-      val n = Term.variable("n", numbers)
+      val n = bound.variable
       val p = Term.variable("p", numbers)
-      val nn = numeral(n)
+      val nn = bound.code
       val apartTerm = denial(equal(z, i))
       val apart = assumed(apartTerm)
+      val notIndexTerm = denial(equal(n, i))
+      val notWitnessTerm = denial(equal(n, z))
 
       val unfolding = apply(languageFact(Language.AllBelowCases), List(z, i, nn, p))
       val coded = sides(unfolding)._2 // !v_i. NUM_LESS z v_i n ==> p, coded
@@ -3924,12 +4374,23 @@ object Truth {
 
       val m = Conv.freshVariable("m", numbers, Set(e, z, i, n, p))
       val em = updated(e, i, m)
-      val lessAt = apply(lessTruth, List(em, z, i, n), apart) // TRUE less e[i := m] = e[i := m] i < n
-      val bound = chained(lessAt, unfolded(Vector(taken(refl(i), m, applied(e, List(i)))), sides(lessAt)._2))
+      // TRUE less e[i := m] = e[i := m] i < bound, and a variable bound read past the update at `i`
+      val (lessAt, boundAt) = bound match {
+        case _: Bound.AtNumeral => (apply(lessTruth, List(em, z, i, n), apart), Vector.empty)
+        case _: Bound.AtVariable =>
+          (apply(lessTruth, List(em, z, i, n), apart, assumed(notWitnessTerm)),
+            Vector(passed(assumed(notIndexTerm), m, applied(e, List(n)))))
+      }
+      val limit = chained(lessAt, unfolded(Vector(taken(refl(i), m, applied(e, List(i)))) ++ boundAt, sides(lessAt)._2))
       val body = chained(apply(g.trueImplication, List(em, less, p)),
-        force(Conv.apTerm(headOf(headOf(imp(applied(truth, List(less, em)), applied(truth, List(p, em))))), bound).flatMap(Conv.apThm(_, applied(truth, List(p, em))))))
+        force(Conv.apTerm(headOf(headOf(imp(applied(truth, List(less, em)), applied(truth, List(p, em))))), limit).flatMap(Conv.apThm(_, applied(truth, List(p, em))))))
       val result = chained(opening, force(LogicError.lift(Kernel.abs(m, body)).flatMap(Conv.apTerm(universals, _))))
-      force(rules.disch(apartTerm, result).flatMap(rules.genAll(_, List(e, z, i, n, p))))
+      val discharged = bound match {
+        case _: Bound.AtNumeral => result
+        case _: Bound.AtVariable =>
+          force(rules.disch(notWitnessTerm, result).flatMap(rules.disch(notIndexTerm, _)))
+      }
+      force(rules.disch(apartTerm, discharged).flatMap(rules.genAll(_, List(e, z, i, n, p))))
     }
 
     /* --------------------------------------------------------- the Sigma-1 class and its truth */

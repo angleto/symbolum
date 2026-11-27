@@ -98,6 +98,22 @@ object Numbering {
   val PairInjective: String = "NUM_PAIR_INJECTIVE"
 
   /**
+   * `|- !n. ?a b. n = NUM_PAIR a b`
+   *
+   * Every number is a pair, which is what lets [[FirstName]] and [[SecondName]] say something at
+   * every number rather than only at one already written as a pair: without it the choice they are
+   * defined by falls somewhere nobody can name at a number not known to be one, and a graph of a
+   * projection could not be shown to hold there.
+   *
+   * By induction, walking the diagonal: `0` is the pair of `0` and `0`; the successor of the pair
+   * of `a` and `S c` is the pair of `S a` and `c`, one step along the same row, and the successor
+   * of the pair of `a` and `0`, the end of a row, is the pair of `0` and `S a`, the start of the
+   * next. Each of the three is an equation both sides of which reach one normal form under the
+   * pair's definition, the triangle's recurrence and the four clauses of the sum.
+   */
+  val PairOnto: String = "NUM_PAIR_ONTO"
+
+  /**
    * `NUM_CODE t p` is `SUC (NUM_PAIR t p)`: a tag, a payload, and the successor that makes it
    * descend.
    *
@@ -170,6 +186,7 @@ object Numbering {
     PairInjective ->
       ("!a:num b:num c:num d:num. NUM_PAIR a b = NUM_PAIR c d ==> " +
         "a = c /\\ b = d"),
+    PairOnto -> "!n:num. ?a:num b:num. n = NUM_PAIR a b",
     CodeInjective ->
       ("!t:num p:num u:num q:num. NUM_CODE t p = NUM_CODE u q ==> " +
         "t = u /\\ p = q"),
@@ -257,6 +274,7 @@ object Numbering {
       left <- componentBelowPair(vocabulary, pairDefinition, successorChecked, PairLeft)
       right <- componentBelowPair(vocabulary, pairDefinition, successorChecked, PairRight)
       injective <- pairDeterminesBoth(vocabulary, pairDefinition, monotone, successorChecked)
+      onto <- pairIsOnto(vocabulary, driver, pairDefinition, zeroChecked, successorChecked)
       codeInjective <- codeDeterminesBoth(vocabulary, codeDefinition, injective)
       codeLeft <- componentBelowCode(vocabulary, codeDefinition, left, CodeLeft)
       codeRight <- componentBelowCode(vocabulary, codeDefinition, right, CodeRight)
@@ -287,6 +305,7 @@ object Numbering {
         PairLeft -> left,
         PairRight -> right,
         PairInjective -> injective,
+        PairOnto -> onto,
         CodeInjective -> codeInjective,
         CodeLeft -> codeLeft,
         CodeRight -> codeRight,
@@ -1102,6 +1121,126 @@ object Numbering {
       refuted <- rules.notIntro(isZero, contradiction)
       general <- rules.genAll(refuted, List(t, p))
       result <- vocabulary.checked(CodeNotZero, general)
+    } yield result
+  }
+
+  /**
+   * [[PairOnto]], by induction on the number.
+   *
+   * Every equation the proof needs is between two terms built from pairs, triangles, sums and
+   * successors, and each is closed the same way: both sides are rewritten by the pair's definition,
+   * [[TriangleAtZero]], [[TriangleAtSuccessor]] and the four clauses of the sum at zero and at a
+   * successor, on either side, and the two normal forms are required to be the same term. Those
+   * rules are confluent, the successor moving outwards past every sum whichever clause fires first,
+   * so two sides that are equal by them meet; two that do not meet are refused rather than closed
+   * by something stronger. The semiring is not used because it reads `SUC x` as an atom, and the
+   * step is exactly the claim that a successor under a sum is one more.
+   */
+  private def pairIsOnto(
+    vocabulary: Vocabulary,
+    driver: Induct,
+    pairDefinition: Kernel.Thm,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = vocabulary.logic
+    val rules = vocabulary.rules
+    val numbers = vocabulary.numbers
+    val peano = vocabulary.peano
+    val a = Term.variable("a", numbers)
+    val b = Term.variable("b", numbers)
+
+    def successorOf(term: Term): Either[LogicError, Term] = LogicError.lift(Term.app(vocabulary.successor, term))
+
+    for {
+      statement <- vocabulary.statement(PairOnto)
+      opened <- Conv.unfold(pairDefinition, List(a, b))
+      pairRule <- rules.genAll(opened, List(a, b))
+      sums <- Vector(Peano.AddAtZero, Peano.ZeroPlus, Peano.AddAtSuccessor, Peano.SuccessorPlus)
+        .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
+          carried.flatMap(found => peano.fact(name).map(found :+ _))
+        }
+      normalising <- Rewrite.Rule.all(logic, Vector(pairRule, atZero, atSuccessor) ++ sums)
+      cases <- peano.naturals.fact(Natural.ZeroOrSuccessor)
+
+      /* `|- left = right` when both sides reach one normal form, and a refusal otherwise. */
+      meet = (left: Term, right: Term) =>
+        for {
+          fromLeft <- Rewrite.rewrite(normalising, left)
+          fromRight <- Rewrite.rewrite(normalising, right)
+          back <- Conv.sym(fromRight)
+          joined <- Conv.trans(fromLeft, back)
+          goal <- LogicError.lift(Term.eq(left, right))
+          result <- if (joined.conclusion == goal) Right(joined) else Left(NotOfForm("the two sides equal", joined.conclusion))
+        } yield result
+
+      /* `?a b. n = NUM_PAIR a b` from `n = NUM_PAIR first second`, at the goal handed over. */
+      paired = (goal: Term, first: Term, second: Term, held: Kernel.Thm) =>
+        for {
+          outer <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
+          atFirst <- LogicError.lift(Term.app(outer, first)).flatMap(Conv.betaNormalise)
+          innerGoal <- Term.destEq(atFirst.conclusion).map(_._2).toRight(NotOfForm("an equation", atFirst.conclusion))
+          inner <- logic.destExistsPredicate(innerGoal).toRight(NotOfForm("an existential", innerGoal))
+          innerProved <- rules.existsIntro(inner, second, held)
+          result <- rules.existsIntro(outer, first, innerProved)
+        } yield result
+
+      proved <- driver.proveBy(
+        statement,
+        goal =>
+          for {
+            zeroPair <- vocabulary.paired(vocabulary.zero, vocabulary.zero)
+            atOrigin <- meet(vocabulary.zero, zeroPair)
+            result <- paired(goal, vocabulary.zero, vocabulary.zero, atOrigin)
+          } yield result,
+        step =>
+          withWitness(vocabulary, step.hypothesis, "a", Set(step.variable)) { (first, rest) =>
+            withWitness(vocabulary, rest, "b", Set(step.variable, first)) { (second, shape) =>
+              for {
+                // SUC n = SUC (NUM_PAIR first second), the hypothesis under the successor
+                lifted <- Conv.apTerm(vocabulary.successor, shape)
+                split <- rules.spec(second, cases)
+                // second = ZERO: the end of a row, and the successor starts the next one
+                endOfRow <- {
+                  for {
+                    isZero <- LogicError.lift(Term.eq(second, vocabulary.zero))
+                    held <- LogicError.lift(Kernel.assume(isZero))
+                    pairedFirst <- LogicError.lift(Term.app(vocabulary.pair, first))
+                    moved <- Conv.apTerm(pairedFirst, held).flatMap(Conv.apTerm(vocabulary.successor, _))
+                    nextOfFirst <- successorOf(first)
+                    leftSide <- Term.destEq(moved.conclusion).map(_._2).toRight(NotOfForm("an equation", moved.conclusion))
+                    startOfRow <- vocabulary.paired(vocabulary.zero, nextOfFirst)
+                    met <- meet(leftSide, startOfRow)
+                    reached <- Conv.trans(lifted, moved).flatMap(Conv.trans(_, met))
+                    result <- paired(step.goal, vocabulary.zero, nextOfFirst, reached)
+                  } yield result
+                }
+                // second = SUC c: one step along the row, the first component up and the second down
+                alongRow <- {
+                  for {
+                    existential <- logic.destDisj(split.conclusion).map(_._2)
+                      .toRight(NotOfForm("a disjunction", split.conclusion))
+                    assumed <- LogicError.lift(Kernel.assume(existential))
+                    result <- withWitness(vocabulary, assumed, "c", Set(step.variable, first, second)) { (c, isSuccessor) =>
+                      for {
+                        pairedFirst <- LogicError.lift(Term.app(vocabulary.pair, first))
+                        moved <- Conv.apTerm(pairedFirst, isSuccessor).flatMap(Conv.apTerm(vocabulary.successor, _))
+                        nextOfFirst <- successorOf(first)
+                        leftSide <- Term.destEq(moved.conclusion).map(_._2).toRight(NotOfForm("an equation", moved.conclusion))
+                        stepped <- vocabulary.paired(nextOfFirst, c)
+                        met <- meet(leftSide, stepped)
+                        reached <- Conv.trans(lifted, moved).flatMap(Conv.trans(_, met))
+                        result <- paired(step.goal, nextOfFirst, c, reached)
+                      } yield result
+                    }
+                  } yield result
+                }
+                result <- rules.disjElim(split, endOfRow, alongRow)
+              } yield result
+            }
+          }
+      )
+      result <- vocabulary.checked(PairOnto, proved)
     } yield result
   }
 

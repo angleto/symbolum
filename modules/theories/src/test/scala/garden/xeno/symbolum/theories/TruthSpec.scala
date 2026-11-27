@@ -80,7 +80,8 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
       Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.BoundedName, Truth.RankName, Truth.SigmaName,
-        Truth.TriangleGraphName, Truth.PairGraphName, Truth.CodeGraphName, Truth.InstanceName)
+        Truth.TriangleGraphName, Truth.PairGraphName, Truth.CodeGraphName, Truth.FirstGraphName,
+        Truth.SecondGraphName, Truth.InstanceName)
     truth.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
@@ -106,9 +107,11 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     // `4102f131`: at no variable substituted the environment `\j. COND (j < 0) (s j) (e j)` is
     // `e` only by `ETA`, and the bridges read `NUM_INST_TRUE` at `s`, where `\j. s j` is `s` by
     // it again. Every fact before them is unchanged.
-    // The three representations spend it through the bridge they are instances of.
+    // The representations spend it through the bridge they are instances of; the projections'
+    // graphs, read through `NUM_TRUE_ALL_BELOW_VAR` and not through the instantiation, do not.
     val withEta = Set(Truth.InstanceTrue, Truth.ProvesBoundedInstance, Truth.ProvesSigmaInstance,
-      Truth.TriangleRepresented, Truth.PairRepresented, Truth.CodeRepresented)
+      Truth.TriangleRepresented, Truth.PairRepresented, Truth.CodeRepresented, Truth.FirstRepresented,
+      Truth.SecondRepresented)
     val expected: Map[String, Set[Term]] =
       Truth.Statements.map { case (name, _) =>
         name -> (if (withEta(name)) Set(choice, infinity, eta) else Set(choice, infinity))
@@ -824,6 +827,89 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     rightOf(reading) shouldBe proposition("ZERO = SUC ZERO")
     val claim = proposition("NUM_TRUE NUM_CODE_GRAPH (\\k:num. ZERO)")
     refuteBySuccessors(claim, force(Conv.trans(atZero, reading)))
+  }
+
+  /** `|- NUM_TRUE graph at` from `reduced`, what the graph's truth fact says there once beta-reduced. */
+  private def graphHolds(graphTrue: String, at: String, reduced: Kernel.Thm): Kernel.Thm = {
+    val reading = force(rules.spec(term(at), fact(graphTrue)))
+    val beta = force(Conv.betaNormalise(rightOf(reading)))
+    rightOf(beta) shouldBe reduced.conclusion
+    force(Conv.trans(reading, beta).flatMap(Conv.sym).flatMap(e => LogicError.lift(Kernel.eqMp(e, reduced))))
+  }
+
+  /** `|- ~NUM_TRUE graph at` from `denied`, the negation of what the fact says there once reduced. */
+  private def graphFails(graphTrue: String, at: String, denied: Kernel.Thm): Kernel.Thm = {
+    val reading = force(rules.spec(term(at), fact(graphTrue)))
+    val beta = force(Conv.betaNormalise(rightOf(reading)))
+    val (negation, inner) = denied.conclusion match {
+      case App(not, inner) => (not, inner)
+      case other => fail(s"not a negation: $other")
+    }
+    rightOf(beta) shouldBe inner
+    force(Conv.trans(reading, beta).flatMap(Conv.apTerm(negation, _)).flatMap(Conv.sym)
+      .flatMap(e => LogicError.lift(Kernel.eqMp(e, denied))))
+  }
+
+  /**
+   * `NUM_FST n` and `NUM_SND n` at `n = NUM_PAIR a b` written as `n`: the projection's equation at
+   * the pair carried back to the number. `NUM_PAIR 0 0` is `0` and `NUM_PAIR 0 1` is `1`, the first
+   * entry of the second row, so at one the two projections differ.
+   */
+  private def projected(head: String, a: String, b: String, number: String): Kernel.Thm = {
+    val reading = evaluate(term(s"NUM_PAIR ($a) ($b)"), pairArithmetic)
+    rightOf(reading) shouldBe term(number)
+    val projection = term(s"$head ($number)") match {
+      case App(function, _) => function
+      case other => fail(s"not an application: $other")
+    }
+    val ofPair = force(chain.numbering.fact(if (head == "NUM_FST") Numbering.FirstOfPair else Numbering.SecondOfPair)
+      .flatMap(rules.specAll(_, List(term(a), term(b)))))
+    force(Conv.sym(reading).flatMap(Conv.apTerm(projection, _)).flatMap(Conv.trans(_, ofPair)))
+  }
+
+  "The graphs of the projections" should "hold at the component their slot names and fail at the other" in {
+    // At zero everywhere both hold, zero being the pair of zero and zero. At one everywhere the
+    // first fails and the second holds, one being the pair of zero and one: a graph reading the
+    // wrong slot goes red at one, and a graph that held everywhere at zero.
+    val zero = "\\k:num. ZERO"
+    val atOne = s"\\k:num. $one"
+    val firstAtZero = graphHolds(Truth.FirstGraphTrue, zero,
+      force(Conv.sym(projected("NUM_FST", "ZERO", "ZERO", "ZERO"))))
+    val secondAtOne = graphHolds(Truth.SecondGraphTrue, atOne,
+      force(Conv.sym(projected("NUM_SND", "ZERO", one, one))))
+    val firstIsZero = projected("NUM_FST", "ZERO", one, one) // NUM_FST 1 = 0
+    val claim = proposition(s"$one = NUM_FST ($one)")
+    val collapsed = force(Conv.trans(force(LogicError.lift(Kernel.assume(claim))), firstIsZero)) // 1 = 0
+    val never = force(chain.naturals.fact(Natural.SuccessorNotZero).flatMap(rules.spec(term("ZERO"), _)))
+    val firstNotAtOne = graphFails(Truth.FirstGraphTrue, atOne,
+      force(rules.notElim(never, collapsed).flatMap(rules.notIntro(claim, _))))
+    Vector(firstAtZero, secondAtOne, firstNotAtOne).foreach(_.hypotheses shouldBe empty)
+    firstAtZero.conclusion shouldBe proposition(s"NUM_TRUE NUM_FST_GRAPH ($zero)")
+    secondAtOne.conclusion shouldBe proposition(s"NUM_TRUE NUM_SND_GRAPH ($atOne)")
+    firstNotAtOne.conclusion shouldBe proposition(s"~(NUM_TRUE NUM_FST_GRAPH ($atOne))")
+
+    // and the representations at the same points, owing nothing
+    def crossed(name: String, at: String, graphTrue: String, held: Kernel.Thm, half: Boolean): Kernel.Thm = {
+      val reading = force(rules.spec(term(at), fact(graphTrue)))
+      val oriented = if (half) reading else force(truth.logic.mkNot(rightOf(reading))) match {
+        case App(not, _) => force(Conv.apTerm(not, reading))
+        case other => fail(s"not a negation: $other")
+      }
+      val meaning = force(LogicError.lift(Kernel.eqMp(oriented, held)))
+      val instance = force(rules.spec(term(at), fact(name)))
+      force((if (half) rules.conjElim1(instance) else rules.conjElim2(instance)).flatMap(rules.mp(_, meaning)))
+    }
+    val cases = Vector(
+      (crossed(Truth.FirstRepresented, zero, Truth.FirstGraphTrue, firstAtZero, half = true),
+        s"NUM_PROV (NUM_INST 2 ($zero) NUM_FST_GRAPH)"),
+      (crossed(Truth.FirstRepresented, atOne, Truth.FirstGraphTrue, firstNotAtOne, half = false),
+        s"NUM_PROV (NUM_CODE 6 (NUM_INST 2 ($atOne) NUM_FST_GRAPH))"),
+      (crossed(Truth.SecondRepresented, atOne, Truth.SecondGraphTrue, secondAtOne, half = true),
+        s"NUM_PROV (NUM_INST 2 ($atOne) NUM_SND_GRAPH)"))
+    cases.foreach { case (theorem, expected) =>
+      theorem.hypotheses shouldBe empty
+      theorem.conclusion shouldBe proposition(expected)
+    }
   }
 
   "The graph of the pairing" should "hold where the value is the pair, fail elsewhere" in {

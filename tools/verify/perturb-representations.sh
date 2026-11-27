@@ -28,6 +28,10 @@
 # 3. One red, the per-fact cost, naming `NUM_CODE_REPR` with `ETA, INFINITY, SELECT`. As
 #    predicted.
 #
+# The third target was rewritten on 2026-11-27 by the projections' increment, whose pin line now
+# continues with `NUM_FST_REPR` and `NUM_SND_REPR`: same perturbation, the constructor's entry
+# taken out, on the line as it stands.
+#
 # READ THE LOG, NOT THE `### exit` LINES: under sbt 2.0.9 `testOnly` can exit 0 over a failure
 # whose message is long, and "the standard chain does not build" is. Mycelium card f0016ec8.
 set -u
@@ -60,8 +64,8 @@ echo "################ 2-the-refutation-fed-unnegated" >> "$LOG"
 echo "### exit $? for 2-the-refutation-fed-unnegated" >> "$LOG"
 
 echo "################ 3-the-pin-without-eta-at-the-constructor" >> "$LOG"
-"$P" "$TEST" 'Truth.TriangleRepresented, Truth.PairRepresented, Truth.CodeRepresented)' \
-  'Truth.TriangleRepresented, Truth.PairRepresented)' -- \
+"$P" "$TEST" 'Truth.TriangleRepresented, Truth.PairRepresented, Truth.CodeRepresented, Truth.FirstRepresented,' \
+  'Truth.TriangleRepresented, Truth.PairRepresented, Truth.FirstRepresented,' -- \
   ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 3-the-pin-without-eta-at-the-constructor" >> "$LOG"
 

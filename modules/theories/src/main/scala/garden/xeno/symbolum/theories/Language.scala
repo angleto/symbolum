@@ -272,7 +272,9 @@ final class Language private (
    * The third thing a caller at open terms has to discharge beside the two above, and the walk is
    * the grammar read once: tags `0` to `4` are terms, `5` to `8` formulas. A code with a shape the
    * grammar does not have is refused naming it, and so is a code with a variable standing where a
-   * tag or a pair should be, since that is not something a walk can settle.
+   * tag or a pair should be, since that is not something a walk can settle. An abbreviation is
+   * walked as the code it names, through [[unfolding]], and the claim is carried back to it: a
+   * graph written with the bounded universal is checked as it is written rather than expanded first.
    */
   def wellFormedIn(code: Term): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
@@ -337,7 +339,22 @@ final class Language private (
             }
           case App(Const(name, _), argument) if name == Language.NumeralName =>
             fact(Language.NumeralIsTerm).flatMap(rules.spec(argument, _))
-          case other => Left(NotOfForm("a code of the object language with a literal tag", other))
+          case other => unfolding(other) match {
+            case Some(opened) =>
+              for {
+                equation <- opened
+                expansion <- Term.destEq(equation.conclusion).map(_._2)
+                  .toRight(NotOfForm("an equation", equation.conclusion))
+                inner <- walk(expansion)
+                predicate <- inner.conclusion match {
+                  case App(head, _) => Right(head)
+                  case shapeless => Left(NotOfForm("a well-formedness claim", shapeless))
+                }
+                back <- Conv.sym(equation).flatMap(Conv.apTerm(predicate, _))
+                carried <- LogicError.lift(Kernel.eqMp(back, inner))
+              } yield carried
+            case None => Left(NotOfForm("a code of the object language with a literal tag", other))
+          }
         }
         walk(code).flatMap(proved =>
           proved.conclusion match {
@@ -346,6 +363,27 @@ final class Language private (
           })
       }
     } yield result
+  }
+
+  /**
+   * `|- abbreviation = code` when `subject` is one of this file's abbreviations applied to all of
+   * its arguments, by the equation that defines it; `None` when it is not one.
+   *
+   * The one table from an abbreviation to its equation: [[wellFormedIn]] reads an abbreviation as
+   * the code it names through it, and so does every walk over a formula's code that has no clause
+   * of its own for one.
+   */
+  private[theories] def unfolding(subject: Term): Option[Either[LogicError, Kernel.Thm]] = {
+    def spine(term: Term, arguments: List[Term]): (Term, List[Term]) = term match {
+      case App(function, argument) => spine(function, argument :: arguments)
+      case head => (head, arguments)
+    }
+    val equations = Language.Abbreviations
+    spine(subject, Nil) match {
+      case (Const(name, _), arguments) if equations.get(name).exists(_._2 == arguments.size) =>
+        Some(fact(equations(name)._1).flatMap(logic.rules.specAll(_, arguments)))
+      case _ => None
+    }
   }
 
   /** `guard = F`, the shape of a decision that two indices differ. */
@@ -1705,6 +1743,19 @@ object Language {
 
   /** `|- !z i t p. NUM_EXISTS_BELOW z i t p = ...`, the existential over a conjunction. */
   val ExistsBelowCases: String = "NUM_EXISTS_BELOW_CASES"
+
+  /**
+   * Each abbreviation, with the equation that defines it and how many arguments it takes: what
+   * `unfolding` reads one through, and what a rewrite that has to see through all of them is built
+   * from, so that an abbreviation added here is seen by both.
+   */
+  private[theories] val Abbreviations: Map[String, (String, Int)] = Map(
+    AndName -> (AndCases, 2),
+    OrName -> (OrCases, 2),
+    ExistsName -> (ExistsCases, 2),
+    LessName -> (LessCases, 3),
+    AllBelowName -> (AllBelowCases, 4),
+    ExistsBelowName -> (ExistsBelowCases, 4))
 
   /**
    * Each of the six builds a formula out of formulas, which is the half that says they are

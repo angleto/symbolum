@@ -965,6 +965,7 @@ they have least appetite for working out how it is produced.
   NUM_PAIR_INJECTIVE       !n:num. !m:num. !k:num. !i:num. NUM_PAIR n m = NUM_PAIR k i ==> n = k /\ m = i
   NUM_PAIR_LE_LEFT         !n:num. !m:num. n <= NUM_PAIR n m
   NUM_PAIR_LE_RIGHT        !n:num. !m:num. m <= NUM_PAIR n m
+  NUM_PAIR_ONTO            !n:num. ?m:num. ?k:num. n = NUM_PAIR m k
   NUM_PAYLOAD_CODE         !n:num. !m:num. NUM_PAYLOAD (NUM_CODE n m) = m
   NUM_SND_PAIR             !n:num. !m:num. NUM_SND (NUM_PAIR n m) = m
   NUM_TAG_CODE             !n:num. !m:num. NUM_TAG (NUM_CODE n m) = n
@@ -1343,6 +1344,8 @@ they have least appetite for working out how it is produced.
   NUM_FORM_IMP_PARTS       !n:num. !m:num. NUM_FORM (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_FORM n /\ NUM_FORM m
   NUM_FREE_FORM_SUBST_NUMERAL !n:num. !m:num. !k:num. NUM_FORM k ==> (!i:num. NUM_FREE_FORM i (NUM_SUBST_FORM n (NUM_NUMERAL m) k) ==> NUM_FREE_FORM i k /\ ~(i = n))
   NUM_FREE_TERM_SUBST_NUMERAL !n:num. !m:num. !k:num. NUM_TERM k ==> (!i:num. NUM_FREE_TERM i (NUM_SUBST_TERM n (NUM_NUMERAL m) k) ==> NUM_FREE_TERM i k /\ ~(i = n))
+  NUM_FST_GRAPH_TRUE       !f:num -> num. NUM_TRUE NUM_FST_GRAPH f = (f 0 = NUM_FST (f 1))
+  NUM_FST_REPR             !f:num -> num. (f 0 = NUM_FST (f 1) ==> NUM_PROV (NUM_INST 2 f NUM_FST_GRAPH)) /\ (~(f 0 = NUM_FST (f 1)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 2 f NUM_FST_GRAPH)))
   NUM_GROUND_ALL           !n:num. !m:num. NUM_GROUND (NUM_CODE 8 (NUM_PAIR n m)) = F
   NUM_GROUND_EQ            !n:num. !m:num. NUM_GROUND (NUM_CODE 5 (NUM_PAIR n m)) = (NUM_CLOSED n /\ NUM_CLOSED m)
   NUM_GROUND_IMP           !n:num. !m:num. NUM_GROUND (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_GROUND n /\ NUM_GROUND m)
@@ -1374,15 +1377,19 @@ they have least appetite for working out how it is produced.
   NUM_SIGMA_SUBST_NUMERAL  !n:num. !m:num. !k:num. !i:num. NUM_SIGMA n i ==> NUM_SIGMA n (NUM_SUBST_FORM m (NUM_NUMERAL k) i)
   NUM_SIGMA_SUC            !n:num. !m:num. NUM_SIGMA (SUC n) m = (?k:num. ?i:num. m = NUM_EXISTS k i /\ NUM_SIGMA n i)
   NUM_SIGMA_ZERO           !n:num. NUM_SIGMA 0 n = (NUM_FORM n /\ NUM_BOUNDED n)
+  NUM_SND_GRAPH_TRUE       !f:num -> num. NUM_TRUE NUM_SND_GRAPH f = (f 0 = NUM_SND (f 1))
+  NUM_SND_REPR             !f:num -> num. (f 0 = NUM_SND (f 1) ==> NUM_PROV (NUM_INST 2 f NUM_SND_GRAPH)) /\ (~(f 0 = NUM_SND (f 1)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 2 f NUM_SND_GRAPH)))
   NUM_TRI_DOUBLE           !n:num. NUM_TRI n + NUM_TRI n = n * SUC n
   NUM_TRI_GRAPH_TRUE       !f:num -> num. NUM_TRUE NUM_TRI_GRAPH f = (f 0 = NUM_TRI (f 1))
   NUM_TRI_REPR             !f:num -> num. (f 0 = NUM_TRI (f 1) ==> NUM_PROV (NUM_INST 2 f NUM_TRI_GRAPH)) /\ (~(f 0 = NUM_TRI (f 1)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 2 f NUM_TRI_GRAPH)))
   NUM_TRUE_ALL             !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 8 (NUM_PAIR n m)) f = (!k:num. NUM_TRUE m (\i:num. COND (i = n) k (f i)))
   NUM_TRUE_ALL_BELOW_NUMERAL !f:num -> num. !n:num. !m:num. !k:num. !i:num. ~(n = m) ==> NUM_TRUE (NUM_ALL_BELOW n m (NUM_NUMERAL k) i) f = (!j:num. j < k ==> NUM_TRUE i (\n1:num. COND (n1 = m) j (f n1)))
+  NUM_TRUE_ALL_BELOW_VAR   !f:num -> num. !n:num. !m:num. !k:num. !i:num. ~(n = m) ==> ~(k = m) ==> ~(k = n) ==> NUM_TRUE (NUM_ALL_BELOW n m (NUM_CODE 0 k) i) f = (!j:num. j < f k ==> NUM_TRUE i (\n1:num. COND (n1 = m) j (f n1)))
   NUM_TRUE_EQ              !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f = (NUM_VALUE n f = NUM_VALUE m f)
   NUM_TRUE_EXISTS          !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_EXISTS n m) f = (?k:num. NUM_TRUE m (\i:num. COND (i = n) k (f i)))
   NUM_TRUE_IMP             !f:num -> num. !n:num. !m:num. NUM_TRUE (NUM_CODE 7 (NUM_PAIR n m)) f = (NUM_TRUE n f ==> NUM_TRUE m f)
   NUM_TRUE_LESS_NUMERAL    !f:num -> num. !n:num. !m:num. !k:num. ~(n = m) ==> NUM_TRUE (NUM_LESS n (NUM_CODE 0 m) (NUM_NUMERAL k)) f = f m < k
+  NUM_TRUE_LESS_VAR        !f:num -> num. !n:num. !m:num. !k:num. ~(n = m) ==> ~(k = n) ==> NUM_TRUE (NUM_LESS n (NUM_CODE 0 m) (NUM_CODE 0 k)) f = f m < f k
   NUM_TRUE_NOT             !f:num -> num. !n:num. NUM_TRUE (NUM_CODE 6 n) f = (~(NUM_TRUE n f))
   NUM_TRUE_SUBST_NUMERAL   !n:num. !m:num. !k:num. NUM_FORM k ==> (!f:num -> num. NUM_TRUE (NUM_SUBST_FORM n (NUM_NUMERAL m) k) f = NUM_TRUE k (\i:num. COND (i = n) m (f i)))
   NUM_VALUE_ADD            !f:num -> num. !n:num. !m:num. NUM_VALUE (NUM_CODE 3 (NUM_PAIR n m)) f = NUM_VALUE n f + NUM_VALUE m f

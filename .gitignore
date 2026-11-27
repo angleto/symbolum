@@ -116,3 +116,4 @@ scratch/*
 
 # Local-only working area (not part of this repo)
 private/
+.local

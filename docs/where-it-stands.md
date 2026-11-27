@@ -808,12 +808,25 @@ and `NUM_CODE_REPR` say that at every `s` the graph, with the numerals of `s 0`,
 the last two, `s 2` put for its variables, is provable in PA when `s 0` is the function at the
 arguments and refutable when it is not. Each is the bridge at its graph, with the three premises
 shown by walking the code: a formula, in the bounded class, and with its free variables below the
-number of variables put for. The walk reads one equation between terms, which is what the graphs
-by doubling are, and refuses any other code by name.
+number of variables put for.
+
+**The two projections are representations too, since 2026-11-27, and theirs are the first graphs
+with a quantifier.** `NUM_FST_GRAPH` says that no `b` below `v1` makes `v1` the pair of `v0` and
+`b`, so `v1` does, each pair written in its doubled closed form, and `NUM_SND_GRAPH` the same at the
+other slot; `NUM_FST_GRAPH_TRUE` and `NUM_SND_GRAPH_TRUE` say their truth is `e 0 = NUM_FST (e 1)`
+and `e 0 = NUM_SND (e 1)`, and `NUM_FST_REPR` and `NUM_SND_REPR` carry it into PA through the same
+bridge. Three things they needed were not there. The pairing being onto, `NUM_PAIR_ONTO` in
+`Numbering`, by induction along the diagonal: a projection is chosen, and at a number nobody has
+shown to be a pair it says nothing. The order and the bounded universal read below a variable
+rather than a numeral, `NUM_TRUE_LESS_VAR` and `NUM_TRUE_ALL_BELOW_VAR`. And a walk of the code that
+reads negations, implications and the bounded universal, with the other abbreviations seen through
+by their equations in `Language`, and a freeness reading that keeps a binder's variable apart from
+the ones put for. The walk refuses a raw universal, an order or an existential outside a bounded
+universal as outside the bounded class; the constant zero is a formula's and the class's, and it is
+the freeness reading that has no clause for it and refuses it, which no graph here has yet met.
 
 Not written above that: a decoding of provability as a Sigma-1 formula, which is what that
-completeness is for; any representation other than the three by doubling, and a walk that reads
-the bounded quantifiers their graphs will carry; the object-level `Prov`, and so
+completeness is for; any representation other than these five; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale

@@ -487,7 +487,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // the run: one antecedent each on `NUM_INST_FORM`, `NUM_INST_SIGMA`, `NUM_INST_FREE` and
     // `NUM_INST_TRUE`, two on `NUM_INST_BOUNDED` and three on each of `NUM_PROV_BOUNDED_INST` and
     // `NUM_PROV_SIGMA_INST`, the two clauses being equations. Plus twelve.
-    propose.weakenings.size shouldBe 1089
+    // 1094 with the projections, 2026-11-27, card `4102f131`, counted before the run: two
+    // antecedents on `NUM_TRUE_LESS_VAR` and three on `NUM_TRUE_ALL_BELOW_VAR`, nothing else new
+    // having an antecedent at its top. Plus five.
+    propose.weakenings.size shouldBe 1094
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

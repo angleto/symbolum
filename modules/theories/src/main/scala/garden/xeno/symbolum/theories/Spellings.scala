@@ -183,6 +183,15 @@ object Spellings {
         "\\ulcorner v_0 + v_0 = (v_1 + v_2) \\cdot S (v_1 + v_2) + (v_1 + v_1) \\urcorner")
       .delimited("NUM_CODE_GRAPH", 0,
         "\\ulcorner v_0 + v_0 = S S ((v_1 + v_2) \\cdot S (v_1 + v_2) + (v_1 + v_1)) \\urcorner")
+      // The projections' graphs, read off `Truth.projectionGraphText`: the bounded universal and
+      // the negation inside the quotes are the object language's, which is what the quotes say,
+      // so they take the ordinary symbols as the equations above them do.
+      .delimited("NUM_FST_GRAPH", 0,
+        "\\ulcorner (\\forall v_2 < v_1.\\, \\neg (v_1 + v_1 = (v_0 + v_2) \\cdot S (v_0 + v_2) + (v_0 + v_0))) " +
+          "\\to v_1 + v_1 = (v_0 + v_1) \\cdot S (v_0 + v_1) + (v_0 + v_0) \\urcorner")
+      .delimited("NUM_SND_GRAPH", 0,
+        "\\ulcorner (\\forall v_2 < v_1.\\, \\neg (v_1 + v_1 = (v_2 + v_0) \\cdot S (v_2 + v_0) + (v_2 + v_2))) " +
+          "\\to v_1 + v_1 = (v_1 + v_0) \\cdot S (v_1 + v_0) + (v_1 + v_1) \\urcorner")
       // The object language's derived connectives. Set as named operations rather than with the
       // meta level's own symbols, which is the point of the row: `NUM_AND p q` is a NUMBER that
       // codes a conjunction, and writing it `#1 \\wedge #2` would put it in the same shape as the

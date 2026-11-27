@@ -800,8 +800,24 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "at variables. One INVERTS and terminates anyway, `1 = x * inv x`, because its right side " +
         "contains no `1`. What would catch a short walk even so is `OrderSpec`, which pins the " +
         "printed form of every fact this file publishes"),
+    "Numbering.scala" ->
+      ("two calls, both in `pairIsOnto`'s `meet`, one per side of an equation between two terms " +
+        "built from pairs, triangles, sums and successors, rewritten by the pair's definition, the " +
+        "triangle's two clauses and the four clauses of the sum. Every rule strictly unfolds a " +
+        "constant or moves a successor outwards, and the system is confluent, so two equal sides " +
+        "meet; a limit that ran out leaves the two normal forms different, and `meet` compares " +
+        "the joined equation with the goal and refuses by `NotOfForm` rather than returning it"),
     "Truth.scala" ->
-      ("ten, and one of them is read as a normal form. Two are `inTheorem` taking the three " +
+      ("fifteen, counted on 2026-11-27; the prose below accounts for thirteen of them and the last " +
+        "two are the freeness reading in `Representing.coveredBy` and the evaluation of a " +
+        "projection's graph in `ProjectionGraphs`. The freeness reading unfolds the clauses of " +
+        "`NUM_FREE_FORM` and `NUM_FREE_TERM` and the abbreviations, each strictly reducing, and what " +
+        "comes back is walked shape by shape, refused by name at any shape the walk does not read, " +
+        "so a walk that stopped short is a refusal. The evaluation strictly unfolds the graph, the " +
+        "truth's and the value's clauses and the update at the bounded index, and what it reaches is " +
+        "taken apart as an implication whose premise is a universal, compared at the argument with " +
+        "its conclusion, and the final equation compared with the published statement. Of the " +
+        "rest, one is read as a normal form. Two are `inTheorem` taking the three " +
         "projections off a recursion equation at a code, one per reader of a clause, and what follows it settles every shape " +
         "test and compares the clause with its published statement, so a walk that stopped with " +
         "a projection standing is refused there by name. The truth-valued reader also unfolds " +

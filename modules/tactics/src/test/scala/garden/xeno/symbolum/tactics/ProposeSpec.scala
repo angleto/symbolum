@@ -519,7 +519,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // before the run: one antecedent each on `NUM_INST_FORM`, `NUM_INST_SIGMA`, `NUM_INST_FREE` and
     // `NUM_INST_TRUE`, two on `NUM_INST_BOUNDED` and three on each bridge, the two clauses being
     // equations. Plus twelve.
-    proposals.size shouldBe 1089
+    // 1094 with the projections, 2026-11-27, card `4102f131`, predicted before the run: two
+    // antecedents on `NUM_TRUE_LESS_VAR` and three on `NUM_TRUE_ALL_BELOW_VAR`; `NUM_PAIR_ONTO` and
+    // the two graph truths are an existential and two equations, and each representation is a
+    // conjunction at its top. Plus five.
+    proposals.size shouldBe 1094
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -2062,7 +2066,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // twelve new weakenings that `open` above did not take, read off the same run as that one, both
     // being printed before either is asserted. Five there and seven here account for all twelve.
     // Plus seven.
-    unreadable shouldBe 287
+    // 292 with the projections, 2026-11-27, card `4102f131`: all five new weakenings, read off the
+    // whole suite's run, not predicted, with `open` above printed at 890 and not moving. Plus
+    // five.
+    unreadable shouldBe 292
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2445,7 +2452,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 390 with the instantiation and its two bridges, 2026-11-26, card `4102f131`, read off the run
     // and not decomposed: six of the twelve new weakenings keep a constant of the naturals. Plus
     // six.
-    aboutNumbers.size shouldBe 390
+    // 395 with the projections, 2026-11-27, card `4102f131`, read off the run and not predicted:
+    // all five new weakenings keep a constant of the naturals, while `after` does not move. Plus
+    // five.
+    aboutNumbers.size shouldBe 395
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
