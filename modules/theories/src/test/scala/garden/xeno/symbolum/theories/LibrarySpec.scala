@@ -932,8 +932,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // All nine bind two or more leading quantifiers, and all but `NUM_INST_ZERO`, whose two are an
     // environment and a formula, bind two of `num`, so `AGENTS.md`'s figures move by nine, nine
     // and eight.
-    library.entries.size shouldBe 1211
-    library.names.distinct.size shouldBe 1208
+    // 1214 and 1211 with the three representations, 2026-11-27, card `4102f131`: three facts
+    // under three new names from `Truth.Statements`, `NUM_TRI_REPR`, `NUM_PAIR_REPR` and
+    // `NUM_CODE_REPR`, derived before the run, and no definition. Each binds one leading
+    // quantifier, an environment, so `AGENTS.md`'s figures move by three, none and none.
+    library.entries.size shouldBe 1214
+    library.names.distinct.size shouldBe 1211
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

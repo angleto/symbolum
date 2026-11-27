@@ -106,7 +106,9 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     // `4102f131`: at no variable substituted the environment `\j. COND (j < 0) (s j) (e j)` is
     // `e` only by `ETA`, and the bridges read `NUM_INST_TRUE` at `s`, where `\j. s j` is `s` by
     // it again. Every fact before them is unchanged.
-    val withEta = Set(Truth.InstanceTrue, Truth.ProvesBoundedInstance, Truth.ProvesSigmaInstance)
+    // The three representations spend it through the bridge they are instances of.
+    val withEta = Set(Truth.InstanceTrue, Truth.ProvesBoundedInstance, Truth.ProvesSigmaInstance,
+      Truth.TriangleRepresented, Truth.PairRepresented, Truth.CodeRepresented)
     val expected: Map[String, Set[Term]] =
       Truth.Statements.map { case (name, _) =>
         name -> (if (withEta(name)) Set(choice, infinity, eta) else Set(choice, infinity))
@@ -788,42 +790,91 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     force(Conv.sym(bottom).flatMap(rules.notElim(never, _)).flatMap(rules.notIntro(claim, _)))
   }
 
-  "The graph of the pairing" should "hold where the value is the pair, fail elsewhere" in {
-    val graph = fact(Truth.PairGraphTrue)
-
-    // At zero everywhere: `NUM_PAIR 0 0` is `NUM_TRI 0 + 0`, zero.
-    val atZero = force(rules.spec(term("\\k:num. ZERO"), graph))
+  /** `NUM_TRUE NUM_PAIR_GRAPH (\k. ZERO)`: `NUM_PAIR 0 0` is `NUM_TRI 0 + 0`, zero. */
+  private lazy val pairHoldsAtZero: Kernel.Thm = {
+    val atZero = force(rules.spec(term("\\k:num. ZERO"), fact(Truth.PairGraphTrue)))
     val zeroReading = evaluate(rightOf(atZero), pairArithmetic)
     rightOf(zeroReading) shouldBe proposition("ZERO = ZERO")
-    val holds = force(Conv.trans(atZero, zeroReading).flatMap(Conv.sym)
+    force(Conv.trans(atZero, zeroReading).flatMap(Conv.sym)
       .flatMap(e => LogicError.lift(Kernel.eqMp(e, Kernel.refl(term("ZERO"))))))
-    holds.hypotheses shouldBe empty
-    holds.conclusion shouldBe proposition("NUM_TRUE NUM_PAIR_GRAPH (\\k:num. ZERO)")
+  }
 
-    // At one everywhere: `NUM_PAIR 1 1` is `NUM_TRI 2 + 1`, four, and the graph is refuted rather
-    // than left unproved, which is the uniqueness half of the representation spent.
-    val one = "SUC ZERO"
-    val atOne = force(rules.spec(term(s"\\k:num. $one"), graph))
+  private val one = "SUC ZERO"
+
+  /**
+   * `~NUM_TRUE NUM_PAIR_GRAPH (\k. 1)`: `NUM_PAIR 1 1` is `NUM_TRI 2 + 1`, four, and the graph is
+   * refuted rather than left unproved, which is the uniqueness half of the representation spent.
+   */
+  private lazy val pairFailsAtOne: Kernel.Thm = {
+    val atOne = force(rules.spec(term(s"\\k:num. $one"), fact(Truth.PairGraphTrue)))
     val oneReading = evaluate(rightOf(atOne), pairArithmetic)
     rightOf(oneReading) shouldBe proposition(s"$one = SUC (SUC (SUC ($one)))")
     val claim = proposition(s"NUM_TRUE NUM_PAIR_GRAPH (\\k:num. $one)")
-    val refuted = refuteBySuccessors(claim, force(Conv.trans(atOne, oneReading)))
-    refuted.hypotheses shouldBe empty
-    refuted.conclusion shouldBe proposition(s"~(NUM_TRUE NUM_PAIR_GRAPH (\\k:num. $one))")
+    refuteBySuccessors(claim, force(Conv.trans(atOne, oneReading)))
   }
 
-  "The graph of the constructor" should "fail at zero, where the pair's graph holds" in {
-    // `NUM_CODE 0 0` is the successor of `NUM_PAIR 0 0`, so at zero everywhere the constructor's
-    // graph reads `0 = 1`. A graph that dropped the two successors of its right side would be the
-    // pair's graph, which holds here.
-    val graph = fact(Truth.CodeGraphTrue)
-    val atZero = force(rules.spec(term("\\k:num. ZERO"), graph))
+  /**
+   * `~NUM_TRUE NUM_CODE_GRAPH (\k. ZERO)`. `NUM_CODE 0 0` is the successor of `NUM_PAIR 0 0`, so at
+   * zero everywhere the constructor's graph reads `0 = 1`. A graph that dropped the two successors
+   * of its right side would be the pair's graph, which holds here.
+   */
+  private lazy val codeFailsAtZero: Kernel.Thm = {
+    val atZero = force(rules.spec(term("\\k:num. ZERO"), fact(Truth.CodeGraphTrue)))
     val reading = evaluate(rightOf(atZero), pairArithmetic)
     rightOf(reading) shouldBe proposition("ZERO = SUC ZERO")
     val claim = proposition("NUM_TRUE NUM_CODE_GRAPH (\\k:num. ZERO)")
-    val refuted = refuteBySuccessors(claim, force(Conv.trans(atZero, reading)))
-    refuted.hypotheses shouldBe empty
-    refuted.conclusion shouldBe proposition("~(NUM_TRUE NUM_CODE_GRAPH (\\k:num. ZERO))")
+    refuteBySuccessors(claim, force(Conv.trans(atZero, reading)))
+  }
+
+  "The graph of the pairing" should "hold where the value is the pair, fail elsewhere" in {
+    pairHoldsAtZero.hypotheses shouldBe empty
+    pairHoldsAtZero.conclusion shouldBe proposition("NUM_TRUE NUM_PAIR_GRAPH (\\k:num. ZERO)")
+    pairFailsAtOne.hypotheses shouldBe empty
+    pairFailsAtOne.conclusion shouldBe proposition(s"~(NUM_TRUE NUM_PAIR_GRAPH (\\k:num. $one))")
+  }
+
+  "The graph of the constructor" should "fail at zero, where the pair's graph holds" in {
+    codeFailsAtZero.hypotheses shouldBe empty
+    codeFailsAtZero.conclusion shouldBe proposition("~(NUM_TRUE NUM_CODE_GRAPH (\\k:num. ZERO))")
+  }
+
+  "A representation" should "give PA's proof of the graph at a point on it, and its refutation off it" in {
+    // Each corollary at a concrete point, fed only the graph's truth there, owing nothing: no walk
+    // of the code is written here, so what makes this more than a restatement of the published
+    // text is that the corollary's antecedent is the one the graph's truth fact gives at that point.
+    // The triangle's at zero, the pair's at zero and at one, the constructor's at zero.
+    def meaning(graphTrue: String, at: String, held: Kernel.Thm, negated: Boolean): Kernel.Thm = {
+      val reading = force(rules.spec(term(at), fact(graphTrue)))
+      val negation = force(truth.logic.mkNot(rightOf(reading))) match {
+        case App(not, _) => not
+        case other => fail(s"not a negation: $other")
+      }
+      val oriented = if (!negated) reading else force(Conv.apTerm(negation, reading))
+      force(LogicError.lift(Kernel.eqMp(oriented, held)))
+    }
+    def crossed(name: String, at: String, held: Kernel.Thm, half: Boolean): Kernel.Thm = {
+      val instance = force(rules.spec(term(at), fact(name)))
+      force((if (half) rules.conjElim1(instance) else rules.conjElim2(instance)).flatMap(rules.mp(_, held)))
+    }
+    val zero = "\\k:num. ZERO"
+    val atOne = s"\\k:num. $one"
+    val cases = Vector(
+      (crossed(Truth.TriangleRepresented, zero,
+        meaning(Truth.TriangleGraphTrue, zero, triangleHoldsAtZero, negated = false), half = true),
+        s"NUM_PROV (NUM_INST 2 ($zero) NUM_TRI_GRAPH)"),
+      (crossed(Truth.PairRepresented, zero,
+        meaning(Truth.PairGraphTrue, zero, pairHoldsAtZero, negated = false), half = true),
+        s"NUM_PROV (NUM_INST 3 ($zero) NUM_PAIR_GRAPH)"),
+      (crossed(Truth.PairRepresented, atOne,
+        meaning(Truth.PairGraphTrue, atOne, pairFailsAtOne, negated = true), half = false),
+        s"NUM_PROV (NUM_CODE 6 (NUM_INST 3 ($atOne) NUM_PAIR_GRAPH))"),
+      (crossed(Truth.CodeRepresented, zero,
+        meaning(Truth.CodeGraphTrue, zero, codeFailsAtZero, negated = true), half = false),
+        s"NUM_PROV (NUM_CODE 6 (NUM_INST 3 ($zero) NUM_CODE_GRAPH))"))
+    cases.foreach { case (theorem, expected) =>
+      theorem.hypotheses shouldBe empty
+      theorem.conclusion shouldBe proposition(expected)
+    }
   }
 
   "The value of a numeral" should "be its number at an environment that says nothing about it" in {

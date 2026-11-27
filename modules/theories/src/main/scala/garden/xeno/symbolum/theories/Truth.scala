@@ -60,8 +60,10 @@ import garden.xeno.symbolum.logic.*
  * [[Truth.ProvesBoundedInstance]], once for every arity: the numerals of `s 0`, `s 1`, ... put for
  * the graph's variables by [[Truth.InstanceName]], provable when the graph is true at `s` and
  * refutable when it is false. A representation reaches it by discharging three premises at its
- * code, that it is a formula, bounded, and has its free variables below the arity, and no fact here
- * does that for any one representation; `TruthSpec` does it for the triangle.
+ * code, that it is a formula, bounded, and has its free variables below the arity, and
+ * [[Truth.TriangleRepresented]], [[Truth.PairRepresented]] and [[Truth.CodeRepresented]] are the
+ * three graphs above having done so: the walk of their codes that discharges the premises is
+ * `Representing`, and it reads one equation between terms and refuses any other code by name.
  */
 final class Truth private (
   val language: Language,
@@ -572,6 +574,24 @@ object Truth {
   val ProvesSigmaInstance: String = "NUM_PROV_SIGMA_INST"
 
   /**
+   * `|- !s. (s 0 = NUM_TRI (s 1) ==> NUM_PROV (NUM_INST 2 s NUM_TRI_GRAPH)) /\`
+   *   `(~(s 0 = NUM_TRI (s 1)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 2 s NUM_TRI_GRAPH)))`
+   *
+   * The triangle is represented in PA: at every point, its graph with the numerals of `s 0` and
+   * `s 1` put for its variables is provable when `s 0` is the triangle of `s 1` and refutable when
+   * it is not. [[ProvesBoundedInstance]] at the graph, whose three premises, a formula, in the
+   * bounded class and with its free variables below two, are each shown by walking its code, and
+   * whose truth is [[TriangleGraphTrue]]. The two below are the same proof at three variables.
+   */
+  val TriangleRepresented: String = "NUM_TRI_REPR"
+
+  /** [[TriangleRepresented]] for the pairing, at three variables, through [[PairGraphTrue]]. */
+  val PairRepresented: String = "NUM_PAIR_REPR"
+
+  /** [[TriangleRepresented]] for the constructor, at three variables, through [[CodeGraphTrue]]. */
+  val CodeRepresented: String = "NUM_CODE_REPR"
+
+  /**
    * The step of the value, as text.
    *
    * Tag `1` has no branch: zero falls through to the last one with every code that is not a term,
@@ -782,7 +802,16 @@ object Truth {
         "(~(NUM_TRUE p s) ==> NUM_PROV (NUM_CODE 6 (NUM_INST n s p)))"),
     ProvesSigmaInstance ->
       ("!m:num n:num s:num -> num p:num. NUM_SIGMA m p ==> " +
-        "(!w:num. NUM_FREE_FORM w p ==> w < n) ==> NUM_TRUE p s ==> NUM_PROV (NUM_INST n s p)")
+        "(!w:num. NUM_FREE_FORM w p ==> w < n) ==> NUM_TRUE p s ==> NUM_PROV (NUM_INST n s p)"),
+    TriangleRepresented ->
+      ("!s:num -> num. (s 0 = NUM_TRI (s 1) ==> NUM_PROV (NUM_INST 2 s NUM_TRI_GRAPH)) /\\ " +
+        "(~(s 0 = NUM_TRI (s 1)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 2 s NUM_TRI_GRAPH)))"),
+    PairRepresented ->
+      ("!s:num -> num. (s 0 = NUM_PAIR (s 1) (s 2) ==> NUM_PROV (NUM_INST 3 s NUM_PAIR_GRAPH)) /\\ " +
+        "(~(s 0 = NUM_PAIR (s 1) (s 2)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 3 s NUM_PAIR_GRAPH)))"),
+    CodeRepresented ->
+      ("!s:num -> num. (s 0 = NUM_CODE (s 1) (s 2) ==> NUM_PROV (NUM_INST 3 s NUM_CODE_GRAPH)) /\\ " +
+        "(~(s 0 = NUM_CODE (s 1) (s 2)) ==> NUM_PROV (NUM_CODE 6 (NUM_INST 3 s NUM_CODE_GRAPH)))")
   )
 
   /** The step of the ground predicate, as text, with the guards the truth's step has. */
@@ -1013,6 +1042,14 @@ object Truth {
         Ranking(rankEquality, rankNegation, rankImplication, rankUniversal),
         Sigmas(sigmaZero, sigmaSuccessor),
         Instances(instanceZero, instanceSuccessor))
+
+      // Each representation, the bridge at its graph, with the graph's three premises walked.
+      bridge <- evaluation.get(ProvesBoundedInstance).toRight(MissingDefinition(ProvesBoundedInstance))
+      representing = new Representing(logic, theory, provability.notation, language, numbering.peano,
+        successor, statements, boundedEquality, bridge)
+      triangleRepresented <- representing.of(TriangleRepresented, graphDefinition, graph)
+      pairRepresented <- representing.of(PairRepresented, pairGraphDefinition, pairGraph)
+      codeRepresented <- representing.of(CodeRepresented, codeGraphDefinition, codeGraph)
     } yield new Truth(
       language,
       theory,
@@ -1063,7 +1100,10 @@ object Truth {
         SigmaZero -> sigmaZero,
         SigmaSuccessor -> sigmaSuccessor,
         InstanceZero -> instanceZero,
-        InstanceSuccessor -> instanceSuccessor
+        InstanceSuccessor -> instanceSuccessor,
+        TriangleRepresented -> triangleRepresented,
+        PairRepresented -> pairRepresented,
+        CodeRepresented -> codeRepresented
       ) ++ evaluation
     )
   }
@@ -1747,6 +1787,191 @@ object Truth {
 
   /** The two clauses of [[InstanceName]], which the instantiation's inductions read. */
   private final case class Instances(zero: Kernel.Thm, successor: Kernel.Thm)
+
+  /**
+   * A representation in PA, from the graph's truth and [[ProvesBoundedInstance]]: what
+   * [[TriangleRepresented]], [[PairRepresented]] and [[CodeRepresented]] are each an instance of.
+   *
+   * The bridge asks three things of the graph, and each is shown by walking its code rather than
+   * stated for it: that it is a formula, by the term and formula rules of `Language` at each
+   * constructor; that it is in the bounded class, by its clause for an equation; and that what is
+   * free in it is below the number of variables put for, by rewriting `NUM_FREE_FORM w` through the
+   * freeness clauses into a disjunction of `j = w`, one per variable occurring, and putting each `j`
+   * below the bound in the successor form `Successor.spell` gives both. The bound is read off the
+   * published statement, so it is written once.
+   *
+   * **What the walk reads is a graph that is one equation between terms without the constant
+   * zero**, which is what the graphs by doubling are. A code with any other constructor is refused
+   * by name rather than guessed at; the projections, whose graphs carry bounded quantifiers, are
+   * the first that will need the walk widened.
+   */
+  private final class Representing(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    language: Language,
+    peano: Peano,
+    successor: Successor,
+    statements: Statements,
+    boundedEquality: Kernel.Thm,
+    bridge: Kernel.Thm
+  ) {
+    private val rules = logic.rules
+    private val numbers = TyApp(Natural.TypeName, Nil)
+    private val environments = Type.fun(numbers, numbers)
+
+    private def force[T](result: Either[LogicError, T]): T =
+      result.fold(error => throw new RefusedHere(error), identity)
+    private def constant(name: String, ty: Type): Term =
+      force(LogicError.lift(theory.constant(name, ty)))
+    private def applied(head: Term, arguments: List[Term]): Term =
+      force(LogicError.lift(Term.appAll(head, arguments)))
+    private def fact(name: String): Kernel.Thm = force(language.fact(name))
+    private def sides(theorem: Kernel.Thm): (Term, Term) =
+      force(Term.destEq(theorem.conclusion).toRight(NotOfForm("an equation", theorem.conclusion)))
+
+    private val coding = constant(Numbering.CodeName, Type.fun(numbers, Type.fun(numbers, numbers)))
+    private val pairing = constant(Numbering.PairName, Type.fun(numbers, Type.fun(numbers, numbers)))
+    private val below = constant(Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+    private val freeIn = constant(Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+    private val tags: Vector[Term] =
+      (0 to 5).toVector.map(k => force(Parser.term(theory, notation, k.toString, numbers)))
+
+    /** `(tag, payload)` of a code written `NUM_CODE tag payload`, the tag's value read off [[tags]]. */
+    private def opened(code: Term): Option[(Int, Term)] = code match {
+      case App(App(head, tag), payload) if head == coding && tags.contains(tag) =>
+        Some((tags.indexOf(tag), payload))
+      case _ => None
+    }
+    private def halves(payload: Term): Option[(Term, Term)] = payload match {
+      case App(App(head, left), right) if head == pairing => Some((left, right))
+      case _ => None
+    }
+    private def refused(error: LogicError): Nothing = throw new RefusedHere(error)
+
+    /** `|- NUM_TERM t` for a term code built from variables, successors, sums and products. */
+    private def termOf(code: Term): Kernel.Thm = opened(code) match {
+      case Some((0, index)) => force(rules.spec(index, fact(Language.TermVariable)))
+      case Some((2, inner)) => force(rules.spec(inner, fact(Language.TermSuccessor)).flatMap(rules.mp(_, termOf(inner))))
+      case Some((tag @ (3 | 4), payload)) => halves(payload) match {
+        case Some((left, right)) =>
+          force(rules.specAll(fact(if (tag == 3) Language.TermSum else Language.TermProduct), List(left, right))
+            .flatMap(rules.mp(_, termOf(left))).flatMap(rules.mp(_, termOf(right))))
+        case None => refused(NotOfForm("a sum or a product of two codes", code))
+      }
+      case _ => refused(NotOfForm("a term code of a variable, a successor, a sum or a product", code))
+    }
+
+    /** `(left, right)` of the code of an equation, which is all this walk reads as a formula. */
+    private def equationOf(code: Term): (Term, Term) = opened(code) match {
+      case Some((5, payload)) => halves(payload).getOrElse(refused(NotOfForm("an equation between two codes", code)))
+      case _ => refused(NotOfForm("the code of an equation, the only formula this walk reads", code))
+    }
+
+    private def formOf(code: Term): Kernel.Thm = {
+      val (left, right) = equationOf(code)
+      force(rules.specAll(fact(Language.FormulaEquality), List(left, right))
+        .flatMap(rules.mp(_, termOf(left))).flatMap(rules.mp(_, termOf(right))))
+    }
+
+    private def boundedOf(code: Term): Kernel.Thm = {
+      val (left, right) = equationOf(code)
+      force(rules.specAll(boundedEquality, List(left, right)).flatMap(rules.eqTruthElim))
+    }
+
+    /** `|- held[to/from]` from `|- from = to` and `|- held`, `held` being `template(from)`. */
+    private def along(template: Term => Term, equation: Kernel.Thm, held: Kernel.Thm): Kernel.Thm = {
+      val (from, _) = sides(equation)
+      val hole = Term.variable("hole", Term.typeOf(from))
+      force(LogicError.lift(Term.abs(hole, template(hole))).flatMap(Conv.apTerm(_, equation))
+        .flatMap(Conv.betaSides).flatMap(e => LogicError.lift(Kernel.eqMp(e, held))))
+    }
+
+    private def lessThan(left: Term, right: Term): Term = applied(below, List(left, right))
+
+    /** `|- j < n` for two numerals with `j` the smaller, through their successor forms. */
+    private def numeralBelow(j: Term, n: Term): Kernel.Thm = {
+      val (spelledJ, spelledN) = (force(successor.spell(j)), force(successor.spell(n)))
+      val (from, to) = (sides(spelledJ)._2, sides(spelledN)._2)
+      def depth(term: Term): Int = term match {
+        case App(_, inner) => 1 + depth(inner)
+        case _ => 0
+      }
+      if (depth(from) >= depth(to)) refused(NotOfForm("a variable below the bound the representation states", j))
+      val step = force(peano.fact(Peano.BelowSuccessor)) // !n. n < SUC n
+      val transitive = force(peano.fact(Peano.StrictTransitive))
+      def upper(order: Kernel.Thm): Term = order.conclusion match {
+        case App(App(_, _), high) => high
+        case other => refused(NotOfForm("an order", other))
+      }
+      // from < SUC from < ... < to, one successor at a time, each joined by transitivity
+      def climb(held: Kernel.Thm): Kernel.Thm =
+        if (upper(held) == to) held
+        else {
+          val next = force(rules.spec(upper(held), step))
+          climb(force(rules.specAll(transitive, List(from, upper(held), upper(next)))
+            .flatMap(t => rules.conjIntro(held, next).flatMap(rules.mp(t, _)))))
+        }
+      val reached = climb(force(rules.spec(from, step)))
+      val atJ = along(x => lessThan(x, to), force(Conv.sym(spelledJ)), reached)
+      along(x => lessThan(j, x), force(Conv.sym(spelledN)), atJ)
+    }
+
+    /** `|- !w. NUM_FREE_FORM w G ==> w < n`, from `G = code`. */
+    private def coveredBy(graph: Term, definition: Kernel.Thm, bound: Term): Kernel.Thm = {
+      val w = Term.variable("w", numbers)
+      val atW = applied(freeIn, List(w))
+      val atCode = force(Conv.apTerm(atW, definition)) // NUM_FREE_FORM w G = NUM_FREE_FORM w code
+      val freeness = Vector(Language.FormulaFreeEquality, Language.FreeSum, Language.FreeProduct,
+        Language.FreeSuccessor, Language.FreeVariable).map(fact)
+      val reading = force(Rewrite.Rule.all(logic, freeness).flatMap(Rewrite.rewrite(_, sides(atCode)._2))
+        .flatMap(Conv.trans(atCode, _)))
+      def inRange(held: Kernel.Thm): Kernel.Thm = logic.destDisj(held.conclusion) match {
+        case Some((l, r)) =>
+          force(rules.disjElim(held, inRange(force(LogicError.lift(Kernel.assume(l)))),
+            inRange(force(LogicError.lift(Kernel.assume(r))))))
+        case None =>
+          val (index, other) = sides(held)
+          if (other != w) refused(NotOfForm("a variable equal to the one asked about", held.conclusion))
+          along(x => lessThan(x, bound), held, numeralBelow(index, bound))
+      }
+      val free = applied(freeIn, List(w, graph))
+      val premise = force(LogicError.lift(Kernel.assume(free)))
+      force(LogicError.lift(Kernel.eqMp(reading, premise)).map(inRange)
+        .flatMap(rules.disch(free, _)).flatMap(rules.gen(w, _)))
+    }
+
+    /** The statement published as `name`, proved for the graph `G = code` whose truth is `graphTrue`. */
+    def of(name: String, definition: Kernel.Thm, graphTrue: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      try {
+        val (graph, code) = sides(definition)
+        val statement = force(statements.statement(name))
+        // the bound, read off the statement's first consequent: NUM_PROV (NUM_INST bound s G)
+        val (_, body) = force(Logic.stripForall(statement))
+        val bound = logic.destConj(body).flatMap { case (first, _) => logic.destImp(first) }.map(_._2) match {
+          case Some(App(_, App(App(App(_, n), _), _))) => n
+          case _ => refused(NotOfForm("a representation as the bridge states it", statement))
+        }
+        val s = Term.variable("s", environments)
+        val formula = force(Conv.sym(definition).flatMap(Conv.apTerm(constant(Language.FormulaName,
+          Type.fun(numbers, Type.Bool)), _)).flatMap(e => LogicError.lift(Kernel.eqMp(e, formOf(code)))))
+        val bounded = force(Conv.sym(definition).flatMap(Conv.apTerm(constant(BoundedName,
+          Type.fun(numbers, Type.Bool)), _)).flatMap(e => LogicError.lift(Kernel.eqMp(e, boundedOf(code)))))
+        val decided = force(rules.specAll(bridge, List(bound, s, graph)).flatMap(rules.mp(_, formula))
+          .flatMap(rules.mp(_, bounded)).flatMap(rules.mp(_, coveredBy(graph, definition, bound))))
+        val meaning = force(rules.spec(s, graphTrue)) // NUM_TRUE G s = (s 0 = f (s 1) ...)
+        val (proved, refuted) = force(logic.destConj(decided.conclusion)
+          .toRight(NotOfForm("a conjunction", decided.conclusion))) match {
+          case (yes, no) => (force(logic.destImp(yes).toRight(NotOfForm("an implication", yes)))._2,
+            force(logic.destImp(no).toRight(NotOfForm("an implication", no)))._2)
+        }
+        val read = along(
+          held => force(logic.mkImp(held, proved).flatMap(l =>
+            logic.mkNot(held).flatMap(logic.mkImp(_, refuted)).flatMap(logic.mkConj(l, _)))),
+          meaning, decided)
+        statements.checked(name, force(rules.gen(s, read)))
+      } catch { case refusal: RefusedHere => Left(refusal.error) }
+  }
 
   private object Evaluation {
 

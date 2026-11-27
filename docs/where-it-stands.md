@@ -803,9 +803,17 @@ refutable there when it is false; `NUM_PROV_SIGMA_INST` is its true half for Sig
 infinity, where every earlier fact of `Truth` rests on the two: the environment with nothing
 substituted is `e` only by it.
 
+**The three graphs are representations in PA since 2026-11-27.** `NUM_TRI_REPR`, `NUM_PAIR_REPR`
+and `NUM_CODE_REPR` say that at every `s` the graph, with the numerals of `s 0`, `s 1` and, for
+the last two, `s 2` put for its variables, is provable in PA when `s 0` is the function at the
+arguments and refutable when it is not. Each is the bridge at its graph, with the three premises
+shown by walking the code: a formula, in the bounded class, and with its free variables below the
+number of variables put for. The walk reads one equation between terms, which is what the graphs
+by doubling are, and refuses any other code by name.
+
 Not written above that: a decoding of provability as a Sigma-1 formula, which is what that
-completeness is for; a corollary per representation stating its graph provable at a point,
-which the bridge leaves to discharging three premises at a code; any representation other than the three by doubling; the object-level `Prov`, and so
+completeness is for; any representation other than the three by doubling, and a walk that reads
+the bounded quantifiers their graphs will carry; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale
