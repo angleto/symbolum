@@ -5,8 +5,16 @@
 # The control is the run before them, in the same tree, and it must be green. Each perturbation is
 # a run of its own, because one refusal stops the chain from being built and every later fact with it.
 #
-# WHAT WAS SEEN: not yet run. The reading is written here after the first run, perturbation by
-# perturbation, with the refusal each one met.
+# WHAT WAS SEEN, 2026-11-28, on 91e1f4ba, clean tree, restored after each run (git status empty):
+# 0. control: DecisionSpec 13 of 13.
+# 1. refused, but NOT by the arithmetic as the prediction below said: `Linarith.Facts stopped the
+#    search at 53, where it allows 48: this is not evidence about f (SUC (SUC i)) * d (SUC i) <=
+#    Sum f (SUC (SUC i)) either way`. The guard fires on the search budget, not on a refutation;
+#    that the claim is false rests on r1_scout.py's control C2, not on this run.
+# 2. refused by the arithmetic: `LINARITH searched to the end: no non-negative combination of the
+#    hypotheses gives` the ring identity of RECALL_STOP. As predicted.
+# 3. refused at the statement check: `expected an instance of 0 < x ==> ...`, the derivation proving
+#    the text for `0 < c` and not the perturbed one. As predicted.
 #
 # READ THE LOG, NOT THE EXIT CODE: `testOnly` over an aborted suite has exited 0 before (see
 # perturb-decision-lecam.sh). `*** 1 SUITE ABORTED ***` and the refusal under it are the reading.
