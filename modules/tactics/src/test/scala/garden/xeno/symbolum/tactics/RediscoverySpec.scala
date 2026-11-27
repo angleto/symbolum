@@ -494,7 +494,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // the run and agreeing with it: one antecedent on `ARGMAX_SCALE`, `BAYES_RULE_OPTIMAL` and
     // `SUMMARY_READER_VALUE`, two on each of `SUFFICIENT_SUMMARY_RULE` and
     // `SUFFICIENT_SUMMARY_UTILITY`, none on `BAYES_RULE_TOTAL` and `SUMMARY_NO_FREE_CURE`. Plus seven.
-    propose.weakenings.size shouldBe 1101
+    // 1121 with the recall-size facts of `Decision`, 2026-11-27 (utitlita_e_danno R1), predicted
+    // before the run: three antecedents on `RECALL_STOP`, five on `RECALL_PERSIST`, seven on
+    // `RECALL_UNIMODAL`, one on `RECALL_SOFTMAX` and four on `RECALL_SOFTMAX_UNIMODAL`. Plus twenty.
+    propose.weakenings.size shouldBe 1121
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -653,7 +656,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // Plus one over the base above.
     // 161 with the radical of an ideal, 2026-11-11, ADR 0072: `SQUARE_ZERO` writes `*` with no
     // lambda in the body, read off the run and matching its statement. Plus one.
-    propose.mutable.size shouldBe 161
+    // 163 with the recall-size facts of `Decision`, 2026-11-27, read off the run: `RECALL_STOP` and
+    // `RECALL_PERSIST` write `*`, `+` and `<=` with no lambda in the body, and the other three carry
+    // a quantifier's lambda. Plus two.
+    propose.mutable.size shouldBe 163
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

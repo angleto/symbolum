@@ -231,11 +231,54 @@ object Decision {
   /** The summary reader collects, over all states, exactly the value of the summary experiment. */
   val SummaryReaderValue: String = "SUMMARY_READER_VALUE"
 
+  /**
+   * R1 of the essay's bounded reader, the stopping criterion: with `Sum f (SUC k)` the chance that the
+   * relevant item is among the first `k + 1` recalled and `s k` the chance the reader uses it in a
+   * context of `k + 1`, one more item does not help exactly when `f (SUC k) * d k <= Sum f (SUC k)`,
+   * where `d k` is the reader's `s (SUC k) / (s k - s (SUC k))`, written as the equation it satisfies.
+   */
+  val RecallStop: String = "RECALL_STOP"
+
+  /** Once the criterion holds it holds at the next size, for a non-increasing `f` and `d` growing by at most one. */
+  val RecallPersist: String = "RECALL_PERSIST"
+
+  /** R1: the accuracy of a recall of size `k + 1` is unimodal in `k`: once it stops rising it never rises again. */
+  val RecallUnimodal: String = "RECALL_UNIMODAL"
+
+  /** The softmax reader, `s i = c / (c + i)` with odds advantage `c`, meets R1's conditions with `d i = c + i`. */
+  val RecallSoftmax: String = "RECALL_SOFTMAX"
+
+  /** R1 at the softmax reader. */
+  val RecallSoftmaxUnimodal: String = "RECALL_SOFTMAX_UNIMODAL"
+
   /** `Sum (\z. prior z * k z s * u a z) n`: the score of action `a` at signal `s`, with `k` and `s` as written. */
   private def score(k: String, s: String, a: String): String = s"Sum (\\z:num. prior z * $k z $s * u $a z) n"
 
   /** The summary experiment of `f` read at `t`, inside a score: `Sum (\x. k z x * COND (f x = t) 1 0) m`. */
   private def fibre(t: String): String = s"Sum (\\x:num. k z x * COND (f x = $t) (1:real) 0) m"
+
+  /** The accuracy of a recall of `i + 1` items: the relevant item recalled, times the reader using it. */
+  private def recallAt(i: String): String = s"Sum f (SUC $i) * s $i"
+
+  /** One more item, the `i + 2`-th, does not raise the accuracy: R1's stopping criterion at `i`. */
+  private def recallCrit(i: String): String = s"f (SUC $i) * d $i <= Sum f (SUC $i)"
+
+  /** The reader's `d i` against `s`: `s i / s (SUC i) = 1 + 1 / d i`, without a quotient. */
+  private def recallReader(i: String): String = s"s $i * d $i = s (SUC $i) * (d $i + 1)"
+
+  /** `RECALL_STOP` at `i`, after its binders. */
+  private def recallStopAt(i: String): String =
+    s"0 < d $i ==> 0 < s (SUC $i) ==> ${recallReader(i)} ==> " +
+      s"(${recallAt(s"(SUC $i)")} <= ${recallAt(i)} ==> ${recallCrit(i)}) /\\ " +
+      s"(${recallCrit(i)} ==> ${recallAt(s"(SUC $i)")} <= ${recallAt(i)})"
+
+  /** `RECALL_PERSIST` at `i`, after its binders. */
+  private def recallPersistAt(i: String): String =
+    s"0 <= f (SUC (SUC $i)) ==> f (SUC (SUC $i)) <= f (SUC $i) ==> 0 < d $i ==> d (SUC $i) <= d $i + 1 ==> " +
+      s"${recallCrit(i)} ==> ${recallCrit(s"(SUC $i)")}"
+
+  /** The softmax reader's accuracy at a recall of `i + 1`. */
+  private def softmaxAt(i: String): String = s"Sum f (SUC $i) * (c * inv (c + real_of_num $i))"
 
   /** The rule of the reader of `k` at signal `s`. */
   private def bayesRule(s: String): String = s"Argmax (\\a:num. ${score("k", s, "a")}) top"
@@ -364,7 +407,25 @@ object Decision {
       ("!n:num. !m:num. !r:num. !top:num. !prior:num->real. !k:num->num->real. !u:num->num->real. !f:num->num. " +
         "(!s:num. s < m ==> f s < r) ==> " +
         s"Sum (\\y:num. Sum (\\s:num. prior y * k y s * u (${summaryRule("s")}) y) m) n = " +
-        "VALUE n r top prior (\\y:num. \\t:num. Sum (\\s:num. k y s * COND (f s = t) (1:real) 0) m) u")
+        "VALUE n r top prior (\\y:num. \\t:num. Sum (\\s:num. k y s * COND (f s = t) (1:real) 0) m) u"),
+    RecallStop -> s"!f:num->real. !d:num->real. !s:num->real. !k:num. ${recallStopAt("k")}",
+    RecallPersist -> s"!f:num->real. !d:num->real. !i:num. ${recallPersistAt("i")}",
+    RecallUnimodal ->
+      ("!f:num->real. !d:num->real. !s:num->real. !k:num. !j:num. " +
+        "(!i:num. 0 <= f i) ==> (!i:num. f (SUC i) <= f i) ==> (!i:num. 0 < d i) ==> " +
+        "(!i:num. d (SUC i) <= d i + 1) ==> (!i:num. 0 < s i) ==> " +
+        s"(!i:num. ${recallReader("i")}) ==> ${recallAt("(SUC k)")} <= ${recallAt("k")} ==> " +
+        s"${recallAt("(SUC (k + j))")} <= ${recallAt("(k + j)")}"),
+    RecallSoftmax ->
+      ("!c:real. 0 < c ==> (!i:num. 0 < c + real_of_num i) /\\ " +
+        "(!i:num. c + real_of_num (SUC i) <= c + real_of_num i + 1) /\\ " +
+        "(!i:num. 0 < c * inv (c + real_of_num i)) /\\ " +
+        "(!i:num. c * inv (c + real_of_num i) * (c + real_of_num i) = " +
+        "c * inv (c + real_of_num (SUC i)) * (c + real_of_num i + 1))"),
+    RecallSoftmaxUnimodal ->
+      ("!f:num->real. !c:real. !k:num. !j:num. " +
+        "(!i:num. 0 <= f i) ==> (!i:num. f (SUC i) <= f i) ==> 0 < c ==> " +
+        s"${softmaxAt("(SUC k)")} <= ${softmaxAt("k")} ==> ${softmaxAt("(SUC (k + j))")} <= ${softmaxAt("(k + j)")}")
   )
 
   private lazy val StatementsMap: Map[String, String] = Statements.toMap
@@ -403,7 +464,12 @@ object Decision {
     BayesRuleTotal -> (_.bayesRuleTotal),
     BayesRuleOptimal -> (_.bayesRuleOptimal),
     SummaryNoFreeCure -> (_.noFreeCure),
-    SummaryReaderValue -> (_.readerValue)
+    SummaryReaderValue -> (_.readerValue),
+    RecallStop -> (_.recallStop),
+    RecallPersist -> (_.recallPersist),
+    RecallUnimodal -> (_.recallUnimodal),
+    RecallSoftmax -> (_.recallSoftmax),
+    RecallSoftmaxUnimodal -> (_.recallSoftmaxUnimodal)
   )
 
   /**
@@ -2360,6 +2426,226 @@ object Decision {
         equal <- trans(lhs, c1, c2, c3, c4)
         discharged <- disch(Into, equal)
         result <- closed(discharged, SummaryReaderValue)
+      } yield result
+    }
+
+    /** `thm`'s equation multiplied through by `factor`, on the side `side` writes: `x => s"$factor * $x"`. */
+    private def times(side: String => String, thm: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        fn <- term(s"\\x:real. ${side("x")}", Type.fun(Reals, Reals))
+        out <- Conv.apTerm(fn, thm).flatMap(beta)
+      } yield out
+
+    private val RF = "(f:num->real)"
+    private val RD = "(d:num->real)"
+    private val RS = "(s:num->real)"
+
+    /** `text` with every `f`, `d` and `s` typed at `num -> real`, so the parser reads them as the statements do. */
+    private def typedAll(text: String): String =
+      text.replaceAll("""\bf """, s"$RF ").replaceAll("""\bd """, s"$RD ").replaceAll("""\bs """, s"$RS ")
+
+    /**
+     * [[RecallStop]]. With `F = Sum f (SUC k)` and `G = Sum f (SUC (SUC k)) = F + f (SUC k)`, the ring
+     * gives `d k * (G * s (SUC k) - F * s k) = s (SUC k) * (f (SUC k) * d k - F)` once `s k * d k` is
+     * replaced by the reader's equation, and both factors outside are positive, so the two sides have
+     * the same sign.
+     */
+    def recallStop: R[Kernel.Thm] = {
+      val K = "(k:num)"
+      val F = s"Sum $RF (SUC $K)"
+      val F1 = s"$RF (SUC $K)"
+      val Dk = s"$RD $K"
+      val S1 = s"$RS (SUC $K)"
+      val G = s"Sum $RF (SUC (SUC $K))"
+      val S0 = s"$RS $K"
+      for {
+        goal <- prop(typedAll(recallStopAt(K)))
+        proved <- underHyps(goal) { (hs, _) =>
+          for {
+            step <- at(fact("SUM_SUC"), s"$G = $F + $F1")
+            spread <- times(x => s"$x * $S1", step)
+            spreadD <- times(x => s"$Dk * $x", spread)
+            weighed <- times(x => s"$F * $x", hs(2))
+            ring <- lin(Seq(spreadD, weighed), s"$Dk * ($F * $S0 - $G * $S1) = $S1 * ($F - $F1 * $Dk)")
+            a1 = s"$G * $S1 <= $F * $S0"
+            crit = s"$F1 * $Dk <= $F"
+            fwd <- for {
+              a <- assume(a1)
+              gap <- lin(Seq(a), s"(0:real) <= $F * $S0 - $G * $S1")
+              scaled <- at(fact("MUL_NONNEG"), s"0 < $Dk ==> 0 <= $F * $S0 - $G * $S1 ==> 0 <= $Dk * ($F * $S0 - $G * $S1)")
+                .flatMap(mp(_, hs(0), gap))
+              turned <- lin(Seq(scaled, ring), s"(0:real) <= $S1 * ($F - $F1 * $Dk)")
+              unscaled <- at(fact("CANCEL_NONNEG"), s"0 < $S1 ==> 0 <= $S1 * ($F - $F1 * $Dk) ==> 0 <= $F - $F1 * $Dk")
+                .flatMap(mp(_, hs(1), turned))
+              c <- lin(Seq(unscaled), crit)
+              out <- disch(a1, c)
+            } yield out
+            bwd <- for {
+              c <- assume(crit)
+              gap <- lin(Seq(c), s"(0:real) <= $F - $F1 * $Dk")
+              scaled <- at(fact("MUL_NONNEG"), s"0 < $S1 ==> 0 <= $F - $F1 * $Dk ==> 0 <= $S1 * ($F - $F1 * $Dk)")
+                .flatMap(mp(_, hs(1), gap))
+              turned <- lin(Seq(scaled, ring), s"(0:real) <= $Dk * ($F * $S0 - $G * $S1)")
+              unscaled <- at(fact("CANCEL_NONNEG"),
+                s"0 < $Dk ==> 0 <= $Dk * ($F * $S0 - $G * $S1) ==> 0 <= $F * $S0 - $G * $S1").flatMap(mp(_, hs(0), turned))
+              a <- lin(Seq(unscaled), a1)
+              out <- disch(crit, a)
+            } yield out
+            out <- conj(fwd, bwd)
+          } yield out
+        }
+        result <- closed(proved, RecallStop)
+      } yield result
+    }
+
+    /**
+     * [[RecallPersist]]: `f (SUC (SUC i)) * d (SUC i) <= f (SUC (SUC i)) * (d i + 1) <= f (SUC i) * (d i + 1)`,
+     * by the two signs, and that is `f (SUC i) * d i + f (SUC i) <= Sum f (SUC i) + f (SUC i)`.
+     */
+    def recallPersist: R[Kernel.Thm] = {
+      val I = "(i:num)"
+      for {
+        goal <- prop(typedAll(recallPersistAt(I)))
+        proved <- underHyps(goal) { (hs, conclusion) =>
+          for {
+            step <- at(fact("SUM_SUC"), s"Sum $RF (SUC (SUC $I)) = Sum $RF (SUC $I) + $RF (SUC $I)")
+            room <- lin(Seq(hs(2)), s"(0:real) <= $RD $I + 1")
+            out <- linT(Seq(step, room) ++ hs, conclusion)
+          } yield out
+        }
+        result <- closed(proved, RecallPersist)
+      } yield result
+    }
+
+    /**
+     * [[RecallUnimodal]], by induction on `j`: at `k + j` the accuracy did not rise, so by
+     * [[RecallStop]] the criterion holds there, by [[RecallPersist]] at the next size, and by
+     * [[RecallStop]] again the accuracy does not rise there either.
+     */
+    def recallUnimodal: R[Kernel.Thm] = {
+      val Kv = "(k:num)"
+      val hyps =
+        s"(!i:num. 0 <= $RF i) ==> (!i:num. $RF (SUC i) <= $RF i) ==> (!i:num. 0 < $RD i) ==> " +
+          s"(!i:num. $RD (SUC i) <= $RD i + 1) ==> (!i:num. 0 < $RS i) ==> " +
+          typedAll(s"(!i:num. ${recallReader("i")}) ==> ${recallAt(s"(SUC $Kv)")} <= ${recallAt(Kv)} ==> ")
+      for {
+        j <- variable("j:num", Numbers)
+        body <- prop(hyps + typedAll(s"${recallAt("(SUC (k + (j:num)))")} <= ${recallAt("(k + j)")}"))
+        proved <- induct(j, body, Some(j))(
+          base =>
+            underHyps(base) { (hs, conclusion) =>
+              for {
+                zero <- at(fact("NUM_ADD_ZERO"), s"$Kv + 0 = $Kv")
+                out <- linAfter(Seq(zero), Seq(hs(6)), conclusion)
+              } yield out
+            },
+          (jv, hypothesis, step) =>
+            underHyps(step) { (hs, conclusion) =>
+              val M = s"($Kv + ${v(jv)})"
+              val SM = s"(SUC $M)"
+              for {
+                fell <- mp(hypothesis, hs*)
+                stopM <- at(k(RecallStop), typedAll(recallStopAt(M)))
+                dM <- at(hs(2), s"0 < $RD $M")
+                sSM <- at(hs(4), s"0 < $RS $SM")
+                rM <- at(hs(5), typedAll(recallReader(M)))
+                bothM <- mp(stopM, dM, sSM, rM).flatMap(split)
+                critM <- mp(bothM(0), fell)
+                f2 <- at(hs(0), s"0 <= $RF (SUC $SM)")
+                mono <- at(hs(1), s"$RF (SUC $SM) <= $RF $SM")
+                dStep <- at(hs(3), s"$RD $SM <= $RD $M + 1")
+                persist <- at(k(RecallPersist), typedAll(recallPersistAt(M)))
+                critSM <- mp(persist, f2, mono, dM, dStep, critM)
+                stopSM <- at(k(RecallStop), typedAll(recallStopAt(SM)))
+                dSM <- at(hs(2), s"0 < $RD $SM")
+                sSSM <- at(hs(4), s"0 < $RS (SUC $SM)")
+                rSM <- at(hs(5), typedAll(recallReader(SM)))
+                bothSM <- mp(stopSM, dSM, sSSM, rSM).flatMap(split)
+                fellSM <- mp(bothSM(1), critSM)
+                suc <- at(fact("NUM_ADD_SUC"), s"$Kv + SUC ${v(jv)} = SUC $M")
+                out <- linAfter(Seq(suc), Seq(fellSM), conclusion)
+              } yield out
+            }
+        )
+        result <- closed(proved, RecallUnimodal)
+      } yield result
+    }
+
+    /**
+     * [[RecallSoftmax]]: `c + i` is positive and grows by exactly one, `c / (c + i)` is positive, and
+     * both sides of the reader's equation are `c`, by `x * inv x = 1` at `c + i` and at `c + i + 1`.
+     */
+    def recallSoftmax: R[Kernel.Thm] = {
+      val C = "(c:real)"
+      def X(i: String) = s"$C + real_of_num $i"
+      for {
+        hc <- assume(s"(0:real) < $C")
+        positive = (i: String) =>
+          for {
+            nn <- at(fact("NUM_REAL_NONNEG"), s"0 <= real_of_num $i")
+            out <- lin(Seq(hc, nn), s"(0:real) < ${X(i)}")
+          } yield out
+        g1 <- prop(s"!i:num. 0 < ${X("i")}")
+        p1 <- every(g1) { (vs, _, _) => positive(v(vs(0))) }
+        g2 <- prop(s"!i:num. ${X("(SUC i)")} <= ${X("i")} + 1")
+        p2 <- every(g2) { (vs, _, conclusion) =>
+          at(fact("NUM_REAL_SUC"), s"real_of_num (SUC ${v(vs(0))}) = real_of_num ${v(vs(0))} + 1")
+            .flatMap(suc => linT(Seq(suc), conclusion))
+        }
+        g3 <- prop(s"!i:num. 0 < $C * inv (${X("i")})")
+        p3 <- every(g3) { (vs, _, conclusion) =>
+          val I = v(vs(0))
+          for {
+            pos <- positive(I)
+            inv <- at(fact("INV_POSITIVE"), s"0 < ${X(I)} ==> 0 < inv (${X(I)})").flatMap(mp(_, pos))
+            out <- linT(Seq(hc, inv), conclusion)
+          } yield out
+        }
+        g4 <- prop(s"!i:num. $C * inv (${X("i")}) * (${X("i")}) = $C * inv (${X("(SUC i)")}) * (${X("i")} + 1)")
+        p4 <- every(g4) { (vs, _, conclusion) =>
+          val I = v(vs(0))
+          val Y = s"$C + (real_of_num $I + 1)"
+          for {
+            suc <- at(fact("NUM_REAL_SUC"), s"real_of_num (SUC $I) = real_of_num $I + 1")
+            posX <- positive(I)
+            posY <- at(fact("NUM_REAL_NONNEG"), s"0 <= real_of_num $I").flatMap(nn => lin(Seq(hc, nn), s"(0:real) < $Y"))
+            nzX <- at(fact("POSITIVE_NOT_ZERO"), s"0 < ${X(I)} ==> ~(${X(I)} = 0)").flatMap(mp(_, posX))
+            nzY <- at(fact("POSITIVE_NOT_ZERO"), s"0 < $Y ==> ~($Y = 0)").flatMap(mp(_, posY))
+            eX <- at(fact("MUL_INVERSE"), s"~(${X(I)} = 0) ==> (${X(I)}) * inv (${X(I)}) = 1").flatMap(mp(_, nzX))
+            eY <- at(fact("MUL_INVERSE"), s"~($Y = 0) ==> ($Y) * inv ($Y) = 1").flatMap(mp(_, nzY))
+            cX <- times(x => s"$C * $x", eX)
+            cY <- times(x => s"$C * $x", eY)
+            out <- linAfter(Seq(suc), Seq(cX, cY), conclusion)
+          } yield out
+        }
+        all <- conjs(p1, p2, p3, p4)
+        discharged <- disch(s"(0:real) < $C", all)
+        result <- closed(discharged, RecallSoftmax)
+      } yield result
+    }
+
+    /** [[RecallSoftmaxUnimodal]]: [[RecallUnimodal]] at `d i = c + i` and `s i = c * inv (c + i)`, by [[RecallSoftmax]]. */
+    def recallSoftmaxUnimodal: R[Kernel.Thm] = {
+      val C = "(c:real)"
+      for {
+        goal <- prop(typedAll(
+          s"(!i:num. 0 <= f i) ==> (!i:num. f (SUC i) <= f i) ==> (0:real) < $C ==> " +
+            s"${softmaxAt("(SUC (k:num))")} <= ${softmaxAt("k")} ==> " +
+            s"${softmaxAt("(SUC (k + (j:num)))")} <= ${softmaxAt("(k + j)")}"))
+        proved <- underHyps(goal) { (hs, _) =>
+          for {
+            fT <- prop0(RF)
+            dT <- prop0(s"\\i:num. $C + real_of_num i")
+            sT <- prop0(s"\\i:num. $C * inv ($C + real_of_num i)")
+            kT <- nm("k:num")
+            jT <- nm("j:num")
+            general <- spec(k(RecallUnimodal), fT, dT, sT, kT, jT)
+            cT <- re(C)
+            reader <- spec(k(RecallSoftmax), cT).flatMap(mp(_, hs(2))).flatMap(split)
+            out <- mp(general, hs(0), hs(1), reader(0), reader(1), reader(2), reader(3), hs(3))
+          } yield out
+        }
+        result <- closed(proved, RecallSoftmaxUnimodal)
       } yield result
     }
   }

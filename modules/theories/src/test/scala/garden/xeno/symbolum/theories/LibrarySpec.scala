@@ -947,8 +947,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `SUFFICIENT_SUMMARY_RULE`, `SUFFICIENT_SUMMARY_UTILITY`, `BAYES_RULE_TOTAL`,
     // `BAYES_RULE_OPTIMAL`, `SUMMARY_NO_FREE_CURE` and `SUMMARY_READER_VALUE`, and no definition;
     // `AGENTS.md`'s figures move by seven, seven and six, counted after the run.
-    library.entries.size shouldBe 1228
-    library.names.distinct.size shouldBe 1225
+    // 1233 and 1230 with the recall-size facts of `Decision`, 2026-11-27 (utitlita_e_danno R1):
+    // five facts under five new names from `Decision.Statements`, `RECALL_STOP`, `RECALL_PERSIST`,
+    // `RECALL_UNIMODAL`, `RECALL_SOFTMAX` and `RECALL_SOFTMAX_UNIMODAL`, and no definition. All but
+    // `RECALL_SOFTMAX`, whose one is `c`, bind two or more leading quantifiers, two of them of one
+    // type, so `AGENTS.md`'s figures move by five, four and four, predicted before the run.
+    library.entries.size shouldBe 1233
+    library.names.distinct.size shouldBe 1230
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

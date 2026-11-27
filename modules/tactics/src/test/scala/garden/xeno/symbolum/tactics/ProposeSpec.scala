@@ -527,7 +527,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the run and agreeing with it: one antecedent on `ARGMAX_SCALE`, `BAYES_RULE_OPTIMAL` and
     // `SUMMARY_READER_VALUE`, two on each of `SUFFICIENT_SUMMARY_RULE` and
     // `SUFFICIENT_SUMMARY_UTILITY`, none on `BAYES_RULE_TOTAL` and `SUMMARY_NO_FREE_CURE`. Plus seven.
-    proposals.size shouldBe 1101
+    // 1121 with the recall-size facts of `Decision`, 2026-11-27 (utitlita_e_danno R1), predicted
+    // before the run: three antecedents on `RECALL_STOP`, five on `RECALL_PERSIST`, seven on
+    // `RECALL_UNIMODAL`, one on `RECALL_SOFTMAX` and four on `RECALL_SOFTMAX_UNIMODAL`. Plus twenty.
+    proposals.size shouldBe 1121
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1612,7 +1615,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // run and not predicted: five of the twelve new weakenings. Plus five.
     // 896 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4), read off the run
     // and not predicted: six of the seven new weakenings. Plus six.
-    open shouldBe 896
+    // 923 with the recall-size facts of `Decision`, 2026-11-27 (utitlita_e_danno R1), read off the
+    // run and not predicted: all twenty new weakenings and seven of the eight new substitutions
+    // (234 to 242, all from `RECALL_STOP` and `RECALL_PERSIST`), the sweep's substituted `Open`
+    // moving 146 to 153 and its `Proved` 52 to 53 in the same run. Plus twenty-seven.
+    open shouldBe 923
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2078,6 +2085,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 293 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4): the one of the
     // seven new weakenings that `open` above did not take, read off the run that printed both. Six
     // there and one here account for all seven. Plus one.
+    // Not moved by the recall-size facts of `Decision`, 2026-11-27 (utitlita_e_danno R1): of their
+    // twenty-eight new proposals `open` above took twenty-seven, and the twenty-eighth went to
+    // none of these two buckets (the sweep's substituted `Proved` moved by one in the same run).
     unreadable shouldBe 293
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
@@ -2466,7 +2476,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // five.
     // 401 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4), read off the run
     // and not decomposed: six of the seven new weakenings keep a constant of the naturals. Plus six.
-    aboutNumbers.size shouldBe 401
+    // 429 with the recall-size facts of `Decision`, 2026-11-27 (utitlita_e_danno R1), read off the
+    // run: all twenty-eight new proposals, twenty weakenings and eight substitutions, keep `SUC`
+    // or `Sum` over `num`. Plus twenty-eight.
+    aboutNumbers.size shouldBe 429
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -2580,7 +2593,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // of it could be evaluated, and the sampler refutes it now at `n = 11` with `f` sampled. Read off
     // a probe listing the refuted proposals on this list that write a numeral: it is the only one.
     // Plus one.
-    after shouldBe 64
+    // 69 with the recall-size facts of `Decision`, 2026-11-27 (utitlita_e_danno R1), read off the
+    // run and not decomposed, which the first run did not reach because `aboutNumbers` above was
+    // red: five of their twenty-eight proposals are refuted at a point by this sampler. Plus five.
+    after shouldBe 69
   }
 
   /* ------------------------------------------------------ the false positive it produced */

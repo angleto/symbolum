@@ -380,6 +380,47 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * R1's hypotheses, met together. The softmax reader at `c = 1` meets the reader's conditions with
+   * `d i = 1 + i` and `s i = 1 / (1 + i)`, which is `RECALL_SOFTMAX` with its one hypothesis met by
+   * arithmetic; the constant `f = 1` meets the ranker's two, so `RECALL_SOFTMAX_UNIMODAL` keeps only
+   * the antecedent that makes it a statement about the shape of the accuracy: once it has not risen
+   * at `k`, it does not rise at `k + j`. That antecedent is the claim's own premise and is not
+   * discharged here.
+   */
+  "The facts about recall size" should "have their structural hypotheses met together" in {
+    import steps.*
+    import steps.kit.*
+    val byArithmetic: Term => Either[LogicError, Kernel.Thm] =
+      goal => steps.every(goal)((_, _, g) => linT(Seq.empty, g))
+
+    val reader = detach(publishedAt(Decision.RecallSoftmax, "c" -> "1:real"))(byArithmetic)
+    reader.conclusion shouldBe proposition(
+      "(!i:num. 0 < 1 + real_of_num i) /\\ (!i:num. 1 + real_of_num (SUC i) <= 1 + real_of_num i + 1) /\\ " +
+        "(!i:num. 0 < 1 * inv (1 + real_of_num i)) /\\ " +
+        "(!i:num. 1 * inv (1 + real_of_num i) * (1 + real_of_num i) = 1 * inv (1 + real_of_num (SUC i)) * (1 + real_of_num i + 1))")
+    reader.hypotheses shouldBe empty
+    Derivation.axiomsOf(reader) shouldBe threeAxioms
+
+    val F = "\\i:num. (1:real)"
+    val shape = detach(detach(detach(publishedAt(Decision.RecallSoftmaxUnimodal, "f" -> F, "c" -> "1:real"))(
+      byArithmetic))(byArithmetic))(byArithmetic)
+    shape.conclusion shouldBe proposition(
+      "Sum (\\i:num. 1) (SUC (SUC (k:num))) * (1 * inv (1 + real_of_num (SUC k))) <= " +
+        "Sum (\\i:num. 1) (SUC k) * (1 * inv (1 + real_of_num k)) ==> " +
+        "Sum (\\i:num. 1) (SUC (SUC (k + (j:num)))) * (1 * inv (1 + real_of_num (SUC (k + j)))) <= " +
+        "Sum (\\i:num. 1) (SUC (k + j)) * (1 * inv (1 + real_of_num (k + j)))")
+    shape.hypotheses shouldBe empty
+    Derivation.axiomsOf(shape) shouldBe threeAxioms
+
+    Seq(Decision.RecallStop, Decision.RecallPersist, Decision.RecallUnimodal).foreach { name =>
+      withClue(s"$name: ") {
+        published(name).hypotheses shouldBe empty
+        Derivation.axiomsOf(published(name)) shouldBe threeAxioms
+      }
+    }
+  }
+
+  /**
    * The essay's case E5, `EssayCase`: `7/20` with the signal alone, `9/16` with the frame on
    * average, `1/8` for the same reader on new tasks, and `7/20` again at `phi = 1/10`, where the rule
    * answers `s` at every signal. Recomputed outside the kernel on 2026-10-22 at `phi = 1/2` and on
