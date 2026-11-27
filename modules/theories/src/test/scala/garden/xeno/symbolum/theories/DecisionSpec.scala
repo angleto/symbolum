@@ -288,6 +288,98 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * `published(name)` with every quantified variable put in: those named in `values` by their text,
+   * the rest as free variables under the name the statement gives them. The names are read off the
+   * statement's text, `!name:type.` in binder order, because the kernel keeps no binder names and
+   * `Logic.stripForall` names them the way the printer does; the count is checked against the
+   * kernel's quantifiers so the two cannot drift apart. Beta-normal, as the kernel holds an instance.
+   */
+  private def publishedAt(name: String, values: (String, String)*): Kernel.Thm = {
+    val thm = published(name)
+    val (vars, _) = force(Logic.stripForall(thm.conclusion))
+    val text = Decision.Statements.toMap.apply(name)
+    val binder = """^\s*!([A-Za-z_][A-Za-z0-9_]*):[^.]*\.""".r
+    def names(rest: String, acc: Vector[String]): Vector[String] =
+      binder.findPrefixMatchOf(rest) match {
+        case Some(m) => names(rest.substring(m.end), acc :+ m.group(1))
+        case None => acc
+      }
+    val declared = names(text, Vector.empty)
+    declared.length shouldBe vars.length
+    val named = values.toMap
+    named.keySet.diff(declared.toSet) shouldBe empty
+    val args = declared.zip(vars).map((n, x) => force(steps.kit.term(named.getOrElse(n, n), x.ty)))
+    force(steps.kit.spec(thm, args*))
+  }
+
+  /** `thm` with its first antecedent proved by `meet` and detached. */
+  private def detach(thm: Kernel.Thm)(meet: Term => Either[LogicError, Kernel.Thm]): Kernel.Thm = {
+    val antecedent = force(decision.logic.destImp(thm.conclusion).toRight(NotOfForm("an implication", thm.conclusion)))._1
+    val met = meet(antecedent).fold(error => fail(s"cannot meet ${antecedent}: ${error.message}"), identity)
+    met.hypotheses shouldBe empty
+    force(decision.logic.rules.mp(thm, met))
+  }
+
+  /**
+   * The facts about summaries, each with its hypotheses met. The sufficient summary is the one that
+   * forgets everything about a signal that says nothing: both rows constant on two signals, `f`
+   * constant at `0`, `kf` one everywhere and `w` two, so `k y s = kf y (f s) * w s` is `2 = 1 * 2`.
+   * The rows are not a channel, and need not be: neither `SUFFICIENT_SUMMARY_RULE` nor
+   * `SUFFICIENT_SUMMARY_UTILITY` reads that a row sums to one, only the factorisation and `0 <= w`,
+   * and with whole numbers every hypothesis is met by arithmetic alone (`LINARITH` takes `1 / 2` as
+   * an atom and cannot see it is positive). The rule into `[0, top]` is the constant `0`, and the summary into `[0, 1)` is
+   * that same constant `f`. `SUMMARY_NO_FREE_CURE` and `BAYES_RULE_TOTAL` have no hypothesis.
+   */
+  "The facts about summaries" should "have every hypothesis met" in {
+    import steps.*
+    import steps.kit.*
+    def closes(thm: Kernel.Thm): Unit = {
+      thm.hypotheses shouldBe empty
+      Derivation.axiomsOf(thm) shouldBe threeAxioms
+    }
+    val byArithmetic: Term => Either[LogicError, Kernel.Thm] =
+      goal => steps.every(goal)((_, _, g) => linT(Seq.empty, g))
+
+    val scaled = detach(publishedAt(Decision.ArgmaxScale, "c" -> "2:real"))(byArithmetic)
+    scaled.conclusion shouldBe proposition("Argmax (\\a:num. 2 * (f:num->real) a) (n:num) = Argmax f n")
+    closes(scaled)
+
+    val Rows = "(\\y:num. \\s:num. (2:real))"
+    val Kf = "\\y:num. \\t:num. (1:real)"
+    val F = "\\s:num. (0:num)"
+    val W = "\\s:num. (2:real)"
+    val rule = detach(detach(publishedAt(Decision.SummaryRule,
+      "n" -> "2:num", "k" -> Rows, "kf" -> Kf, "t" -> "0:num", "w" -> W, "s" -> "0:num"))(byArithmetic))(byArithmetic)
+    rule.conclusion shouldBe proposition(
+      "Argmax (\\a:num. Sum (\\z:num. (prior:num->real) z * 1 * (u:num->num->real) a z) 2) (top:num) = " +
+        "Argmax (\\a:num. Sum (\\z:num. prior z * 2 * u a z) 2) top")
+    closes(rule)
+
+    val sufficient = detach(detach(publishedAt(Decision.SufficientSummary,
+      "n" -> "2:num", "m" -> "2:num", "k" -> Rows, "kf" -> Kf, "f" -> F, "w" -> W))(byArithmetic))(byArithmetic)
+    closes(sufficient)
+
+    val optimal = detach(publishedAt(Decision.BayesRuleOptimal, "d" -> F))(goal =>
+      steps.every(goal)((_, _, g) => at(fact("NUM_ZERO_LE"), "0 <= (top:num)")
+        .filterOrElse(_.conclusion == g, NotOfForm("0 <= top", g))))
+    closes(optimal)
+
+    val reader = detach(publishedAt(Decision.SummaryReaderValue, "m" -> "2:num", "r" -> "1:num", "f" -> F))(goal =>
+      steps.every(goal) { (_, _, _) =>
+        for {
+          lt <- at(fact("NUM_ZERO_LT_SUC"), "0 < SUC 0")
+          one <- fact("NUM_ONE_SUC")
+          back <- Conv.sym(one)
+          moved <- rw(back, lt)
+        } yield moved
+      })
+    closes(reader)
+
+    closes(published(Decision.BayesRuleTotal))
+    closes(published(Decision.SummaryNoFreeCure))
+  }
+
+  /**
    * The essay's case E5, `EssayCase`: `7/20` with the signal alone, `9/16` with the frame on
    * average, `1/8` for the same reader on new tasks, and `7/20` again at `phi = 1/10`, where the rule
    * answers `s` at every signal. Recomputed outside the kernel on 2026-10-22 at `phi = 1/2` and on

@@ -523,7 +523,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // antecedents on `NUM_TRUE_LESS_VAR` and three on `NUM_TRUE_ALL_BELOW_VAR`; `NUM_PAIR_ONTO` and
     // the two graph truths are an existential and two equations, and each representation is a
     // conjunction at its top. Plus five.
-    proposals.size shouldBe 1094
+    // 1101 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4), counted after
+    // the run and agreeing with it: one antecedent on `ARGMAX_SCALE`, `BAYES_RULE_OPTIMAL` and
+    // `SUMMARY_READER_VALUE`, two on each of `SUFFICIENT_SUMMARY_RULE` and
+    // `SUFFICIENT_SUMMARY_UTILITY`, none on `BAYES_RULE_TOTAL` and `SUMMARY_NO_FREE_CURE`. Plus seven.
+    proposals.size shouldBe 1101
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1606,7 +1610,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // off the run and not predicted: one of the five new weakenings. Plus one.
     // 890 with the instantiation and its two bridges, 2026-11-26, card `4102f131`, read off the
     // run and not predicted: five of the twelve new weakenings. Plus five.
-    open shouldBe 890
+    // 896 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4), read off the run
+    // and not predicted: six of the seven new weakenings. Plus six.
+    open shouldBe 896
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2069,7 +2075,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 292 with the projections, 2026-11-27, card `4102f131`: all five new weakenings, read off the
     // whole suite's run, not predicted, with `open` above printed at 890 and not moving. Plus
     // five.
-    unreadable shouldBe 292
+    // 293 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4): the one of the
+    // seven new weakenings that `open` above did not take, read off the run that printed both. Six
+    // there and one here account for all seven. Plus one.
+    unreadable shouldBe 293
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2455,7 +2464,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 395 with the projections, 2026-11-27, card `4102f131`, read off the run and not predicted:
     // all five new weakenings keep a constant of the naturals, while `after` does not move. Plus
     // five.
-    aboutNumbers.size shouldBe 395
+    // 401 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4), read off the run
+    // and not decomposed: six of the seven new weakenings keep a constant of the naturals. Plus six.
+    aboutNumbers.size shouldBe 401
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

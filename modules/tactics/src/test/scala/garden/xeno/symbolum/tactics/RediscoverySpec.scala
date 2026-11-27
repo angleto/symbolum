@@ -490,7 +490,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 1094 with the projections, 2026-11-27, card `4102f131`, counted before the run: two
     // antecedents on `NUM_TRUE_LESS_VAR` and three on `NUM_TRUE_ALL_BELOW_VAR`, nothing else new
     // having an antecedent at its top. Plus five.
-    propose.weakenings.size shouldBe 1094
+    // 1101 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4), counted AFTER
+    // the run and agreeing with it: one antecedent on `ARGMAX_SCALE`, `BAYES_RULE_OPTIMAL` and
+    // `SUMMARY_READER_VALUE`, two on each of `SUFFICIENT_SUMMARY_RULE` and
+    // `SUFFICIENT_SUMMARY_UTILITY`, none on `BAYES_RULE_TOTAL` and `SUMMARY_NO_FREE_CURE`. Plus seven.
+    propose.weakenings.size shouldBe 1101
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

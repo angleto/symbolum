@@ -942,8 +942,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // graph truths and their two representations; the two graph definitions are the register's.
     // Only the two below a variable bind two or more leading quantifiers, an environment and three
     // or four of `num`, so `AGENTS.md`'s figures move by seven, two and two.
-    library.entries.size shouldBe 1221
-    library.names.distinct.size shouldBe 1218
+    // 1228 and 1225 with the summary facts of `Decision`, 2026-11-27 (utitlita_e_danno T4): seven
+    // facts under seven new names from `Decision.Statements`, `ARGMAX_SCALE`,
+    // `SUFFICIENT_SUMMARY_RULE`, `SUFFICIENT_SUMMARY_UTILITY`, `BAYES_RULE_TOTAL`,
+    // `BAYES_RULE_OPTIMAL`, `SUMMARY_NO_FREE_CURE` and `SUMMARY_READER_VALUE`, and no definition;
+    // `AGENTS.md`'s figures move by seven, seven and six, counted after the run.
+    library.entries.size shouldBe 1228
+    library.names.distinct.size shouldBe 1225
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

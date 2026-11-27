@@ -210,6 +210,44 @@ object Decision {
   /** The posterior at a signal of positive probability is a distribution. */
   val PosteriorDistribution: String = "POSTERIOR_DISTRIBUTION"
 
+  /** `|- !f c n. 0 < c ==> Argmax (\a. c * f a) n = Argmax f n`: a positive scale keeps the first maximiser. */
+  val ArgmaxScale: String = "ARGMAX_SCALE"
+
+  /** A signal whose likelihood factors through a summary, with a positive weight, gets the summary reader's action. */
+  val SummaryRule: String = "SUFFICIENT_SUMMARY_RULE"
+
+  /** T4a of the essay: a sufficient summary collects what the history collects, on every set of states. */
+  val SufficientSummary: String = "SUFFICIENT_SUMMARY_UTILITY"
+
+  /** The Bayes rule, followed at every signal, collects exactly [[ValueName]]. */
+  val BayesRuleTotal: String = "BAYES_RULE_TOTAL"
+
+  /** And no rule on the signal into `[0, top]` collects more. */
+  val BayesRuleOptimal: String = "BAYES_RULE_OPTIMAL"
+
+  /** T4c of the essay: what a summary reader gains on a set of states it loses at least as much of on the rest. */
+  val SummaryNoFreeCure: String = "SUMMARY_NO_FREE_CURE"
+
+  /** The summary reader collects, over all states, exactly the value of the summary experiment. */
+  val SummaryReaderValue: String = "SUMMARY_READER_VALUE"
+
+  /** `Sum (\z. prior z * k z s * u a z) n`: the score of action `a` at signal `s`, with `k` and `s` as written. */
+  private def score(k: String, s: String, a: String): String = s"Sum (\\z:num. prior z * $k z $s * u $a z) n"
+
+  /** The summary experiment of `f` read at `t`, inside a score: `Sum (\x. k z x * COND (f x = t) 1 0) m`. */
+  private def fibre(t: String): String = s"Sum (\\x:num. k z x * COND (f x = $t) (1:real) 0) m"
+
+  /** The rule of the reader of `k` at signal `s`. */
+  private def bayesRule(s: String): String = s"Argmax (\\a:num. ${score("k", s, "a")}) top"
+
+  /** The rule of the reader of the summary `f`, acting on the history `s` through `f s`. */
+  private def summaryRule(s: String): String =
+    s"Argmax (\\a:num. Sum (\\z:num. prior z * ${fibre(s"(f $s)")} * u a z) n) top"
+
+  /** `Sum (\y. COND (inN y) (Sum (\s. prior y * k y s * u (rule s) y) m) 0) n`: what `rule` collects on `inN`. */
+  private def collected(inN: String, rule: String => String): String =
+    s"Sum (\\y:num. COND ($inN) (Sum (\\s:num. prior y * k y s * u (${rule("s")}) y) m) 0) n"
+
   /** The bodies of the four constants defined outright, as text. */
   val Bodies: Vector[(String, String)] = Vector(
     DistributionName ->
@@ -300,7 +338,33 @@ object Decision {
     PosteriorDistribution ->
       ("!n:num. !m:num. !p:num->real. !k:num->num->real. !s:num. DISTRIBUTION n p ==> CHANNEL n m k ==> " +
         "s < m ==> 0 < Sum (\\y:num. p y * k y s) n ==> " +
-        "DISTRIBUTION n (\\y:num. p y * k y s * inv (Sum (\\z:num. p z * k z s) n))")
+        "DISTRIBUTION n (\\y:num. p y * k y s * inv (Sum (\\z:num. p z * k z s) n))"),
+    ArgmaxScale -> "!f:num->real. !c:real. !n:num. 0 < c ==> Argmax (\\a:num. c * f a) n = Argmax f n",
+    SummaryRule ->
+      ("!n:num. !top:num. !prior:num->real. !k:num->num->real. !kf:num->num->real. !u:num->num->real. " +
+        "!t:num. !w:num->real. !s:num. (!y:num. y < n ==> k y s = kf y t * w s) ==> 0 < w s ==> " +
+        s"Argmax (\\a:num. ${score("kf", "t", "a")}) top = ${bayesRule("s")}"),
+    SufficientSummary ->
+      ("!n:num. !m:num. !top:num. !prior:num->real. !k:num->num->real. !kf:num->num->real. !u:num->num->real. " +
+        "!f:num->num. !w:num->real. !N:num->bool. (!s:num. s < m ==> 0 <= w s) ==> " +
+        "(!y:num. !s:num. y < n ==> s < m ==> k y s = kf y (f s) * w s) ==> " +
+        s"${collected("N y", s => s"Argmax (\\a:num. ${score("kf", s"(f $s)", "a")}) top")} = ${collected("N y", bayesRule)}"),
+    BayesRuleTotal ->
+      ("!n:num. !m:num. !top:num. !prior:num->real. !k:num->num->real. !u:num->num->real. " +
+        s"Sum (\\y:num. Sum (\\s:num. prior y * k y s * u (${bayesRule("s")}) y) m) n = VALUE n m top prior k u"),
+    BayesRuleOptimal ->
+      ("!n:num. !m:num. !top:num. !prior:num->real. !k:num->num->real. !u:num->num->real. !d:num->num. " +
+        "(!s:num. s < m ==> d s <= top) ==> " +
+        "Sum (\\y:num. Sum (\\s:num. prior y * k y s * u (d s) y) m) n <= VALUE n m top prior k u"),
+    SummaryNoFreeCure ->
+      ("!n:num. !m:num. !top:num. !prior:num->real. !k:num->num->real. !u:num->num->real. !f:num->num. !N:num->bool. " +
+        s"(${collected("N y", summaryRule)} - ${collected("N y", bayesRule)}) + " +
+        s"(${collected("~(N y)", summaryRule)} - ${collected("~(N y)", bayesRule)}) <= 0"),
+    SummaryReaderValue ->
+      ("!n:num. !m:num. !r:num. !top:num. !prior:num->real. !k:num->num->real. !u:num->num->real. !f:num->num. " +
+        "(!s:num. s < m ==> f s < r) ==> " +
+        s"Sum (\\y:num. Sum (\\s:num. prior y * k y s * u (${summaryRule("s")}) y) m) n = " +
+        "VALUE n r top prior (\\y:num. \\t:num. Sum (\\s:num. k y s * COND (f s = t) (1:real) 0) m) u")
   )
 
   private lazy val StatementsMap: Map[String, String] = Statements.toMap
@@ -332,7 +396,14 @@ object Decision {
     ExpectationLinear -> (_.expectationLinear),
     DistributionProduct -> (_.product),
     ProductIndependent -> (_.productIndependent),
-    PosteriorDistribution -> (_.posterior)
+    PosteriorDistribution -> (_.posterior),
+    ArgmaxScale -> (_.argmaxScale),
+    SummaryRule -> (_.summaryRule),
+    SufficientSummary -> (_.sufficientSummary),
+    BayesRuleTotal -> (_.bayesRuleTotal),
+    BayesRuleOptimal -> (_.bayesRuleOptimal),
+    SummaryNoFreeCure -> (_.noFreeCure),
+    SummaryReaderValue -> (_.readerValue)
   )
 
   /**
@@ -1842,5 +1913,454 @@ object Decision {
           } yield out
         }
       } yield out
+
+    /* ------------------------------------------------- a sufficient summary, and what a summary costs */
+
+    /** `Argmax F n = Argmax G n` from `F x = G x` at a variable `x` nothing assumes. */
+    def congArgmax(x: FVar, pointwise: Kernel.Thm, length: String): R[Kernel.Thm] =
+      for {
+        lambdas <- LogicError.lift(Kernel.abs(x, pointwise))
+        constant <- term(ArgmaxName, Type.fun(Functions, Type.fun(Numbers, Numbers)))
+        len <- nm(length)
+        out <- Conv.apTerm(constant, lambdas).flatMap(Conv.apThm(_, len)).flatMap(beta)
+      } yield out
+
+    /** `~(a < b)` from `b <= a`. */
+    def notBelow(a: String, b: String, le: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        strict <- prop(s"$a < $b")
+        assumed <- LogicError.lift(Kernel.assume(strict))
+        absurd <- lin(Seq(assumed, le), "F")
+        out <- rules.notIntro(strict, absurd)
+      } yield out
+
+    /**
+     * [[ArgmaxScale]], by induction on `n`: [[MaximumScale]] scales the running maximum by `c`, and
+     * `c * M < c * y` exactly when `M < y` because `c` is positive, so each step of the recursion takes
+     * the same side. A scale of zero would make every action a maximiser and keep the first, which is why
+     * the hypothesis is strict.
+     */
+    def argmaxScale: R[Kernel.Thm] =
+      for {
+        body <- prop("(0:real) < (c:real) ==> Argmax (\\a:num. c * (f:num->real) a) (n:num) = Argmax f n")
+        proved <- induct(n, body)(
+          base =>
+            underHyps(base) { (_, _) =>
+              for {
+                scaled <- at(k(ArgmaxAtZero), "Argmax (\\a:num. (c:real) * (f:num->real) a) 0 = 0")
+                plain <- at(k(ArgmaxAtZero), "Argmax (f:num->real) 0 = 0")
+                back <- Conv.sym(plain)
+                out <- trans(scaled, back)
+              } yield out
+            },
+          (kv, hypothesis, step) =>
+            underHyps(step) { (hs, _) =>
+              val K = v(kv)
+              val C = "(c:real)"
+              val Fs = s"(\\a:num. $C * (f:num->real) a)"
+              val M = s"Maximum (f:num->real) $K"
+              val Y = s"(f:num->real) (SUC $K)"
+              val MS = s"Maximum $Fs $K"
+              for {
+                ih <- mp(hypothesis, hs(0))
+                scaledStep <- at(k(ArgmaxAtSuccessor),
+                  s"Argmax $Fs (SUC $K) = COND ($MS < $C * $Y) (SUC $K) (Argmax $Fs $K)")
+                plainStep <- at(k(ArgmaxAtSuccessor), s"Argmax (f:num->real) (SUC $K) = COND ($M < $Y) (SUC $K) (Argmax f $K)")
+                back <- Conv.sym(plainStep)
+                nonneg <- lin(Seq(hs(0)), s"(0:real) <= $C")
+                maxScaled <- at(k(MaximumScale), s"(0:real) <= $C ==> $MS = $C * $M").flatMap(mp(_, nonneg))
+                out <- cases(s"$M < $Y")(
+                  less =>
+                    for {
+                      times <- lin(Seq(hs(0), less), s"$C * $M < $C * $Y")
+                      scaledLess <- lin(Seq(times, maxScaled), s"$MS < $C * $Y")
+                      a <- at(fact("COND_TRUE"),
+                        s"$MS < $C * $Y ==> COND ($MS < $C * $Y) (SUC $K) (Argmax $Fs $K) = SUC $K").flatMap(mp(_, scaledLess))
+                      b <- at(fact("COND_TRUE"),
+                        s"$M < $Y ==> COND ($M < $Y) (SUC $K) (Argmax (f:num->real) $K) = SUC $K").flatMap(mp(_, less))
+                      bb <- Conv.sym(b)
+                      out <- trans(scaledStep, a, bb, back)
+                    } yield out,
+                  notLess =>
+                    for {
+                      ge <- at(fact("LE_OF_NOT_LT"), s"~($M < $Y) ==> $Y <= $M").flatMap(mp(_, notLess))
+                      times <- lin(Seq(hs(0), ge), s"$C * $Y <= $C * $M")
+                      scaledGe <- lin(Seq(times, maxScaled), s"$C * $Y <= $MS")
+                      notScaled <- notBelow(MS, s"$C * $Y", scaledGe)
+                      a <- at(fact("COND_FALSE"),
+                        s"~($MS < $C * $Y) ==> COND ($MS < $C * $Y) (SUC $K) (Argmax $Fs $K) = Argmax $Fs $K")
+                        .flatMap(mp(_, notScaled))
+                      b <- at(fact("COND_FALSE"),
+                        s"~($M < $Y) ==> COND ($M < $Y) (SUC $K) (Argmax (f:num->real) $K) = Argmax f $K").flatMap(mp(_, notLess))
+                      bb <- Conv.sym(b)
+                      out <- trans(scaledStep, a, ih, bb, back)
+                    } yield out
+                )
+              } yield out
+            }
+        )
+        f <- variable("f:num->real", Functions)
+        c <- variable("c:real", Reals)
+        out <- gen(proved, f, c).flatMap(reordered(_, ArgmaxScale))
+      } yield out
+
+    /**
+     * [[SummaryRule]]: below `n` the likelihood is `kf y t * w s`, so the score of every action at
+     * `s` is `w s` times its score at `t` under `kf`, and [[ArgmaxScale]] keeps the first maximiser.
+     */
+    def summaryRule: R[Kernel.Thm] = {
+      val a = fresh("a", Numbers)
+      val KF = "(kf:num->num->real)"; val W = "(w:num->real)"; val S = "(s:num)"; val T = "(t:num)"
+      def X(kk: String, at_ : String, av: String) = s"Sum (\\z:num. $P z * $kk z $at_ * $U $av z) (n:num)"
+      val Term_ = s"$P z * $Kt z $S * $U (a:num) z"
+      val Scaled = s"$W $S * ($P z * $KF z $T * $U (a:num) z)"
+      val Factor = s"!y:num. y < (n:num) ==> $Kt y $S = $KF y $T * $W $S"
+      val Positive = s"0 < $W $S"
+      for {
+        factor <- assume(Factor)
+        positive <- assume(Positive)
+        each <- prop(s"!z:num. z < (n:num) ==> $Term_ = $Scaled")
+        termwise <- every(each) { (zs, zhs, g) =>
+          val Z = v(zs(0))
+          for {
+            kz <- at(factor, s"$Z < (n:num) ==> $Kt $Z $S = $KF $Z $T * $W $S").flatMap(mp(_, zhs(0)))
+            out <- driver.using(kz).identity(g)
+          } yield out
+        }
+        spread <- at(fact("SUM_CONGRUENCE_BELOW"),
+          s"(!z:num. z < (n:num) ==> $Term_ = $Scaled) ==> ${X(Kt, S, "a")} = Sum (\\z:num. $Scaled) n")
+          .flatMap(mp(_, termwise))
+        pulled <- at(fact("SUM_SCALE"), s"Sum (\\z:num. $Scaled) (n:num) = $W $S * ${X(KF, T, "a")}")
+        atA <- trans(spread, pulled)
+        under <- congArgmax(a, atA, "top:num")
+        scaled <- at(k(ArgmaxScale),
+          s"0 < $W $S ==> Argmax (\\a:num. $W $S * ${X(KF, T, "a")}) (top:num) = Argmax (\\a:num. ${X(KF, T, "a")}) top")
+          .flatMap(mp(_, positive))
+        first <- Conv.sym(scaled)
+        second <- Conv.sym(under)
+        out <- trans(first, second)
+        inner <- disch(Positive, out)
+        both <- disch(Factor, inner)
+        result <- closed(both, SummaryRule)
+      } yield result
+    }
+
+    /**
+     * [[SufficientSummary]], signal by signal. Where `0 < w s` the two rules agree by
+     * [[SummaryRule]] at `t = f s`; where `w s = 0` every state's likelihood of `s` is zero, so both
+     * rules collect nothing there whatever they do. Neither case reads `N`, which is why the equality
+     * holds on every set of states.
+     */
+    def sufficientSummary: R[Kernel.Thm] = {
+      val KF = "(kf:num->num->real)"; val W = "(w:num->real)"; val Ff = "(f:num->num)"; val Nb = "(N:num->bool)"
+      val Mn = "(m:num)"; val Nn = "(n:num)"
+      def DF(sv: String) = s"Argmax (\\a:num. Sum (\\z:num. $P z * $KF z ($Ff $sv) * $U a z) $Nn) (top:num)"
+      def DK(sv: String) = s"Argmax (\\a:num. Sum (\\z:num. $P z * $Kt z $sv * $U a z) $Nn) (top:num)"
+      def summand(yv: String, sv: String, d: String => String) = s"$P $yv * $Kt $yv $sv * $U (${d(sv)}) $yv"
+      def inner(yv: String, d: String => String) = s"Sum (\\s:num. ${summand(yv, "s", d)}) $Mn"
+      def guarded(yv: String, d: String => String) = s"COND ($Nb $yv) (${inner(yv, d)}) 0"
+      val NonNeg = s"!s:num. s < $Mn ==> (0:real) <= $W s"
+      val Factor = s"!y:num. !s:num. y < $Nn ==> s < $Mn ==> $Kt y s = $KF y ($Ff s) * $W s"
+      for {
+        nonneg <- assume(NonNeg)
+        factor <- assume(Factor)
+
+        // at each signal: the rules agree, or the signal has probability zero in every state
+        caseGoal <- prop(s"!s:num. s < $Mn ==> ${DF("s")} = ${DK("s")} \\/ (!y:num. y < $Nn ==> $Kt y s = 0)")
+        bySignal <- every(caseGoal) { (ss, shs, _) =>
+          val S = v(ss(0))
+          for {
+            atSGoal <- prop(s"!y:num. y < $Nn ==> $Kt y $S = $KF y ($Ff $S) * $W $S")
+            atS <- every(atSGoal) { (ys, yhs, _) =>
+              val Y = v(ys(0))
+              at(factor, s"$Y < $Nn ==> $S < $Mn ==> $Kt $Y $S = $KF $Y ($Ff $S) * $W $S").flatMap(mp(_, yhs(0), shs(0)))
+            }
+            weight <- at(nonneg, s"$S < $Mn ==> (0:real) <= $W $S").flatMap(mp(_, shs(0)))
+            silent <- prop(s"!y:num. y < $Nn ==> $Kt y $S = 0")
+            same <- prop(s"${DF(S)} = ${DK(S)}")
+            out <- cases(s"(0:real) < $W $S")(
+              positive =>
+                for {
+                  rule <- at(k(SummaryRule),
+                    s"(!y:num. y < $Nn ==> $Kt y $S = $KF y ($Ff $S) * $W $S) ==> 0 < $W $S ==> ${DF(S)} = ${DK(S)}")
+                    .flatMap(mp(_, atS, positive))
+                  out <- rules.disjIntro1(silent, rule)
+                } yield out,
+              notPositive =>
+                for {
+                  le <- at(fact("LE_OF_NOT_LT"), s"~((0:real) < $W $S) ==> $W $S <= 0").flatMap(mp(_, notPositive))
+                  zero <- lin(Seq(weight, le), s"$W $S = 0")
+                  zeros <- every(silent) { (ys, yhs, g) =>
+                    val Y = v(ys(0))
+                    at(atS, s"$Y < $Nn ==> $Kt $Y $S = $KF $Y ($Ff $S) * $W $S").flatMap(mp(_, yhs(0)))
+                      .flatMap(kyS => driver.using(kyS, zero).identity(g))
+                  }
+                  out <- rules.disjIntro2(same, zeros)
+                } yield out
+            )
+          } yield out
+        }
+
+        // at each state below n, the two inner sums agree term by term, and so does the guard on N
+        perYGoal <- prop(s"!y:num. y < $Nn ==> ${guarded("y", DF)} = ${guarded("y", DK)}")
+        perY <- every(perYGoal) { (ys, yhs, _) =>
+          val Y = v(ys(0))
+          for {
+            termsGoal <- prop(s"!s:num. s < $Mn ==> ${summand(Y, "s", DF)} = ${summand(Y, "s", DK)}")
+            terms <- every(termsGoal) { (ss, shs, g) =>
+              val S = v(ss(0))
+              for {
+                split <- at(bySignal, s"$S < $Mn ==> ${DF(S)} = ${DK(S)} \\/ (!y:num. y < $Nn ==> $Kt y $S = 0)")
+                  .flatMap(mp(_, shs(0)))
+                out <- byCases(split)(
+                  agree => driver.using(agree).identity(g),
+                  silent => at(silent, s"$Y < $Nn ==> $Kt $Y $S = 0").flatMap(mp(_, yhs(0)))
+                    .flatMap(zero => driver.using(zero).identity(g))
+                )
+              } yield out
+            }
+            summed <- at(fact("SUM_CONGRUENCE_BELOW"),
+              s"(!s:num. s < $Mn ==> ${summand(Y, "s", DF)} = ${summand(Y, "s", DK)}) ==> ${inner(Y, DF)} = ${inner(Y, DK)}")
+              .flatMap(mp(_, terms))
+            guard <- term(s"\\x:real. COND ($Nb $Y) x 0", Type.fun(Reals, Reals))
+            out <- Conv.apTerm(guard, summed).flatMap(beta)
+          } yield out
+        }
+        total <- at(fact("SUM_CONGRUENCE_BELOW"),
+          s"(!y:num. y < $Nn ==> ${guarded("y", DF)} = ${guarded("y", DK)}) ==> " +
+            s"Sum (\\y:num. ${guarded("y", DF)}) $Nn = Sum (\\y:num. ${guarded("y", DK)}) $Nn")
+          .flatMap(mp(_, perY))
+        afterFactor <- disch(Factor, total)
+        afterBoth <- disch(NonNeg, afterFactor)
+        result <- closed(afterBoth, SufficientSummary)
+      } yield result
+    }
+
+    /** The score of action `av` at signal `sv` under `k`, over the states below `n`. */
+    private def scoreAt(av: String, sv: String): String = s"Sum (\\y:num. $P y * $Kt y $sv * $U $av y) (n:num)"
+
+    /** [[BayesRuleTotal]]: exchange the two sums, and at each signal [[ArgmaxAttains]] reads the maximum. */
+    def bayesRuleTotal: R[Kernel.Thm] = {
+      val s = fresh("s", Numbers)
+      def D(sv: String) = s"Argmax (\\a:num. Sum (\\z:num. $P z * $Kt z $sv * $U a z) (n:num)) (top:num)"
+      for {
+        swapped <- at(fact("SUM_SWAP"),
+          s"Sum (\\y:num. Sum (\\s:num. $P y * $Kt y s * $U (${D("s")}) y) (m:num)) (n:num) = " +
+            s"Sum (\\s:num. ${scoreAt(s"(${D("s")})", "s")}) m")
+        fT <- prop0(s"\\a:num. ${scoreAt("a", "(s:num)")}")
+        topT <- nm("top:num")
+        attains <- spec(k(ArgmaxAttains), fT, topT).flatMap(split)
+        summed <- cong("Sum", s, attains(1), "(m:num)")
+        value <- unfold(ValueName, "n:num", "m:num", "top:num", P, Kt, U)
+        back <- Conv.sym(value)
+        equal <- trans(swapped, summed, back)
+        result <- closed(equal, BayesRuleTotal)
+      } yield result
+    }
+
+    /** [[BayesRuleOptimal]]: exchange the two sums, and at each signal [[MaximumUpper]] bounds the action taken. */
+    def bayesRuleOptimal: R[Kernel.Thm] = {
+      val D = "(d:num->num)"
+      val Bound = s"!s:num. s < (m:num) ==> $D s <= (top:num)"
+      val Taken = scoreAt(s"($D s)", "s")
+      val Best = s"Maximum (\\a:num. ${scoreAt("a", "s")}) (top:num)"
+      for {
+        bound <- assume(Bound)
+        swapped <- at(fact("SUM_SWAP"),
+          s"Sum (\\y:num. Sum (\\s:num. $P y * $Kt y s * $U ($D s) y) (m:num)) (n:num) = Sum (\\s:num. $Taken) m")
+        eachGoal <- prop(s"!s:num. s < (m:num) ==> $Taken <= $Best")
+        each <- every(eachGoal) { (ss, shs, _) =>
+          val S = v(ss(0))
+          for {
+            le <- at(bound, s"$S < (m:num) ==> $D $S <= (top:num)").flatMap(mp(_, shs(0)))
+            // by the arguments and not by the instance: `f i` with both unknown is not a pattern
+            fT <- prop0(s"\\a:num. ${scoreAt("a", S)}")
+            topT <- nm("top:num")
+            dS <- nm(s"$D $S")
+            out <- spec(k(MaximumUpper), fT, topT, dS).flatMap(mp(_, le))
+          } yield out
+        }
+        mono <- at(fact("SUM_MONOTONE_BELOW"),
+          s"(!s:num. s < (m:num) ==> $Taken <= $Best) ==> Sum (\\s:num. $Taken) m <= Sum (\\s:num. $Best) m")
+          .flatMap(mp(_, each))
+        value <- unfold(ValueName, "n:num", "m:num", "top:num", P, Kt, U)
+        out <- lin(Seq(swapped, mono, value),
+          s"Sum (\\y:num. Sum (\\s:num. $P y * $Kt y s * $U ($D s) y) (m:num)) (n:num) <= VALUE n m (top:num) $P $Kt $U")
+        discharged <- disch(Bound, out)
+        result <- closed(discharged, BayesRuleOptimal)
+      } yield result
+    }
+
+    /**
+     * `Sum (\y. COND (N y) (T y) 0) n + Sum (\y. COND (~N y) (T y) 0) n = Sum T n`, at the `T` that
+     * collects what `rule` collects at state `y`: every state is in `N` or in its complement, once.
+     */
+    private def halves(rule: String => String): R[Kernel.Thm] = {
+      val y = fresh("y", Numbers)
+      val Nb = "(N:num->bool)"
+      val T = s"Sum (\\s:num. $P (y:num) * $Kt y s * $U (${rule("s")}) y) (m:num)"
+      val In = s"COND ($Nb (y:num)) ($T) 0"
+      val Out = s"COND (~($Nb (y:num))) ($T) 0"
+      for {
+        pointwise <- cases(s"$Nb (y:num)")(
+          inside =>
+            for {
+              a <- at(fact("COND_TRUE"), s"$Nb (y:num) ==> $In = $T").flatMap(mp(_, inside))
+              negated <- prop(s"~($Nb (y:num))")
+              assumed <- LogicError.lift(Kernel.assume(negated))
+              absurd <- rules.notElim(assumed, inside)
+              notOutside <- rules.notIntro(negated, absurd)
+              b <- at(fact("COND_FALSE"), s"~(~($Nb (y:num))) ==> $Out = 0").flatMap(mp(_, notOutside))
+              out <- lin(Seq(a, b), s"$In + $Out = $T")
+            } yield out,
+          outside =>
+            for {
+              a <- at(fact("COND_FALSE"), s"~($Nb (y:num)) ==> $In = 0").flatMap(mp(_, outside))
+              b <- at(fact("COND_TRUE"), s"~($Nb (y:num)) ==> $Out = $T").flatMap(mp(_, outside))
+              out <- lin(Seq(a, b), s"$In + $Out = $T")
+            } yield out
+        )
+        summed <- cong("Sum", y, pointwise, "(n:num)")
+        parts <- at(fact("SUM_ADD"), s"Sum (\\y:num. $In + $Out) (n:num) = Sum (\\y:num. $In) n + Sum (\\y:num. $Out) n")
+        out <- lin(Seq(summed, parts), s"Sum (\\y:num. $In) (n:num) + Sum (\\y:num. $Out) n = Sum (\\y:num. $T) n")
+      } yield out
+    }
+
+    /**
+     * [[SummaryNoFreeCure]]: on `N` and on its complement together each rule collects its total, the
+     * Bayes rule's total is [[ValueName]] by [[BayesRuleTotal]], and the summary reader's rule is a
+     * rule into `[0, top]` like any other, so its total is at most that by [[BayesRuleOptimal]].
+     */
+    def noFreeCure: R[Kernel.Thm] = {
+      val Ff = "(f:num->num)"
+      def DF(sv: String) =
+        s"Argmax (\\a:num. Sum (\\z:num. $P z * Sum (\\x:num. $Kt z x * COND ($Ff x = $Ff $sv) (1:real) 0) (m:num) * " +
+          s"$U a z) (n:num)) (top:num)"
+      def DK(sv: String) = s"Argmax (\\a:num. Sum (\\z:num. $P z * $Kt z $sv * $U a z) (n:num)) (top:num)"
+      // what `rule` collects on `N` (side "N") or on its complement (side "~N"), as `halves` writes it
+      def onHalf(side: String, rule: String => String): String = {
+        val guard = if (side == "N") "(N:num->bool) (y:num)" else "~((N:num->bool) (y:num))"
+        s"Sum (\\y:num. COND ($guard) (Sum (\\s:num. $P (y:num) * $Kt y s * $U (${rule("s")}) y) (m:num)) 0) (n:num)"
+      }
+      val valueOfK = s"VALUE (n:num) (m:num) (top:num) $P $Kt $U"
+      for {
+        splitF <- halves(DF)
+        splitK <- halves(DK)
+        boundGoal <- prop(s"!s:num. s < (m:num) ==> ${DF("s")} <= (top:num)")
+        bound <- every(boundGoal) { (ss, _, _) =>
+          val S = v(ss(0))
+          for {
+            fT <- prop0(s"\\a:num. Sum (\\z:num. $P z * Sum (\\x:num. $Kt z x * COND ($Ff x = $Ff $S) (1:real) 0) (m:num) * " +
+              s"$U a z) (n:num)")
+            topT <- nm("top:num")
+            attains <- spec(k(ArgmaxAttains), fT, topT).flatMap(split)
+          } yield attains(0)
+        }
+        optimal <- at(k(BayesRuleOptimal),
+          s"(!s:num. s < (m:num) ==> ${DF("s")} <= (top:num)) ==> " +
+            s"Sum (\\y:num. Sum (\\s:num. $P y * $Kt y s * $U (${DF("s")}) y) m) (n:num) <= VALUE n m top $P $Kt $U")
+          .flatMap(mp(_, bound))
+        total <- at(k(BayesRuleTotal),
+          s"Sum (\\y:num. Sum (\\s:num. $P y * $Kt y s * $U (${DK("s")}) y) (m:num)) (n:num) = VALUE n m (top:num) $P $Kt $U")
+        // one rule at a time: its two halves against its total, then the two rules against each other
+        summaryTotal <- lin(Seq(splitF, optimal), s"${onHalf("N", DF)} + ${onHalf("~N", DF)} <= $valueOfK")
+        bayesTotal <- lin(Seq(splitK, total), s"${onHalf("N", DK)} + ${onHalf("~N", DK)} = $valueOfK")
+        out <- lin(Seq(summaryTotal, bayesTotal),
+          s"(${onHalf("N", DF)} - ${onHalf("N", DK)}) + (${onHalf("~N", DF)} - ${onHalf("~N", DK)}) <= 0")
+        result <- closed(out, SummaryNoFreeCure)
+      } yield result
+    }
+
+    /**
+     * [[SummaryReaderValue]], the fibre-sum identity. At each summary `t` the summary's maximum is its
+     * score at its own rule ([[ArgmaxAttains]]), which is the indicator-weighted sum of the history's
+     * scores at that action ([[GarbledTerm]]). Exchanged, the sum over `t` at each history `s` keeps only
+     * `t = f s` ([[SumIndicator]], which is where `f s < r` is read), and what is left is the history's
+     * score at the summary reader's action: what that rule collects, signal by signal.
+     */
+    def readerValue: R[Kernel.Thm] = {
+      val Ff = "(f:num->num)"; val Rn = "(r:num)"; val Mn = "(m:num)"; val Nn = "(n:num)"
+      val t = fresh("t", Numbers)
+      def Ind(x: String, tt: String) = s"COND ($Ff $x = $tt) (1:real) 0"
+      // the inner binder is `j` because callers pass `tt` as `(f x)` and `(f s)`: an `x` here would capture theirs
+      def Kf(av: String, tt: String) = s"Sum (\\z:num. $P z * Sum (\\j:num. $Kt z j * ${Ind("j", tt)}) $Mn * $U $av z) $Nn"
+      def D(tt: String) = s"Argmax (\\a:num. ${Kf("a", tt)}) (top:num)"
+      def H(tt: String, xv: String) = scoreAt(s"(${D(tt)})", xv)
+      val Into = s"!s:num. s < $Mn ==> $Ff s < $Rn"
+      val Tt = "(t:num)"
+      for {
+        into <- assume(Into)
+        value <- unfold(ValueName, "n:num", "r:num", "top:num", P,
+          s"\\y:num. \\t:num. Sum (\\s:num. $Kt y s * COND ($Ff s = t) (1:real) 0) $Mn", U)
+
+        // at each summary t, its maximum is the indicator-weighted sum of the history's scores at its rule
+        fT <- prop0(s"\\a:num. ${Kf("a", Tt)}")
+        topT <- nm("top:num")
+        attains <- spec(k(ArgmaxAttains), fT, topT).flatMap(split)
+        nT <- nm(Nn); mT <- nm(Mn)
+        prT <- prop0(P); kT <- prop0(Kt); uT <- prop0(U)
+        gT <- prop0(s"\\s:num. \\t:num. ${Ind("s", "t")}")
+        dT <- nm(D(Tt))
+        // by the arguments: `g s t` with `g` and `t` both unknown is not a pattern
+        garbled <- spec(k(GarbledTerm), nT, mT, prT, kT, gT, uT, dT, t)
+        back <- Conv.sym(attains(1))
+        atT <- trans(back, garbled)
+        underSum <- cong("Sum", t, atT, Rn)
+        swapped <- at(fact("SUM_SWAP"),
+          s"Sum (\\t:num. Sum (\\x:num. ${Ind("x", "t")} * ${H("t", "x")}) $Mn) $Rn = " +
+            s"Sum (\\x:num. Sum (\\t:num. ${Ind("x", "t")} * ${H("t", "x")}) $Rn) $Mn")
+
+        // at each history x below m, the indicator keeps only t = f x
+        perXGoal <- prop(s"!x:num. x < $Mn ==> Sum (\\t:num. ${Ind("x", "t")} * ${H("t", "x")}) $Rn = ${H(s"($Ff x)", "x")}")
+        perX <- every(perXGoal) { (xs, xhs, _) =>
+          val Xv = v(xs(0))
+          val FX = s"($Ff $Xv)"
+          val Flipped = s"COND ($Tt = $FX) (1:real) 0"
+          val goalText = s"${Ind(Xv, Tt)} * ${H(Tt, Xv)} = ${H(Tt, Xv)} * $Flipped"
+          for {
+            pointwise <- cases(s"$Tt = $FX")(
+              on =>
+                for {
+                  turned <- Conv.sym(on)
+                  a <- at(fact("COND_TRUE"), s"$FX = $Tt ==> ${Ind(Xv, Tt)} = 1").flatMap(mp(_, turned))
+                  b <- at(fact("COND_TRUE"), s"$Tt = $FX ==> $Flipped = 1").flatMap(mp(_, on))
+                  g <- prop(goalText)
+                  out <- driver.using(a, b).identity(g)
+                } yield out,
+              off =>
+                for {
+                  turned <- flipped(Tt, FX)
+                  apart <- rw(turned, off)
+                  a <- at(fact("COND_FALSE"), s"~($FX = $Tt) ==> ${Ind(Xv, Tt)} = 0").flatMap(mp(_, apart))
+                  b <- at(fact("COND_FALSE"), s"~($Tt = $FX) ==> $Flipped = 0").flatMap(mp(_, off))
+                  g <- prop(goalText)
+                  out <- driver.using(a, b).identity(g)
+                } yield out
+            )
+            summed <- cong("Sum", t, pointwise, Rn)
+            hT <- prop0(s"\\t:num. ${H("t", Xv)}")
+            rT <- nm(Rn)
+            fxT <- nm(FX)
+            below <- at(into, s"$Xv < $Mn ==> $FX < $Rn").flatMap(mp(_, xhs(0)))
+            picked <- spec(k(SumIndicator), hT, rT, fxT).flatMap(mp(_, below))
+            out <- trans(summed, picked)
+          } yield out
+        }
+        collapse <- at(fact("SUM_CONGRUENCE_BELOW"),
+          s"(!x:num. x < $Mn ==> Sum (\\t:num. ${Ind("x", "t")} * ${H("t", "x")}) $Rn = ${H(s"($Ff x)", "x")}) ==> " +
+            s"Sum (\\x:num. Sum (\\t:num. ${Ind("x", "t")} * ${H("t", "x")}) $Rn) $Mn = Sum (\\x:num. ${H(s"($Ff x)", "x")}) $Mn")
+          .flatMap(mp(_, perX))
+        lhs <- at(fact("SUM_SWAP"),
+          s"Sum (\\y:num. Sum (\\s:num. $P y * $Kt y s * $U (${D(s"($Ff s)")}) y) $Mn) $Nn = " +
+            s"Sum (\\s:num. ${H(s"($Ff s)", "s")}) $Mn")
+        c1 <- Conv.sym(collapse)
+        c2 <- Conv.sym(swapped)
+        c3 <- Conv.sym(underSum)
+        c4 <- Conv.sym(value)
+        equal <- trans(lhs, c1, c2, c3, c4)
+        discharged <- disch(Into, equal)
+        result <- closed(discharged, SummaryReaderValue)
+      } yield result
+    }
   }
 }
